@@ -19,10 +19,12 @@ dependencyResolutionManagement {
     }
 }
 
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
 rootProject.name = "JucoTemplate"
 include(":app")
 include(":core:designsystem")
-include(":faeture:main")
+include(":feature:main")
 include(":build-logic")
-include(":faeture:home")
+include(":feature:home")
 include(":core:common")
