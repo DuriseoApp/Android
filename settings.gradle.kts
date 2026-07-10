@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 rootProject.name = "JucoTemplate"
 include(":app")
 include(":core:designsystem")
+include(":faeture:main")
