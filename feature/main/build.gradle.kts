@@ -36,6 +36,8 @@ android {
 
 dependencies {
     implementation(projects.feature.home)
+    implementation(projects.feature.menu)
+
     implementation(projects.core.designsystem)
 
     implementation(libs.androidx.core.ktx)
