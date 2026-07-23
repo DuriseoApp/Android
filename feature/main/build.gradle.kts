@@ -39,6 +39,9 @@ dependencies {
     implementation(projects.feature.menu)
 
     implementation(projects.core.designsystem)
+    implementation(projects.core.common)
+
+    implementation(libs.androidx.navigation.compose)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
