@@ -41,6 +41,8 @@ dependencies {
     implementation(projects.feature.main)
     implementation(projects.core.designsystem)
 
+    implementation(libs.timber)
+
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
