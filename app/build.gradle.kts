@@ -7,9 +7,7 @@ plugins {
 
 android {
     namespace = "com.juco.jucotemplate"
-    compileSdk {
-        version = release(37)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.juco.jucotemplate"

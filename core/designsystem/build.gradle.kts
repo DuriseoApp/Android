@@ -5,9 +5,7 @@ plugins {
 
 android {
     namespace = "com.juco.core.designsystem"
-    compileSdk {
-        version = release(37)
-    }
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26

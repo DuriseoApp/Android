@@ -7,9 +7,7 @@ plugins {
 
 android {
     namespace = "com.juco.feature.menu"
-    compileSdk {
-        version = release(37)
-    }
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26

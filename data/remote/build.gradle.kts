@@ -4,9 +4,7 @@ plugins {
 
 android {
     namespace = "com.juco.data.remote"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26
