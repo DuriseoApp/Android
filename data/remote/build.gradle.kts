@@ -35,6 +35,8 @@ android {
 }
 
 dependencies {
+    implementation(projects.core.common)
+
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.retrofit)

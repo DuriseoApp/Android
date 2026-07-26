@@ -34,12 +34,14 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
 dependencies {
     implementation(projects.feature.main)
     implementation(projects.core.designsystem)
+    implementation(projects.core.common)
 
     implementation(libs.timber)
 
