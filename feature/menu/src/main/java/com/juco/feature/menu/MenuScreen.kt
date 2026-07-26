@@ -7,11 +7,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.juco.core.designsystem.theme.JucoTheme
 
 @Composable
 fun MenuRoute(
-    padding: PaddingValues
+    padding: PaddingValues,
+    viewModel: MenuViewModel = hiltViewModel(),
 ) {
     MenuScreen(
         padding = padding
