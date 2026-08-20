@@ -1,4 +1,5 @@
 pluginManagement {
+    includeBuild("build-logic")
     repositories {
         google {
             content {
@@ -25,7 +26,6 @@ rootProject.name = "JucoTemplate"
 include(":app")
 include(":core:designsystem")
 include(":feature:main")
-include(":build-logic")
 include(":feature:home")
 include(":core:common")
 include(":feature:menu")

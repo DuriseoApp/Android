@@ -1,13 +1,36 @@
 plugins {
-    id("java-library")
-    alias(libs.plugins.jetbrains.kotlin.jvm)
+    `kotlin-dsl`
 }
-java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+
+dependencies {
+    implementation(libs.android.gradle.plugin)
+    implementation(libs.kotlin.gradle.plugin)
+    implementation(libs.compose.gradle.plugin)
+    implementation(libs.ksp.gradle.plugin)
+    implementation(libs.hilt.gradle.plugin)
 }
-kotlin {
-    compilerOptions {
-        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+
+gradlePlugin {
+    plugins {
+        register("androidApplication") {
+            id = "juco.android.application"
+            implementationClass = "AndroidApplicationConventionPlugin"
+        }
+        register("androidLibrary") {
+            id = "juco.android.library"
+            implementationClass = "AndroidLibraryConventionPlugin"
+        }
+        register("androidCompose") {
+            id = "juco.android.compose"
+            implementationClass = "AndroidComposeConventionPlugin"
+        }
+        register("androidHilt") {
+            id = "juco.android.hilt"
+            implementationClass = "AndroidHiltConventionPlugin"
+        }
+        register("androidFeature") {
+            id = "juco.android.feature"
+            implementationClass = "AndroidFeatureConventionPlugin"
+        }
     }
 }
