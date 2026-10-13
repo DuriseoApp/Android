@@ -22,7 +22,7 @@ dependencyResolutionManagement {
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
-rootProject.name = "JucoTemplate"
+rootProject.name = "Duriseo"
 include(":app")
 include(":core:designsystem")
 include(":feature:main")

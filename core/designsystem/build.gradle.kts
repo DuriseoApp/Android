@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.juco.core.designsystem"
+    namespace = "com.juco.duriseo.core.designsystem"
 }
 
 dependencies {
