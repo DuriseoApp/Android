@@ -68,6 +68,9 @@ hs_err_pid*
 replay_pid*
 
 ### Kotlin ###
+# Kotlin 2.x compiler session data
+.kotlin/
+
 # Compiled class file
 
 # Log file
