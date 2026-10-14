@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.juco.duriseo.feature.menu"
+    namespace = "com.juco.duriseo_android.feature.menu"
 }
 
 dependencies {

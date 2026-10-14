@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <application
-        android:name="com.juco.duriseo.MyApp"
+        android:name="com.juco.duriseo_android.MyApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -13,7 +13,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Duriseo">
         <activity
-            android:name="com.juco.duriseo.feature.main.MainActivity"
+            android:name="com.juco.duriseo_android.feature.main.MainActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.Duriseo">

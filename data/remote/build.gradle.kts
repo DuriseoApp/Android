@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.juco.duriseo.data.remote"
+    namespace = "com.juco.duriseo_android.data.remote"
 }
 
 dependencies {

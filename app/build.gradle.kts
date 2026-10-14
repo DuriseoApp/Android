@@ -5,10 +5,10 @@ plugins {
 }
 
 android {
-    namespace = "com.juco.duriseo"
+    namespace = "com.juco.duriseo_android"
 
     defaultConfig {
-        applicationId = "com.juco.duriseo"
+        applicationId = "com.juco.duriseo_android"
         versionCode = 1
         versionName = "1.0"
     }
