@@ -13,23 +13,23 @@ dependencies {
 gradlePlugin {
     plugins {
         register("androidApplication") {
-            id = "juco.android.application"
+            id = "duriseo.android.application"
             implementationClass = "AndroidApplicationConventionPlugin"
         }
         register("androidLibrary") {
-            id = "juco.android.library"
+            id = "duriseo.android.library"
             implementationClass = "AndroidLibraryConventionPlugin"
         }
         register("androidCompose") {
-            id = "juco.android.compose"
+            id = "duriseo.android.compose"
             implementationClass = "AndroidComposeConventionPlugin"
         }
         register("androidHilt") {
-            id = "juco.android.hilt"
+            id = "duriseo.android.hilt"
             implementationClass = "AndroidHiltConventionPlugin"
         }
         register("androidFeature") {
-            id = "juco.android.feature"
+            id = "duriseo.android.feature"
             implementationClass = "AndroidFeatureConventionPlugin"
         }
     }

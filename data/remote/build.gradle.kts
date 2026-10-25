@@ -1,11 +1,11 @@
 plugins {
-    id("juco.android.library")
-    id("juco.android.hilt")
+    id("duriseo.android.library")
+    id("duriseo.android.hilt")
     alias(libs.plugins.kotlin.serialization)
 }
 
 android {
-    namespace = "com.juco.duriseo_android.data.remote"
+    namespace = "com.duriseo.android.data.remote"
 }
 
 dependencies {
