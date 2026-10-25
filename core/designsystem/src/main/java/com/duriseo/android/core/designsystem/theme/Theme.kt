@@ -8,51 +8,51 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 
-private val LocalJucoColors = staticCompositionLocalOf<JucoColors> {
-    error("No JucoColors provided")
+private val LocalDuriseoColors = staticCompositionLocalOf<DuriseoColors> {
+    error("No DuriseoColors provided")
 }
-private val LocalJucoTypography = staticCompositionLocalOf<JucoTypography> {
-    error("No JucoTypography provided")
+private val LocalDuriseoTypography = staticCompositionLocalOf<DuriseoTypography> {
+    error("No DuriseoTypography provided")
 }
 
-object JucoTheme {
-    val colors: JucoColors
+object DuriseoTheme {
+    val colors: DuriseoColors
         @Composable
         @ReadOnlyComposable
-        get() = LocalJucoColors.current
-    val typography: JucoTypography
+        get() = LocalDuriseoColors.current
+    val typography: DuriseoTypography
         @Composable
         @ReadOnlyComposable
-        get() = LocalJucoTypography.current
+        get() = LocalDuriseoTypography.current
 }
 
 @Composable
-fun ProvideJucoColors(
-    colors: JucoColors,
-    typography: JucoTypography,
+fun ProvideDuriseoColors(
+    colors: DuriseoColors,
+    typography: DuriseoTypography,
     content: @Composable () -> Unit
 ) {
     val provideColors = remember { colors.copy() }.apply { update(colors) }
     CompositionLocalProvider(
-        LocalJucoColors provides provideColors,
-        LocalJucoTypography provides typography,
+        LocalDuriseoColors provides provideColors,
+        LocalDuriseoTypography provides typography,
         content = content
     )
 }
 
 @Composable
-fun JucoTheme(
+fun DuriseoTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
     val typography = typography()
     val colors = if (darkTheme) {
-        JucoDarkColors()
+        DuriseoDarkColors()
     } else {
-        JucoLightColors()
+        DuriseoLightColors()
     }
 
-    ProvideJucoColors(
+    ProvideDuriseoColors(
         colors = colors,
         typography = typography
     ) {

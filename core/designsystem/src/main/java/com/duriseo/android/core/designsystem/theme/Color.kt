@@ -37,7 +37,7 @@ val RedLight = Color(0xFFFF3B30)
 val RedDark = Color(0xFFFF453A)
 
 @Stable
-class JucoColors(
+class DuriseoColors(
     primaryBackground: Color,
     secondaryBackground: Color,
     primaryText: Color,
@@ -80,7 +80,7 @@ class JucoColors(
         disabledBackground: Color = this.disabledBackground,
         disabledText: Color = this.disabledText,
         outline: Color = this.outline
-    ): JucoColors = JucoColors(
+    ): DuriseoColors = DuriseoColors(
         primaryBackground,
         secondaryBackground,
         primaryText,
@@ -93,7 +93,7 @@ class JucoColors(
         red
     )
 
-    fun update(other: JucoColors) {
+    fun update(other: DuriseoColors) {
         primaryBackground = other.primaryBackground
         secondaryBackground = other.secondaryBackground
         primaryText = other.primaryText
@@ -107,7 +107,7 @@ class JucoColors(
     }
 }
 
-fun JucoLightColors(
+fun DuriseoLightColors(
     PrimaryBackground: Color = PrimaryBackgroundLight,
     SecondaryBackground: Color = SecondaryBackgroundLight,
     PrimaryText: Color = PrimaryTextLight,
@@ -118,7 +118,7 @@ fun JucoLightColors(
     DisabledText: Color = DisabledTextLight,
     Outline: Color = OutlineLight,
     red: Color = RedLight
-) = JucoColors(
+) = DuriseoColors(
     PrimaryBackground,
     SecondaryBackground,
     PrimaryText,
@@ -131,7 +131,7 @@ fun JucoLightColors(
     red
 )
 
-fun JucoDarkColors(
+fun DuriseoDarkColors(
     PrimaryBackground: Color = PrimaryBackgroundDark,
     SecondaryBackground: Color = SecondaryBackgroundDark,
     PrimaryText: Color = PrimaryTextDark,
@@ -142,7 +142,7 @@ fun JucoDarkColors(
     DisabledText: Color = DisabledTextDark,
     Outline: Color = OutlineDark,
     red: Color = RedDark
-) = JucoColors(
+) = DuriseoColors(
     PrimaryBackground,
     SecondaryBackground,
     PrimaryText,
