@@ -7,9 +7,9 @@ import org.gradle.kotlin.dsl.the
 class AndroidFeatureConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {
-            pluginManager.apply("juco.android.library")
-            pluginManager.apply("juco.android.compose")
-            pluginManager.apply("juco.android.hilt")
+            pluginManager.apply("duriseo.android.library")
+            pluginManager.apply("duriseo.android.compose")
+            pluginManager.apply("duriseo.android.hilt")
 
             val libs = the<VersionCatalogsExtension>().named("libs")
             dependencies {

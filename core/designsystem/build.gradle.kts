@@ -1,10 +1,10 @@
 plugins {
-    id("juco.android.library")
-    id("juco.android.compose")
+    id("duriseo.android.library")
+    id("duriseo.android.compose")
 }
 
 android {
-    namespace = "com.juco.duriseo_android.core.designsystem"
+    namespace = "com.duriseo.android.core.designsystem"
 }
 
 dependencies {

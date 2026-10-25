@@ -1,14 +1,14 @@
 plugins {
-    id("juco.android.application")
-    id("juco.android.compose")
-    id("juco.android.hilt")
+    id("duriseo.android.application")
+    id("duriseo.android.compose")
+    id("duriseo.android.hilt")
 }
 
 android {
-    namespace = "com.juco.duriseo_android"
+    namespace = "com.duriseo.android"
 
     defaultConfig {
-        applicationId = "com.juco.duriseo_android"
+        applicationId = "com.duriseo.android"
         versionCode = 1
         versionName = "1.0"
     }

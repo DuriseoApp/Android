@@ -1,9 +1,9 @@
 plugins {
-    id("juco.android.feature")
+    id("duriseo.android.feature")
 }
 
 android {
-    namespace = "com.juco.duriseo_android.feature.home"
+    namespace = "com.duriseo.android.feature.home"
 }
 
 dependencies {

@@ -1,10 +1,10 @@
 plugins {
-    id("juco.android.library")
+    id("duriseo.android.library")
     alias(libs.plugins.kotlin.serialization)
 }
 
 android {
-    namespace = "com.juco.duriseo_android.core.common"
+    namespace = "com.duriseo.android.core.common"
 }
 
 dependencies {
