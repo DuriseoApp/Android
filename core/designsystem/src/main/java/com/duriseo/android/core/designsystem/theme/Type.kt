@@ -64,7 +64,7 @@ private fun regularTextStyle(
 )
 
 @Immutable
-data class JucoTypography(
+data class DuriseoTypography(
     val h1Bold: TextStyle,
     val h2SemiBold: TextStyle,
     val h3SemiBold: TextStyle,
@@ -79,7 +79,7 @@ data class JucoTypography(
     val c2Regular: TextStyle
 )
 
-fun typography() = JucoTypography(
+fun typography() = DuriseoTypography(
     h1Bold = boldTextStyle(
         fontSize = 32.sp,
         lineHeight = 1.3.em,

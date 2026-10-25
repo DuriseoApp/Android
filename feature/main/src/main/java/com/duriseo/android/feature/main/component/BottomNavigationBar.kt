@@ -26,7 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.duriseo.android.core.designsystem.theme.JucoTheme
+import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 
 @Composable
 fun BottomNavigationBar(
@@ -50,7 +50,7 @@ fun BottomNavigationBar(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(JucoTheme.colors.primaryBackground)
+                    .background(DuriseoTheme.colors.primaryBackground)
             ) {
                 Row(
                     modifier = Modifier
@@ -79,7 +79,7 @@ fun BottomNavigationBar(
                                 ),
                                 contentDescription = menu.contentDescription,
                                 modifier = Modifier.size(32.dp),
-                                tint = JucoTheme.colors.primaryText
+                                tint = DuriseoTheme.colors.primaryText
                             )
                         }
                     }
@@ -92,7 +92,7 @@ fun BottomNavigationBar(
 @Composable
 @Preview(showBackground = false)
 private fun BottomNavigationBarHomePreview() {
-    JucoTheme {
+    DuriseoTheme {
         BottomNavigationBar(
             currentMenu = MainMenu.HOME,
             onMenuSelected = {},
@@ -104,7 +104,7 @@ private fun BottomNavigationBarHomePreview() {
 @Composable
 @Preview(showBackground = false)
 private fun BottomNavigationBarSettingPreview() {
-    JucoTheme {
+    DuriseoTheme {
         BottomNavigationBar(
             currentMenu = MainMenu.MENU,
             onMenuSelected = {},

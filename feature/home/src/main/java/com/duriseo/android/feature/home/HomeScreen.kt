@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.duriseo.android.core.designsystem.theme.JucoTheme
+import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 
 @Composable
 fun HomeRoute(
@@ -29,8 +29,8 @@ fun HomeScreen(
     ) {
         Text(
             text = "Home",
-            color = JucoTheme.colors.primaryText,
-            style = JucoTheme.typography.h1Bold
+            color = DuriseoTheme.colors.primaryText,
+            style = DuriseoTheme.typography.h1Bold
         )
     }
 }
@@ -38,7 +38,7 @@ fun HomeScreen(
 @Preview
 @Composable
 private fun HomeScreenPreview() {
-    JucoTheme {
+    DuriseoTheme {
         HomeScreen(
             padding = PaddingValues()
         )

@@ -13,7 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
-import com.duriseo.android.core.designsystem.theme.JucoTheme
+import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 import com.duriseo.android.feature.main.component.BottomNavigationBar
 import com.duriseo.android.feature.main.navigation.MainNavHost
 import com.duriseo.android.feature.main.navigation.MainNavigator
@@ -38,7 +38,7 @@ fun MainScreen(
     }
 
     Scaffold(
-        containerColor = JucoTheme.colors.primaryBackground,
+        containerColor = DuriseoTheme.colors.primaryBackground,
         snackbarHost = { SnackbarHost(snackBarHostState) },
         content = { paddingValues ->
             MainNavHost(
