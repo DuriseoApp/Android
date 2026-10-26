@@ -20,9 +20,11 @@ class TokenColorsTest {
 
     @Test
     fun `tokens 그림자 색은 ink-900 RGB에 토큰의 알파를 쓴다`() {
-        assertEquals(0.12f, DuriseoShadows.Sm.color.alpha, 0.001f)
-        assertEquals(0.18f, DuriseoShadows.Fab.color.alpha, 0.001f)
-        assertEquals(0.24f, DuriseoShadows.Dialog.color.alpha, 0.001f)
+        // sRGB Color는 알파를 8비트(1/255)로 저장하므로 그 오차까지 허용한다
+        val eightBit = 1f / 255f
+        assertEquals(0.12f, DuriseoShadows.Sm.color.alpha, eightBit)
+        assertEquals(0.18f, DuriseoShadows.Fab.color.alpha, eightBit)
+        assertEquals(0.24f, DuriseoShadows.Dialog.color.alpha, eightBit)
         assertEquals(Ink900.red, DuriseoShadows.Fab.color.red, 0f)
     }
 }
