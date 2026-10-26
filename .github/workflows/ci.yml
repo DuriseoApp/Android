@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 빌드와 테스트
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v5
+      # local.properties 설정값은 CI에 없다. 빌드는 빈 값으로 되고, 설정값이 필요한 테스트는 가짜 값을 쓴다
+      - name: ./gradlew assembleDebug testDebugUnitTest
+        run: ./gradlew assembleDebug testDebugUnitTest --no-daemon
+      - name: 테스트 결과 요약
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import glob, os, xml.etree.ElementTree as ET
+          t = f = e = s = 0
+          for path in glob.glob("**/build/test-results/testDebugUnitTest/*.xml", recursive=True):
+              r = ET.parse(path).getroot()
+              t += int(r.get("tests", 0)); f += int(r.get("failures", 0)); e += int(r.get("errors", 0)); s += int(r.get("skipped", 0))
+          line = f"테스트 {t}개 실행, 실패 {f + e}개, 건너뜀 {s}개"
+          print(f"::notice title=테스트 결과::{line}")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as out:
+              out.write(f"### {line}\n")
+          PY
+      - name: 리포트 올리기
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            **/build/reports/tests/
+            **/build/reports/lint-results-*.html
+          retention-days: 7

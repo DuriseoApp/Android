@@ -260,3 +260,6 @@ fabric.properties
 !/gradle/wrapper/gradle-wrapper.jar
 
 # End of https://www.toptal.com/developers/gitignore/api/android,androidstudio,windows,macos,java,kotlin
+
+# 릴리스 서명 정보 (비밀값)
+keystore.properties
