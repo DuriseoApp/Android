@@ -1,6 +1,6 @@
 # 단위 1: 기반
 
-> 브랜치: `feat/1-foundation` · PR: https://github.com/DuriseoApp/Android/pull/8 · 상태: 리뷰 중
+> 브랜치: `feat/1-foundation` · PR: https://github.com/DuriseoApp/Android/pull/8 · 상태: PR 완료
 > 기준: PRD v0.7 (Docs main, Docs PR #8 머지됨), SCREENS.md(캔버스 버전 38) 공통 표, design-system.md(하단 탭·스낵바 명세, Android 매핑 포함), tokens.json(`$meta.updated` 2026-10-18), API.md 1장·1.1·5장 (main)
 > PRD v0.7(D-81 refresh 토큰 형식, D-82 글자 수 기준)은 인증·입력 제한 변경이라 단위 1 범위에는 영향이 없다.
 
@@ -195,9 +195,13 @@ Android 레포 안에서 정할 수 있는 것. 리드가 범위 확인 때 함�
 | 회차 | Critical | Major | 비고 |
 | --- | --- | --- | --- |
 | 1 | 0 | 1 | Minor 9. Major: 문구 주석 출처(SCREENS.md 공통 표). 수정: 주석 출처, 날짜 파싱 오류 -> `SerializationException`, 팔레트 라벨 `strings.xml`, ARCHITECTURE 그림(`core:designsystem -> domain`), settings 행·주석(단위 2부터), 견본 크기 토큰, `MainBottomBar` modifier, Docs PR #8 값 반영(`TODO(Docs PR)` 제거) |
+| 2 | 0 | 1 | 탭 있는 화면의 스낵바 위치(계산값 84dp)가 문서에 없는 값 → 빼고 Scaffold 기본 자리로. 위치 결정은 단위 4 전 Docs `/design-sync` (남은 일). Minor 3: ColorSchemeTest 보강·PersonColorsTest 상대 경로는 다음 단위, PLAN·진행 기록 상태 맞춤 |
 
 ## 남은 일
 
+- 탭 있는 화면의 스낵바 위치를 Docs에서 정하기 (FAB가 생기는 단위 4 전, `/design-sync`)
+- `ColorSchemeTest`에 매핑 역할 7개 확인 추가, `PersonColorsTest`의 상대 경로 정리
+
 - 리뷰 1회차 수정 반영 완료 → CI 확인 뒤 사람이 머지 (`gh pr merge` 금지)
-- 실기기 확인(CI 밖): 탭 전환 상태 저장·복원, 비행기 모드에서 `AndroidNetworkMonitor`, Google 글꼴 받기, 스낵바 위치(탭·FAB 위)
+- 실기기 확인(CI 밖): 탭 전환 상태 저장·복원, 비행기 모드에서 `AndroidNetworkMonitor`, Google 글꼴 받기, 스낵바가 하단 탭 바로 위에 뜨는지
 - 확인 필요 1·10·11·12와 Docs 쪽 수정은 Docs `/prd-sync`·`/design-sync`로
