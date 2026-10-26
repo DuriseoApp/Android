@@ -1,8 +1,8 @@
 # 단위 1: 기반
 
-> 브랜치: `feat/1-foundation` · PR: (링크) · 상태: 진행 중 (범위 확정 대기, 사람 확인 전 코드 없음)
-> 기준: PRD v0.6 (Docs main, `sync/prd-v0.7`은 아직 머지 전), SCREENS.md(캔버스 버전 38) 공통 표, design-system.md, tokens.json(`$meta.updated` 2026-10-18), API.md 1장·1.1·5장 (main)
-> PRD v0.7(D-81 refresh 토큰 형식, D-82 글자 수 기준)은 인증·입력 제한 변경이라 단위 1 범위에는 영향이 없다. v0.7이 머지되면 헤더 버전만 올린다.
+> 브랜치: `feat/1-foundation` · PR: https://github.com/DuriseoApp/Android/pull/8 · 상태: 리뷰 중
+> 기준: PRD v0.7 (Docs main, Docs PR #8 머지됨), SCREENS.md(캔버스 버전 38) 공통 표, design-system.md(하단 탭·스낵바 명세, Android 매핑 포함), tokens.json(`$meta.updated` 2026-10-18), API.md 1장·1.1·5장 (main)
+> PRD v0.7(D-81 refresh 토큰 형식, D-82 글자 수 기준)은 인증·입력 제한 변경이라 단위 1 범위에는 영향이 없다.
 
 단위 1은 기반만 만든다. 인증 화면(단위 2)과 기능 화면(SCR-CAL·MEMO 등)은 만들지 않는다. 캘린더·메모 탭 내용은 문구 없는 빈 자리표시 화면이다 (문서에 없는 문구를 만들지 않기 위해).
 
@@ -194,8 +194,10 @@ Android 레포 안에서 정할 수 있는 것. 리드가 범위 확인 때 함�
 
 | 회차 | Critical | Major | 비고 |
 | --- | --- | --- | --- |
+| 1 | 0 | 1 | Minor 9. Major: 문구 주석 출처(SCREENS.md 공통 표). 수정: 주석 출처, 날짜 파싱 오류 -> `SerializationException`, 팔레트 라벨 `strings.xml`, ARCHITECTURE 그림(`core:designsystem -> domain`), settings 행·주석(단위 2부터), 견본 크기 토큰, `MainBottomBar` modifier, Docs PR #8 값 반영(`TODO(Docs PR)` 제거) |
 
 ## 남은 일
 
-- 사람 확인: 위 범위 표, 결정 1~6, 확인 필요 1~12 중 단위 1을 막는 것(2·3·4·5·6·7) → 맞으면 **start**
+- 리뷰 1회차 수정 반영 완료 → CI 확인 뒤 사람이 머지 (`gh pr merge` 금지)
+- 실기기 확인(CI 밖): 탭 전환 상태 저장·복원, 비행기 모드에서 `AndroidNetworkMonitor`, Google 글꼴 받기, 스낵바 위치(탭·FAB 위)
 - 확인 필요 1·10·11·12와 Docs 쪽 수정은 Docs `/prd-sync`·`/design-sync`로

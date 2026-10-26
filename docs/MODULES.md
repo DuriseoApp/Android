@@ -9,7 +9,7 @@
 | `app` | application, compose, hilt | 있음 | `local.properties` 설정값 -> `BuildConfig` -> `AppConfig` 제공 |
 | `feature:main` | feature | 있음 | 하단 탭 2개(캘린더·메모, D-30). 메모 탭은 `feature:memo`(단위 6) 전까지 빈 자리표시 |
 | `feature:calendar` | feature | 있음 | 템플릿 `feature:home`에서 이름 변경 (단위 1). 화면은 단위 4 |
-| `feature:settings` | feature | 있음 | 템플릿 `feature:menu`에서 이름 변경 (단위 1). 하단 탭이 아님, 진입은 캘린더 앱바. 화면은 단위 8 |
+| `feature:settings` | feature | 있음 | 템플릿 `feature:menu`에서 이름 변경 (단위 1). 하단 탭이 아님, 진입은 캘린더 앱바. 화면은 단위 2부터 (SCR-SET-01 계정 부분, `docs/PLAN.md` 단위 2) |
 | `core:designsystem` | library, compose | 있음 | 단위 1에서 토큰 반영 (`/sync-tokens`), 하단 탭·스낵바 컴포넌트, 오류 -> 문구 도우미 |
 | `core:common` | library, hilt | 있음 | 로거, `AppConfig`, `Clock`·`@IoDispatcher` 제공, 내비게이션 경로 |
 | `domain` | Kotlin JVM (`duriseo.kotlin.jvm`) | 있음 | 순수 Kotlin. Android 의존 없음. `DataError`·`DataResult`(결과·오류 타입), `ErrorCode`, `NetworkMonitor` |

@@ -1,8 +1,11 @@
 package com.duriseo.android.core.designsystem.theme
 
 import androidx.compose.ui.graphics.Color
+import com.duriseo.android.core.designsystem.R
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 class PersonColorsTest {
 
@@ -39,9 +42,28 @@ class PersonColorsTest {
             keys,
         )
         assertEquals(12, keys.size)
+    }
+
+    @Test
+    fun `FR-CAL-04 팔레트 색 이름은 strings의 pick_label 리소스고 값은 tokens 라벨이다`() {
+        val expected = listOf(
+            "orange" to "주황", "rose" to "로즈", "amber" to "앰버", "mustard" to "머스터드",
+            "green" to "초록", "teal" to "청록", "blue" to "파랑", "purple" to "보라",
+            "magenta" to "자주", "brown" to "브라운", "gray" to "회색", "ink" to "먹색",
+        )
+        val xml = File("src/main/res/values/strings.xml").readText(Charsets.UTF_8)
+
+        expected.forEach { (name, label) ->
+            assertTrue(xml.contains("<string name=\"pick_label_$name\">$label</string>"))
+        }
         assertEquals(
-            listOf("주황", "로즈", "앰버", "머스터드", "초록", "청록", "파랑", "보라", "자주", "브라운", "회색", "먹색"),
-            DuriseoPickPalette.colors.map { it.label },
+            listOf(
+                R.string.pick_label_orange, R.string.pick_label_rose, R.string.pick_label_amber,
+                R.string.pick_label_mustard, R.string.pick_label_green, R.string.pick_label_teal,
+                R.string.pick_label_blue, R.string.pick_label_purple, R.string.pick_label_magenta,
+                R.string.pick_label_brown, R.string.pick_label_gray, R.string.pick_label_ink,
+            ),
+            DuriseoPickPalette.colors.map { it.labelRes },
         )
     }
 

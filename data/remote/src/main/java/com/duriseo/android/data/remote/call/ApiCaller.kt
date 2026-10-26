@@ -21,7 +21,7 @@ import kotlin.coroutines.cancellation.CancellationException
  *
  * - 성공(2xx): 봉투 없이 리소스 그대로. 204는 [callUnit].
  * - 오류(4xx, 5xx): `{code, message, details, traceId}` -> [DataError.ApiError]. `message`는 담지 않는다.
- *   JSON이 아닌 오류 본문(프록시 HTML, 빈 본문)은 `INTERNAL_ERROR`로 본다 (unit-1.md 확인 필요 9).
+ *   JSON이 아닌 오류 본문(프록시 HTML, 빈 본문)은 `INTERNAL_ERROR`로 본다 (SCREENS.md 공통 표 "공통 오류").
  * - 네트워크 오류(연결 없음, 시간 초과, 그 밖의 IOException): [DataError.Offline] (NFR-OFF-02).
  */
 @Singleton

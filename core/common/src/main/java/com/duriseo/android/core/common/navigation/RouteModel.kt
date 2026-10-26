@@ -13,7 +13,7 @@ sealed interface MainRouteModel : RouteModel {
     @Serializable
     data object Memo : MainRouteModel
 
-    /** 전체 메뉴(설정). 하단 탭이 아니라 캘린더 앱바에서 들어간다 (SCR-SET-01) */
+    /** 전체 메뉴(설정). 하단 탭이 아니라 캘린더 앱바에서 들어간다. 화면은 단위 2부터 (SCR-SET-01 계정 부분, docs/PLAN.md 단위 2) */
     @Serializable
     data object Settings : MainRouteModel
 }

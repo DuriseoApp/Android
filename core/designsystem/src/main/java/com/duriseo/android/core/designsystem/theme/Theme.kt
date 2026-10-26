@@ -7,21 +7,33 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 
 /**
- * design-system.md "Android (Jetpack Compose) 매핑" 표에 있는 14개 역할만 지정한다.
- * 표에 없는 역할(secondary·tertiary·background·surfaceContainerHigh/Highest·inverseSurface 등)은
- * M3 기본값으로 남는다. TODO(Docs PR): 매핑이 보충되면 추가.
+ * design-system.md "Android (Jetpack Compose) 매핑" 표대로 지정한다.
+ * 표에서 "쓰지 않음"인 역할(tertiary 4개, inversePrimary, errorContainer·onErrorContainer)은 지정하지 않는다.
+ * 그 역할을 쓰는 M3 컴포넌트는 화면에 두지 않고 `core:designsystem` 컴포넌트로 그린다.
  * 다크 모드는 design-system.md에 정의되기 전까지 만들지 않는다 (라이트만).
  */
-private val DuriseoLightColorScheme = lightColorScheme(
+internal val DuriseoLightColorScheme = lightColorScheme(
     primary = Brand500,
     onPrimary = OnBrand,
     primaryContainer = Brand100,
     onPrimaryContainer = Brand700,
+    secondary = Ink900,
+    onSecondary = OnBrand,
+    secondaryContainer = Brand100,
+    onSecondaryContainer = Brand700,
+    background = Surface0,
+    onBackground = Ink900,
     surface = Surface0,
     onSurface = Ink900,
+    surfaceVariant = Surface100,
     onSurfaceVariant = Ink600,
+    surfaceContainerLowest = Surface0,
     surfaceContainerLow = Surface50,
     surfaceContainer = Surface100,
+    surfaceContainerHigh = Surface0,
+    surfaceContainerHighest = Line300,
+    inverseSurface = Ink900,
+    inverseOnSurface = OnBrand,
     outline = Line300,
     outlineVariant = Line200,
     error = Danger600,

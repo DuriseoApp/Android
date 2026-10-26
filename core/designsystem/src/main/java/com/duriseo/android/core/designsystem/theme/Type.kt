@@ -51,7 +51,7 @@ val IbmPlexMono = FontFamily(
 )
 
 /**
- * tokens에 `letterSpacing`이 없는 스타일은 0으로 둔다 (CSS 기본값과 같음, unit-1.md 결정 6).
+ * tokens에 `letterSpacing`이 없는 스타일은 0으로 둔다 (design-system.md "Android 매핑": 보드도 지정하지 않음 = CSS 기본값).
  * 행간은 위아래 가운데 정렬(CSS line-height와 같은 모양)로 맞춘다.
  */
 private fun plexStyle(
@@ -59,8 +59,9 @@ private fun plexStyle(
     lineHeight: TextUnit,
     weight: FontWeight,
     letterSpacing: TextUnit = 0.em,
+    fontFamily: FontFamily = IbmPlexSansKr,
 ) = TextStyle(
-    fontFamily = IbmPlexSansKr,
+    fontFamily = fontFamily,
     fontSize = size,
     lineHeight = lineHeight,
     fontWeight = weight,
@@ -72,17 +73,20 @@ private fun plexStyle(
 )
 
 /**
- * design-system.md 매핑 표에 있는 9개만 지정한다. 나머지(display·title-sm·code-lg·code-md)와
- * 표에 없는 M3 스타일은 Docs 보충(PR) 뒤에 더한다.
- * TODO(Docs PR): display, title-sm, code-lg, code-md 대응이 정해지면 추가.
+ * design-system.md "Android 매핑"의 Typography 대응 11개. 남는 자리(displayMedium·displaySmall·
+ * headlineLarge·headlineSmall)는 쓰지 않는다. `code-lg`·`code-md`는 [DuriseoTextStyles].
  */
 val DuriseoTypography = Typography(
+    // display 40/46 700, -0.02em (로그인 앱 이름)
+    displayLarge = plexStyle(40.sp, 46.sp, FontWeight.Bold, (-0.02).em),
     // headline 26/35 700, -0.01em
     headlineMedium = plexStyle(26.sp, 35.sp, FontWeight.Bold, (-0.01).em),
     // title-lg 22/30 700, -0.01em
     titleLarge = plexStyle(22.sp, 30.sp, FontWeight.Bold, (-0.01).em),
     // title-md 17/24 700
     titleMedium = plexStyle(17.sp, 24.sp, FontWeight.Bold),
+    // title-sm 15/22 700
+    titleSmall = plexStyle(15.sp, 22.sp, FontWeight.Bold),
     // body-lg 16/24 400
     bodyLarge = plexStyle(16.sp, 24.sp, FontWeight.Normal),
     // body-md 15/24 400
@@ -96,3 +100,15 @@ val DuriseoTypography = Typography(
     // micro 11/14 600
     labelSmall = plexStyle(11.sp, 14.sp, FontWeight.SemiBold),
 )
+
+/**
+ * M3 `Typography`에 고정폭 자리가 없어서 따로 둔 초대코드용 스타일 (`font.mono` IBM Plex Mono, 500).
+ * `DuriseoTheme`가 제공하지 않고 `DuriseoTextStyles.CodeLg`처럼 바로 쓴다.
+ */
+object DuriseoTextStyles {
+    /** code-lg 26/32 500 mono, 0.04em (초대코드 칸, InviteCreate.dc.html 32행) */
+    val CodeLg: TextStyle = plexStyle(26.sp, 32.sp, FontWeight.Medium, 0.04.em, IbmPlexMono)
+
+    /** code-md 24/30 500 mono (InviteEnter.dc.html 65행). letterSpacing은 토큰에 없어 0 */
+    val CodeMd: TextStyle = plexStyle(24.sp, 30.sp, FontWeight.Medium, fontFamily = IbmPlexMono)
+}

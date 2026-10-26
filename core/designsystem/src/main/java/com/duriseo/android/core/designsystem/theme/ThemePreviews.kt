@@ -1,6 +1,7 @@
 package com.duriseo.android.core.designsystem.theme
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,7 +18,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 
 // 토큰 견본 Preview. 글자는 토큰 이름을 보여 주는 개발용이라 앱 문구(strings.xml)가 아니다.
 
@@ -52,6 +57,9 @@ private val TokenColors: List<Pair<String, Color>> = listOf(
     "favorite-600" to Favorite600,
 )
 
+/** 견본 한 칸의 크기. 앱바 높이(64) 토큰 하나로 모든 견본(색, 모서리, 그림자)을 같은 크기로 그린다. */
+private val SampleSize = DuriseoSize.Appbar
+
 @Composable
 private fun SwatchGrid(swatches: List<Pair<String, Color>>, columns: Int = 4) {
     Column(
@@ -63,16 +71,21 @@ private fun SwatchGrid(swatches: List<Pair<String, Color>>, columns: Int = 4) {
         swatches.chunked(columns).forEach { rowItems ->
             Row(horizontalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space2)) {
                 rowItems.forEach { (name, color) ->
-                    Box(
-                        modifier = Modifier
-                            .size(width = DuriseoSize.ButtonLg + DuriseoSize.Touch, height = DuriseoSize.ButtonLg)
-                            .background(color, MaterialTheme.shapes.small),
-                        contentAlignment = Alignment.Center,
+                    Column(
+                        modifier = Modifier.width(SampleSize),
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .size(SampleSize)
+                                .background(color, MaterialTheme.shapes.small)
+                                .border(Dp.Hairline, Line200, MaterialTheme.shapes.small),
+                        )
                         Text(
                             text = name,
                             style = MaterialTheme.typography.labelSmall,
-                            color = onPersonColor(color),
+                            color = Ink900,
+                            textAlign = TextAlign.Center,
                         )
                     }
                 }
@@ -85,7 +98,7 @@ private fun SwatchGrid(swatches: List<Pair<String, Color>>, columns: Int = 4) {
 @Composable
 private fun ColorTokensPreview() {
     DuriseoTheme {
-        SwatchGrid(TokenColors, columns = 4)
+        SwatchGrid(TokenColors, columns = 6)
     }
 }
 
@@ -94,8 +107,8 @@ private fun ColorTokensPreview() {
 private fun PickPalettePreview() {
     DuriseoTheme {
         SwatchGrid(
-            swatches = DuriseoPickPalette.colors.map { "${it.label} ${it.key}" to it.color },
-            columns = 3,
+            swatches = DuriseoPickPalette.colors.map { stringResource(it.labelRes) to it.color },
+            columns = 6,
         )
     }
 }
@@ -111,15 +124,19 @@ private fun TypographyTokensPreview() {
             verticalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space1),
         ) {
             // 이름 = M3 스타일 이름 (tokens 이름)
+            Text("displayLarge (display) 40/46", style = MaterialTheme.typography.displayLarge, color = Ink900)
             Text("headlineMedium (headline) 26/35", style = MaterialTheme.typography.headlineMedium, color = Ink900)
             Text("titleLarge (title-lg) 22/30", style = MaterialTheme.typography.titleLarge, color = Ink900)
             Text("titleMedium (title-md) 17/24", style = MaterialTheme.typography.titleMedium, color = Ink900)
+            Text("titleSmall (title-sm) 15/22", style = MaterialTheme.typography.titleSmall, color = Ink900)
             Text("bodyLarge (body-lg) 16/24", style = MaterialTheme.typography.bodyLarge, color = Ink900)
             Text("bodyMedium (body-md) 15/24", style = MaterialTheme.typography.bodyMedium, color = Ink900)
             Text("bodySmall (body-sm) 14/22", style = MaterialTheme.typography.bodySmall, color = Ink900)
             Text("labelLarge (label) 13/18", style = MaterialTheme.typography.labelLarge, color = Ink900)
             Text("labelMedium (caption) 12/16", style = MaterialTheme.typography.labelMedium, color = Ink900)
             Text("labelSmall (micro) 11/14", style = MaterialTheme.typography.labelSmall, color = Ink900)
+            Text("CodeLg 26/32 mono", style = DuriseoTextStyles.CodeLg, color = Ink900)
+            Text("CodeMd 24/30 mono", style = DuriseoTextStyles.CodeMd, color = Ink900)
         }
     }
 }
@@ -129,7 +146,7 @@ private fun ShapeSample(name: String, shape: Shape) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
-                .size(DuriseoSize.ButtonLg + DuriseoSize.ButtonMd)
+                .size(SampleSize)
                 .background(Brand100, shape),
         )
         Text(text = name, style = MaterialTheme.typography.labelSmall, color = Ink900)
@@ -168,7 +185,7 @@ private fun ShadowSample(name: String, shadow: DuriseoShadow) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
-                .size(DuriseoSize.ButtonLg + DuriseoSize.ButtonMd)
+                .size(SampleSize)
                 .duriseoShadow(shape, shadow)
                 .background(Surface0, shape),
         )

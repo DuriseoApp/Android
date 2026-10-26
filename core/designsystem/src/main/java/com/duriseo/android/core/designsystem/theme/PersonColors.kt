@@ -1,8 +1,10 @@
 package com.duriseo.android.core.designsystem.theme
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import com.duriseo.android.core.designsystem.R
 import kotlin.math.pow
 
 /**
@@ -28,11 +30,14 @@ val DefaultPersonColors = PersonColors(
 
 val LocalPersonColors = staticCompositionLocalOf { DefaultPersonColors }
 
-/** 우리 색상 팔레트의 한 칸. [key]는 서버 팔레트 키 그대로다 (ERD `space_members.color`). */
+/**
+ * 우리 색상 팔레트의 한 칸. [key]는 서버 팔레트 키 그대로다 (ERD `space_members.color`).
+ * [labelRes]는 색 이름("주황" 등) 문구 리소스다.
+ */
 @Immutable
 data class PickColor(
     val key: String,
-    val label: String,
+    @StringRes val labelRes: Int,
     val color: Color,
 )
 
@@ -42,18 +47,18 @@ data class PickColor(
  */
 object DuriseoPickPalette {
     val colors: List<PickColor> = listOf(
-        PickColor("pick-orange", "주황", Color(0xFFE0612F)),
-        PickColor("pick-rose", "로즈", Color(0xFFD6336C)),
-        PickColor("pick-amber", "앰버", Color(0xFFF59F00)),
-        PickColor("pick-mustard", "머스터드", Color(0xFFB8860B)),
-        PickColor("pick-green", "초록", Color(0xFF2F9E44)),
-        PickColor("pick-teal", "청록", Color(0xFF0C8599)),
-        PickColor("pick-blue", "파랑", Color(0xFF2F6FDB)),
-        PickColor("pick-purple", "보라", Color(0xFF6D4AE0)),
-        PickColor("pick-magenta", "자주", Color(0xFFAE3EC9)),
-        PickColor("pick-brown", "브라운", Color(0xFF8D6E63)),
-        PickColor("pick-gray", "회색", Color(0xFF868E96)),
-        PickColor("pick-ink", "먹색", Color(0xFF1C1A22)),
+        PickColor("pick-orange", R.string.pick_label_orange, Color(0xFFE0612F)),
+        PickColor("pick-rose", R.string.pick_label_rose, Color(0xFFD6336C)),
+        PickColor("pick-amber", R.string.pick_label_amber, Color(0xFFF59F00)),
+        PickColor("pick-mustard", R.string.pick_label_mustard, Color(0xFFB8860B)),
+        PickColor("pick-green", R.string.pick_label_green, Color(0xFF2F9E44)),
+        PickColor("pick-teal", R.string.pick_label_teal, Color(0xFF0C8599)),
+        PickColor("pick-blue", R.string.pick_label_blue, Color(0xFF2F6FDB)),
+        PickColor("pick-purple", R.string.pick_label_purple, Color(0xFF6D4AE0)),
+        PickColor("pick-magenta", R.string.pick_label_magenta, Color(0xFFAE3EC9)),
+        PickColor("pick-brown", R.string.pick_label_brown, Color(0xFF8D6E63)),
+        PickColor("pick-gray", R.string.pick_label_gray, Color(0xFF868E96)),
+        PickColor("pick-ink", R.string.pick_label_ink, Color(0xFF1C1A22)),
     )
 
     /** 키 → 색. 모르는 키면 null. */

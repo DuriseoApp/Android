@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.main.component
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -13,14 +14,17 @@ import com.duriseo.android.core.designsystem.R
  */
 enum class MainTab(
     @StringRes val labelRes: Int,
+    @DrawableRes val iconRes: Int,
     val route: MainRouteModel,
 ) {
     CALENDAR(
         labelRes = R.string.tab_calendar,
+        iconRes = R.drawable.ic_tab_calendar,
         route = MainRouteModel.Calendar,
     ),
     MEMO(
         labelRes = R.string.tab_memo,
+        iconRes = R.drawable.ic_tab_memo,
         route = MainRouteModel.Memo,
     );
 

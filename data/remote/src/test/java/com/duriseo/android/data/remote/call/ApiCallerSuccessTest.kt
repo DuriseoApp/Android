@@ -5,6 +5,8 @@ import com.duriseo.android.data.remote.SampleDto
 import com.duriseo.android.data.remote.json.createApiJson
 import com.duriseo.android.data.remote.jsonResponse
 import com.duriseo.android.data.remote.sampleApi
+import com.duriseo.android.domain.error.DataError
+import com.duriseo.android.domain.error.ErrorCode
 import com.duriseo.android.domain.result.DataResult
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
@@ -101,5 +103,15 @@ class ApiCallerSuccessTest {
         val result = caller.call { api.getSample() }
 
         assertTrue(result is DataResult.Failure)
+    }
+
+    @Test
+    fun `API 1_1 성공 응답의 일시 형식이 틀리면 INTERNAL_ERROR로 처리한다`() = runTest {
+        server.enqueue(jsonResponse(200, """{"id":"a","note":null,"createdAt":"어제 오후"}"""))
+
+        val result = caller.call { api.getSample() }
+
+        val error = (result as DataResult.Failure).error as DataError.ApiError
+        assertEquals(ErrorCode.INTERNAL_ERROR, error.knownCode)
     }
 }

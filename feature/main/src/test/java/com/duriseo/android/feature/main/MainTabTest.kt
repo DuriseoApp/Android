@@ -31,4 +31,10 @@ class MainTabTest {
         assertEquals(DesignR.string.tab_calendar, MainTab.CALENDAR.labelRes)
         assertEquals(DesignR.string.tab_memo, MainTab.MEMO.labelRes)
     }
+
+    @Test
+    fun `D-30 탭 아이콘은 달력과 메모 선 아이콘이다`() {
+        assertEquals(DesignR.drawable.ic_tab_calendar, MainTab.CALENDAR.iconRes)
+        assertEquals(DesignR.drawable.ic_tab_memo, MainTab.MEMO.iconRes)
+    }
 }

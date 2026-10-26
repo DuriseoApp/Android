@@ -16,8 +16,7 @@ import com.duriseo.android.core.designsystem.component.DuriseoBottomNavItem
 
 /**
  * 하단 탭. `feature:main`은 선택 상태와 클릭만 넘기고 그림은 `core:designsystem`의 [DuriseoBottomNav]가 그린다.
- *
- * TODO(Docs PR): 탭 아이콘(달력·메모)은 Docs에 원본이 정해지면 `iconRes`로 넘긴다 (확인 필요 3).
+ * 탭 아이콘은 선택돼도 같은 선 아이콘이고 색만 바뀐다 (design-system.md "하단 탭").
  */
 @Composable
 fun MainBottomBar(
@@ -27,6 +26,7 @@ fun MainBottomBar(
     modifier: Modifier = Modifier,
 ) {
     AnimatedVisibility(
+        modifier = modifier,
         visible = isVisible,
         enter = slideInVertically(initialOffsetY = { it }) +
             expandVertically(expandFrom = Alignment.Top) +
@@ -36,12 +36,12 @@ fun MainBottomBar(
             fadeOut(),
     ) {
         DuriseoBottomNav(
-            modifier = modifier,
             items = MainTab.entries.map { tab ->
                 DuriseoBottomNavItem(
                     label = stringResource(tab.labelRes),
                     selected = tab == currentTab,
                     onClick = { onTabSelected(tab) },
+                    iconRes = tab.iconRes,
                 )
             },
         )

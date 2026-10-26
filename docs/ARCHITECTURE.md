@@ -7,7 +7,8 @@
 ```
 app ──> feature:main ──> feature:<기능> ──> domain <── data:repository ──> data:remote
                                 │                                    └──> data:local
-                                └──> core:designsystem, core:common        push ──> domain
+                                ├──> core:designsystem ──> domain      push ──> domain
+                                └──> core:common
 ```
 
 | 레이어 | 하는 일 | 알면 안 되는 것 |

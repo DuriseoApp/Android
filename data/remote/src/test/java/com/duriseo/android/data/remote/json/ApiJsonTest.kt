@@ -2,6 +2,7 @@ package com.duriseo.android.data.remote.json
 
 import com.duriseo.android.data.remote.SampleDto
 import org.junit.Assert.assertEquals
+import kotlinx.serialization.SerializationException
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.Instant
@@ -56,5 +57,21 @@ class ApiJsonTest {
 
         assertNull(dto.note)
         assertNull(dto.day)
+    }
+
+    @Test(expected = SerializationException::class)
+    fun `API 1장 모양이 틀린 일시는 SerializationException이다`() {
+        json.decodeFromString(
+            SampleDto.serializer(),
+            """{"id":"1","note":null,"createdAt":"어제 오후"}""",
+        )
+    }
+
+    @Test(expected = SerializationException::class)
+    fun `API 1장 모양이 틀린 날짜는 SerializationException이다`() {
+        json.decodeFromString(
+            SampleDto.serializer(),
+            """{"id":"1","note":null,"createdAt":"2026-10-17T06:30:00Z","day":"2026-13-45"}""",
+        )
     }
 }
