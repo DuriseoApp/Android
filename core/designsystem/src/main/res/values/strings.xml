@@ -1,0 +1,26 @@
+<resources>
+    <!-- 하단 탭 (SCREENS.md 공통 "하단 탭", D-30). 접근성 라벨 "주요 메뉴"는 design-system.md "하단 탭" -->
+    <string name="tab_calendar">캘린더</string>
+    <string name="tab_memo">메모</string>
+    <string name="bottom_nav_label">주요 메뉴</string>
+
+    <!-- 오프라인 안내: SCREENS.md 공통 표 "오프라인 안내" (PRD NFR-OFF-02 문구 그대로, 스낵바) -->
+    <string name="offline_required">인터넷 연결이 필요해요</string>
+
+    <!-- 공통 오류 안내: SCREENS.md 공통 표 "공통 오류" (API.md 5장 INTERNAL_ERROR, 스낵바) -->
+    <string name="error_common">문제가 생겼어요. 잠시 후 다시 시도해 주세요</string>
+
+    <!-- 우리 색상 팔레트 이름 (tokens.json color.pick label, 팔레트 순서) -->
+    <string name="pick_label_orange">주황</string>
+    <string name="pick_label_rose">로즈</string>
+    <string name="pick_label_amber">앰버</string>
+    <string name="pick_label_mustard">머스터드</string>
+    <string name="pick_label_green">초록</string>
+    <string name="pick_label_teal">청록</string>
+    <string name="pick_label_blue">파랑</string>
+    <string name="pick_label_purple">보라</string>
+    <string name="pick_label_magenta">자주</string>
+    <string name="pick_label_brown">브라운</string>
+    <string name="pick_label_gray">회색</string>
+    <string name="pick_label_ink">먹색</string>
+</resources>

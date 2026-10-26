@@ -1,5 +1,6 @@
 plugins {
     id("duriseo.android.library")
+    id("duriseo.android.hilt")
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -10,11 +11,9 @@ android {
 dependencies {
     implementation(libs.timber)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.coroutines.core)
 
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
+
     testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
 }

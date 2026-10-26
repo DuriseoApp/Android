@@ -26,8 +26,7 @@ description: feature:<이름> 모듈을 새로 만들고 앱에 연결한다. "f
        implementation(projects.core.common)
        implementation(projects.domain)
 
-       testImplementation(libs.junit)
-       // 테스트 도구는 docs/MODULES.md 3장의 테스트 라이브러리 (단위 1에서 카탈로그에 추가됨)
+       // 테스트 도구(JUnit, 코루틴 테스트, Turbine)는 duriseo.android.feature 플러그인이 넣어 준다
    }
    ```
    - `data:*` 모듈에 의존하지 않는다. 리포지토리 구현은 Hilt가 `data:repository`에서 넣어 준다.

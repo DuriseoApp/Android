@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 하단 탭 메모 아이콘. 원본 ../Docs/design/icons/tab-memo.svg (24 격자, 선 1.8, round cap·join).
+     선택돼도 채우지 않는다. 색은 Icon의 tint로 준다 (strokeColor는 자리값). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M6,3.5 h9 l4,4 V20 a0.5,0.5 0 0 1 -0.5,0.5 h-12.5 A0.5,0.5 0 0 1 5.5,20 V4 a0.5,0.5 0 0 1 0.5,-0.5 z"
+        android:strokeColor="#000000"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M15,3.5 V8 h4 M9,12 h6 M9,16 h4"
+        android:strokeColor="#000000"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
