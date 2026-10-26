@@ -32,5 +32,9 @@ gradlePlugin {
             id = "duriseo.android.feature"
             implementationClass = "AndroidFeatureConventionPlugin"
         }
+        register("kotlinJvm") {
+            id = "duriseo.kotlin.jvm"
+            implementationClass = "KotlinJvmConventionPlugin"
+        }
     }
 }

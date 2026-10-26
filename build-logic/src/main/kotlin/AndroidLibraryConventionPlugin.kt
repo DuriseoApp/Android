@@ -9,11 +9,14 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
         with(target) {
             pluginManager.apply("com.android.library")
 
+            val catalog = versionCatalog
+            val javaVersion = JavaVersion.toVersion(catalog.versionOf("jvmTarget"))
+
             extensions.configure<LibraryExtension> {
-                compileSdk = 36
+                compileSdk = catalog.intVersionOf("compileSdk")
 
                 defaultConfig {
-                    minSdk = 26
+                    minSdk = catalog.intVersionOf("minSdk")
                     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
                     consumerProguardFiles("consumer-rules.pro")
                 }
@@ -29,8 +32,8 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                 }
 
                 compileOptions {
-                    sourceCompatibility = JavaVersion.VERSION_11
-                    targetCompatibility = JavaVersion.VERSION_11
+                    sourceCompatibility = javaVersion
+                    targetCompatibility = javaVersion
                 }
 
                 buildFeatures {

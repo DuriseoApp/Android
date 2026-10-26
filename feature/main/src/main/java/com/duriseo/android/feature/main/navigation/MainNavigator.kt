@@ -3,35 +3,29 @@ package com.duriseo.android.feature.main.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.navigation.NavDestination
-import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navOptions
 import com.duriseo.android.core.common.navigation.MainRouteModel
-import com.duriseo.android.feature.home.navigation.navigateToHome
-import com.duriseo.android.core.common.navigation.RouteModel
-import com.duriseo.android.feature.main.component.MainMenu
-import com.duriseo.android.feature.menu.navigation.navigateToMenu
+import com.duriseo.android.feature.calendar.navigation.navigateToCalendar
+import com.duriseo.android.feature.main.component.MainTab
 
 class MainNavigator(
-    val navController: NavHostController
+    val navController: NavHostController,
 ) {
-    val startDestination = MainRouteModel.Home
+    /** 앱의 첫 화면은 캘린더다 (D-30) */
+    val startDestination: MainRouteModel = MainTab.START.route
+
     val currentDestination: NavDestination?
         @Composable get() = navController.currentBackStackEntryAsState().value?.destination
-    val currentMenu: MainMenu?
-        @Composable get() = MainMenu.find { menu ->
-            currentDestination?.hasRoute(menu::class) == true
-        }
 
-    private val singleTopOptions = navOptions {
-        launchSingleTop = true
-        restoreState = true
-    }
+    val currentTab: MainTab?
+        @Composable get() = MainTab.fromDestination(currentDestination)
 
-    fun navigate(menu: MainMenu) {
+    /** 탭 전환. 시작 화면까지 되돌려 상태를 저장하고, 다시 누르면 복원한다. */
+    fun navigate(tab: MainTab) {
         val navOptions = navOptions {
             popUpTo(navController.graph.findStartDestination().id) {
                 saveState = true
@@ -40,23 +34,15 @@ class MainNavigator(
             restoreState = true
         }
 
-        when (menu) {
-            MainMenu.HOME -> navController.navigateToHome(navOptions)
-            MainMenu.MENU -> navController.navigateToMenu(navOptions)
+        when (tab) {
+            MainTab.CALENDAR -> navController.navigateToCalendar(navOptions)
+            MainTab.MEMO -> navController.navigate(MainRouteModel.Memo, navOptions)
         }
-        fun popBackStack() = navController.popBackStack()
-        fun popAllBackStack(destination: RouteModel) =
-            navController.popBackStack(destination, false)
     }
 
+    /** 하단 탭은 탭 화면(캘린더·메모)에서만 보인다 */
     @Composable
-    fun showBottomBar(): Boolean {
-        val isCurrentMenu = MainMenu.contains {
-            currentDestination?.hasRoute(it::class) == true
-        }
-        return isCurrentMenu
-
-    }
+    fun showBottomBar(): Boolean = currentTab != null
 }
 
 @Composable

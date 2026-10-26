@@ -1,135 +1,98 @@
 package com.duriseo.android.core.designsystem.theme
 
-import androidx.compose.runtime.Immutable
+import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.googlefonts.Font
+import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.duriseo.android.core.designsystem.R
 
-private val pretendardBold = FontFamily(Font(R.font.pretendard_bold, FontWeight.Bold))
-private val pretendardSemiBold = FontFamily(Font(R.font.pretendard_semibold, FontWeight.SemiBold))
-private val pretendardRegular = FontFamily(Font(R.font.pretendard_regular, FontWeight.Medium))
+// 값의 기준은 ../Docs/design/tokens.json (font, typography.*)과
+// design-system.md "Android (Jetpack Compose) 매핑"의 Typography 대응이다.
+//
+// 글꼴은 Google Downloadable Fonts로 받는다 (리드 결정 2026-10-26). 받기 전이나 오프라인이면
+// 시스템 글꼴로 보인다. 오픈소스 고지(SIL OFL)는 오픈소스 라이선스 화면이 생기는 단위에서 한다.
 
-private fun boldTextStyle(
-    fontSize: TextUnit,
-    fontFamily: FontFamily = pretendardBold,
-    lineHeight: TextUnit = 1.35.em,
-    letterSpacing: TextUnit = (-0.012).em
-): TextStyle = TextStyle(
-    fontSize = fontSize,
-    fontFamily = fontFamily,
-    lineHeight = lineHeight,
-    letterSpacing = letterSpacing,
-    lineHeightStyle = LineHeightStyle(
-        alignment = LineHeightStyle.Alignment.Center,
-        trim = LineHeightStyle.Trim.None
-    )
+private val GoogleFontProvider = GoogleFont.Provider(
+    providerAuthority = "com.google.android.gms.fonts",
+    providerPackage = "com.google.android.gms",
+    certificates = R.array.com_google_android_gms_fonts_certs,
 )
 
-private fun semiBoldTextStyle(
-    fontSize: TextUnit,
-    fontFamily: FontFamily = pretendardSemiBold,
+private val IbmPlexSansKrName = GoogleFont("IBM Plex Sans KR")
+private val IbmPlexMonoName = GoogleFont("IBM Plex Mono")
+
+private fun sansKr(weight: FontWeight) = Font(
+    googleFont = IbmPlexSansKrName,
+    fontProvider = GoogleFontProvider,
+    weight = weight,
+)
+
+/** tokens `font.sans`: 모든 UI 글자. 400·500·600·700 */
+val IbmPlexSansKr = FontFamily(
+    sansKr(FontWeight.Normal),
+    sansKr(FontWeight.Medium),
+    sansKr(FontWeight.SemiBold),
+    sansKr(FontWeight.Bold),
+)
+
+/** tokens `font.mono`: 초대코드 전용. 500 */
+val IbmPlexMono = FontFamily(
+    Font(
+        googleFont = IbmPlexMonoName,
+        fontProvider = GoogleFontProvider,
+        weight = FontWeight.Medium,
+    ),
+)
+
+/**
+ * tokens에 `letterSpacing`이 없는 스타일은 0으로 둔다 (CSS 기본값과 같음, unit-1.md 결정 6).
+ * 행간은 위아래 가운데 정렬(CSS line-height와 같은 모양)로 맞춘다.
+ */
+private fun plexStyle(
+    size: TextUnit,
     lineHeight: TextUnit,
-    letterSpacing: TextUnit
-): TextStyle = TextStyle(
-    fontSize = fontSize,
-    fontFamily = fontFamily,
+    weight: FontWeight,
+    letterSpacing: TextUnit = 0.em,
+) = TextStyle(
+    fontFamily = IbmPlexSansKr,
+    fontSize = size,
     lineHeight = lineHeight,
+    fontWeight = weight,
     letterSpacing = letterSpacing,
     lineHeightStyle = LineHeightStyle(
         alignment = LineHeightStyle.Alignment.Center,
-        trim = LineHeightStyle.Trim.None
-    )
+        trim = LineHeightStyle.Trim.None,
+    ),
 )
 
-private fun regularTextStyle(
-    fontSize: TextUnit,
-    fontFamily: FontFamily = pretendardRegular,
-    lineHeight: TextUnit,
-    letterSpacing: TextUnit
-): TextStyle = TextStyle(
-    fontSize = fontSize,
-    fontFamily = fontFamily,
-    lineHeight = lineHeight,
-    letterSpacing = letterSpacing,
-    lineHeightStyle = LineHeightStyle(
-        alignment = LineHeightStyle.Alignment.Center,
-        trim = LineHeightStyle.Trim.None
-    )
-)
-
-@Immutable
-data class DuriseoTypography(
-    val h1Bold: TextStyle,
-    val h2SemiBold: TextStyle,
-    val h3SemiBold: TextStyle,
-
-    val b1Regular: TextStyle,
-    val b1SemiBold: TextStyle,
-    val b2Regular: TextStyle,
-    val b2SemiBold: TextStyle,
-
-    val c1Regular: TextStyle,
-    val c1SemiBold: TextStyle,
-    val c2Regular: TextStyle
-)
-
-fun typography() = DuriseoTypography(
-    h1Bold = boldTextStyle(
-        fontSize = 32.sp,
-        lineHeight = 1.3.em,
-        letterSpacing = (-0.02).em
-    ),
-    h2SemiBold = semiBoldTextStyle(
-        fontSize = 24.sp,
-        lineHeight = 1.35.em,
-        letterSpacing = (-0.015).em
-    ),
-    h3SemiBold = semiBoldTextStyle(
-        fontSize = 20.sp,
-        lineHeight = 1.4.em,
-        letterSpacing = (-0.01).em
-    ),
-
-    b1Regular = regularTextStyle(
-        fontSize = 16.sp,
-        lineHeight = 1.5.em,
-        letterSpacing = (-0.004).em
-    ),
-    b1SemiBold = semiBoldTextStyle(
-        fontSize = 16.sp,
-        lineHeight = 1.5.em,
-        letterSpacing = (-0.004).em
-    ),
-    b2Regular = regularTextStyle(
-        fontSize = 14.sp,
-        lineHeight = 1.45.em,
-        letterSpacing = (-0.004).em
-    ),
-    b2SemiBold = semiBoldTextStyle(
-        fontSize = 14.sp,
-        lineHeight = 1.45.em,
-        letterSpacing = (-0.004).em
-    ),
-
-    c1Regular = regularTextStyle(
-        fontSize = 12.sp,
-        lineHeight = 1.4.em,
-        letterSpacing = 0.em
-    ),
-    c1SemiBold = semiBoldTextStyle(
-        fontSize = 12.sp,
-        lineHeight = 1.4.em,
-        letterSpacing = 0.em
-    ),
-    c2Regular = regularTextStyle(
-        fontSize = 10.sp,
-        lineHeight = 1.2.em,
-        letterSpacing = 0.01.em
-    )
+/**
+ * design-system.md 매핑 표에 있는 9개만 지정한다. 나머지(display·title-sm·code-lg·code-md)와
+ * 표에 없는 M3 스타일은 Docs 보충(PR) 뒤에 더한다.
+ * TODO(Docs PR): display, title-sm, code-lg, code-md 대응이 정해지면 추가.
+ */
+val DuriseoTypography = Typography(
+    // headline 26/35 700, -0.01em
+    headlineMedium = plexStyle(26.sp, 35.sp, FontWeight.Bold, (-0.01).em),
+    // title-lg 22/30 700, -0.01em
+    titleLarge = plexStyle(22.sp, 30.sp, FontWeight.Bold, (-0.01).em),
+    // title-md 17/24 700
+    titleMedium = plexStyle(17.sp, 24.sp, FontWeight.Bold),
+    // body-lg 16/24 400
+    bodyLarge = plexStyle(16.sp, 24.sp, FontWeight.Normal),
+    // body-md 15/24 400
+    bodyMedium = plexStyle(15.sp, 24.sp, FontWeight.Normal),
+    // body-sm 14/22 400
+    bodySmall = plexStyle(14.sp, 22.sp, FontWeight.Normal),
+    // label 13/18 600
+    labelLarge = plexStyle(13.sp, 18.sp, FontWeight.SemiBold),
+    // caption 12/16 500
+    labelMedium = plexStyle(12.sp, 16.sp, FontWeight.Medium),
+    // micro 11/14 600
+    labelSmall = plexStyle(11.sp, 14.sp, FontWeight.SemiBold),
 )

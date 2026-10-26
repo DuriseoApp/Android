@@ -1,0 +1,11 @@
+<resources>
+    <!-- 하단 탭 (SCREENS.md 공통 "하단 탭", D-30) -->
+    <string name="tab_calendar">캘린더</string>
+    <string name="tab_memo">메모</string>
+
+    <!-- 오프라인 안내: PRD NFR-OFF-02 문구 그대로 (스낵바로 보여 준다) -->
+    <string name="offline_required">인터넷 연결이 필요해요</string>
+
+    <!-- 공통 오류 안내: API.md 5장 INTERNAL_ERROR "공통 오류 안내" (스낵바) -->
+    <string name="error_common">문제가 생겼어요. 잠시 후 다시 시도해 주세요</string>
+</resources>

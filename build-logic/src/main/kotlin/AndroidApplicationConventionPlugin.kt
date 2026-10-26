@@ -9,12 +9,15 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
         with(target) {
             pluginManager.apply("com.android.application")
 
+            val catalog = versionCatalog
+            val javaVersion = JavaVersion.toVersion(catalog.versionOf("jvmTarget"))
+
             extensions.configure<ApplicationExtension> {
-                compileSdk = 36
+                compileSdk = catalog.intVersionOf("compileSdk")
 
                 defaultConfig {
-                    minSdk = 26
-                    targetSdk = 36
+                    minSdk = catalog.intVersionOf("minSdk")
+                    targetSdk = catalog.intVersionOf("targetSdk")
                     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
                 }
 
@@ -29,8 +32,8 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
                 }
 
                 compileOptions {
-                    sourceCompatibility = JavaVersion.VERSION_11
-                    targetCompatibility = JavaVersion.VERSION_11
+                    sourceCompatibility = javaVersion
+                    targetCompatibility = javaVersion
                 }
 
                 buildFeatures {
