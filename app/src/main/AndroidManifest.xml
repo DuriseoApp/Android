@@ -6,9 +6,14 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- 카카오톡 설치 여부 확인 (Android 11 이상 패키지 가시성). SDK 매니페스트와 합쳐져도 문제없다 -->
+    <queries>
+        <package android:name="com.kakao.talk" />
+    </queries>
+
     <application
         android:name="com.duriseo.android.MyApp"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -25,6 +30,22 @@
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- 카카오 로그인 리다이렉트. scheme은 kakao<네이티브 앱 키> (app/build.gradle.kts의 manifestPlaceholders) -->
+        <activity
+            android:name="com.kakao.sdk.auth.AuthCodeHandlerActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="oauth"
+                    android:scheme="kakao${kakaoNativeAppKey}" />
             </intent-filter>
         </activity>
     </application>

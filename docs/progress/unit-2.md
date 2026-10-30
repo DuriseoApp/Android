@@ -1,7 +1,7 @@
 # 단위 2: 인증
 
-> 브랜치: `feat/2-auth` · PR: (아직 없음) · 상태: 범위 확인 중 (코드 쓰기 전)
-> 기준: PRD v0.7 (Docs main `b992123`), SCREENS.md(캔버스 버전 38, 2026-10-26 갱신), API.md(2026-10-26 갱신: 1장 토큰 형식·인증 실패 순서, 3.1 `AuthTokens`·`Me`, 4.1~4.3·4.6·4.7, 5장), design-system.md(Android 매핑, 스낵바), tokens.json
+> 브랜치: `feat/2-auth` · PR: (아직 없음) · 상태: 구현 중 (1부 데이터 계층 → 2부 화면)
+> 기준: PRD v0.8 (Docs main, Docs PR #9 머지), SCREENS.md(캔버스 버전 38, 2026-10-26 갱신), API.md(2026-10-26 갱신: 1장 토큰 형식·인증 실패 순서, 3.1 `AuthTokens`·`Me`, 4.1~4.3·4.6·4.7, 5장), design-system.md(Android 매핑, 스낵바), tokens.json
 > 서버: Server 단위 1(계정) 머지됨. 개발 서버 배포는 사용자 확인 (아래 "서버 연동")
 
 단위 2는 로그인 상태를 만들고 지키는 단위다. 시작 화면(SCR-START-01), 게스트 시작, Google·카카오 로그인, 게스트 연동과 기존 계정 로그인, 토큰 암호화 저장·자동 갱신·세션 끊김, 로그아웃, 탈퇴, 내 정보(`GET /me`) 캐시, 시간대 갱신, 전체 메뉴(SCR-SET-01)의 계정 부분을 만든다.
@@ -203,6 +203,42 @@ Android 레포 안에서 정할 수 있는 것. 리드가 범위 확인 때 함�
 4. **`local.properties`**: `duriseo.api.devUrl`, `duriseo.google.webClientId`, `duriseo.kakao.nativeAppKey` (값은 claude.ai 프로젝트 `config/environment.md`). 새 키는 없다.
 5. **맥 실기기 확인** (CI 밖): Google 계정 있는 기기로 Google 로그인, 카카오톡 설치·미설치 두 경우, 두 기기로 같은 계정 로그인 → 이전 기기 `SESSION_REPLACED` 안내, 앱 삭제 후 재설치 → 시작 화면(FR-AUTH-01 AC3), 카카오 회원 탈퇴 뒤 카카오 계정의 연결된 서비스에서 둘이서가 사라지는지.
 6. 아래 확인 필요에 답하고 범위가 맞으면 **start**.
+
+## 확인 필요 해결 (PRD v0.8)
+
+아래 "확인 필요" 번호는 Docs v0.8 반영 또는 리드 결정으로 해결됐다. 구현은 이 결정을 따른다.
+
+| 번호 | 해결 | 근거 |
+| --- | --- | --- |
+| 1 | `Me`에 `createdAt`(일시, 가입일) 추가. 앱이 기기 시간대 날짜로 바꿔 보여 줌 | Docs v0.8, API 3.1 |
+| 5 | Docs v0.8에 반영돼 해결 (문구는 SCREENS.md 기준) | Docs v0.8 |
+| 6 | 요청 중은 버튼 비활성만, 공통 오류 스낵바(소셜 SDK 실패·`SOCIAL_TOKEN_INVALID`·`GUEST_ONLY`·`GUEST_NOT_ALLOWED` 포함), 소셜 로그인 취소는 안내 없음, 스낵바는 위에서 40 | Docs v0.8, D-88, SCREENS 공통 표 |
+| 7 | Docs v0.8에 반영돼 해결 (수치는 design-system·tokens.json 기준, 2부) | Docs v0.8 |
+| 8 | Docs v0.8에 반영돼 해결 (로고는 2부, Docs `design/logo/` 기준) | Docs v0.8 |
+| 10 | 로그아웃·탈퇴는 온라인에서만. 오프라인이면 "인터넷 연결이 필요해요", 서버 오류는 공통 오류 후 로그인 상태 유지, `SESSION_*`면 로컬 정리 후 시작 화면, 204면 소셜 SDK 상태도 지움 | D-86, API 3.1 |
+| 11 | 로그아웃·탈퇴·세션 끊김 때 Kakao SDK 로그아웃과 Credential Manager 상태 지우기, 실패는 무시 | API 1장 |
+| 12 | Docs v0.8에 반영돼 해결 (2부 화면에서 SCREENS.md대로) | Docs v0.8, FR-SET-01 |
+| 13 | Docs v0.8에 반영돼 해결 (2부) | Docs v0.8 |
+| 2 | 신규 회원·`importPending` 분기 결과는 만들되, 단위 3 전까지 캘린더로 보냄 | 리드 결정 |
+| 3 | 캘린더 자리 화면 위에 임시 [전체 메뉴] 진입 버튼 | 리드 결정 |
+| 4 | SCR-SET-01은 계정 부분만 | 리드 결정 |
+| 9 | 약관 링크는 모양만, 누르면 동작 없음 | 리드 결정 |
+| 14 | Server 단위 1은 개발 서버에 배포됨 | 리드 결정 |
+| 15 | Robolectric(`org.robolectric:robolectric`)과 `androidx.test:core`를 `testImplementation`으로 추가 | 리드 결정 |
+| 16 | 소셜 로그인 코드는 `core:common`의 `social` 패키지 | 리드 결정 |
+
+구현 중 정한 것 (1부)
+
+- 토큰 값 객체 `AuthTokens`는 네 필드(access·refresh와 각 만료)이고, `isNewUser`는 응답을 감싼 `IssuedTokens`/`LoginResult`가 가진다.
+- `TokenStorage`는 `current()` 말고 `state: StateFlow<TokenState>`(Loading·Empty·Present)와 `restore()`를 가진다. "아직 읽는 중"과 "토큰 없음"을 구분해야 앱 시작 때 빈 화면 → 분기가 되기 때문이다.
+- `SessionEndNotifier`(domain)로 `data:remote`의 Authenticator가 `data:repository`의 `SessionManager`를 부른다. `data:remote`는 `data:repository`를 모른다.
+- `AuthApi`는 인증 없는 클라이언트용(guest·social·refresh), `AuthSessionApi`는 인증 클라이언트용(link·switch·logout)으로 나눴다. 잘못된 클라이언트로 부르는 실수를 막으려는 것이다.
+- Retrofit/DTO는 `data:remote`의 `AuthRemoteDataSource`·`MeRemoteDataSource`가 감싸 도메인 모델만 `data:repository`로 나간다. Room도 `data:local`의 `MeLocalDataSource`·`LocalDataCleaner`가 감싼다.
+- 시간대는 `Clock`(`Clock.systemDefaultZone()`)의 zone으로 비교한다. 프로세스가 도는 동안 기기 시간대를 바꾸면 다음 실행에 반영된다 (결정 5).
+- Room 스키마 JSON(`data/local/schemas/`)은 첫 CI/맥 빌드가 만든다. 만들어지면 커밋한다 (이 환경은 Gradle을 못 돌려 아직 없다).
+- 1부 검증은 CI에서만 한다 (이 환경은 Google Maven에 닿지 않는다). 라이브러리 버전과 `AGP 9` 호환(Tink, Credential Manager, Kakao `v2-user`, Robolectric `sdk = [35]`)은 CI 결과로 확인한다.
+- `DataError.toMessageRes()`의 `SESSION_*`·`TOKEN_EXPIRED` "보여 줄 것 없음" 도우미(C절)는 화면이 쓰는 2부에서 더한다.
+- switch는 새 토큰을 먼저 저장하고 그 뒤에 게스트 Room·설정을 지운다 (토큰을 먼저 지우면 로그인 상태가 잠깐 풀려 시작 화면으로 튄다).
 
 ## 확인 필요
 
