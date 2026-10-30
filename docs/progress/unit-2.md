@@ -1,6 +1,6 @@
 # 단위 2: 인증
 
-> 브랜치: `feat/2-auth` · PR: (아직 없음) · 상태: 구현 중 (1부 데이터 계층 → 2부 화면)
+> 브랜치: `feat/2-auth` · PR: (아직 없음) · 상태: 리뷰 중 (1부 데이터 계층 + 2부 화면 구현 끝, CI 확인 대기)
 > 기준: PRD v0.8 (Docs main, Docs PR #9 머지), SCREENS.md(캔버스 버전 38, 2026-10-26 갱신), API.md(2026-10-26 갱신: 1장 토큰 형식·인증 실패 순서, 3.1 `AuthTokens`·`Me`, 4.1~4.3·4.6·4.7, 5장), design-system.md(Android 매핑, 스낵바), tokens.json
 > 서버: Server 단위 1(계정) 머지됨. 개발 서버 배포는 사용자 확인 (아래 "서버 연동")
 
@@ -239,6 +239,18 @@ Android 레포 안에서 정할 수 있는 것. 리드가 범위 확인 때 함�
 - 1부 검증은 CI에서만 한다 (이 환경은 Google Maven에 닿지 않는다). 라이브러리 버전과 `AGP 9` 호환(Tink, Credential Manager, Kakao `v2-user`, Robolectric `sdk = [35]`)은 CI 결과로 확인한다.
 - `DataError.toMessageRes()`의 `SESSION_*`·`TOKEN_EXPIRED` "보여 줄 것 없음" 도우미(C절)는 화면이 쓰는 2부에서 더한다.
 - switch는 새 토큰을 먼저 저장하고 그 뒤에 게스트 Room·설정을 지운다 (토큰을 먼저 지우면 로그인 상태가 잠깐 풀려 시작 화면으로 튄다).
+
+구현 중 정한 것 (2부)
+
+- 화면 이동은 `authState` 변화가 아니라 **명시한 곳**에서 한다: 앱 시작 분기와 세션 끊김은 `feature:main`의 `MainViewModel`(`start`, `effects`), 로그인·로그아웃·탈퇴·switch는 각 화면 ViewModel의 SideEffect → `MainNavigator.navigateToStart/Home`(백스택을 모두 비움). 세션 끊김 이벤트는 구독자가 없으면 사라지므로 `MainViewModel`이 만들어지자마자 구독해 `Channel`에 쌓는다.
+- 소셜 SDK에는 Activity가 필요한데 ViewModel이 Activity를 들고 있으면 안 되므로, ViewModel이 SideEffect `RequestSocialToken(provider)`를 내보내면 Route가 `viewModel.fetchSocialToken(activity, provider)`를 부르고 결과는 `SocialTokenReceived` 액션으로 돌아온다. SDK 호출은 ViewModel 범위에서 돈다. 단위 테스트는 액션으로 결과를 넣는다.
+- 시작 화면 스낵바는 화면 상태(`snackbarMessageRes`)로 그려 Preview에서 볼 수 있다(위에서 40, 4초). 전체 메뉴·계정 화면의 스낵바는 `MainScreen`의 공통 스낵바(`onShowSnackBar`)를 쓴다.
+- 비활성 버튼은 면 `line-100`(tokens.json), 글자색은 문서에 없어 `ink-600`으로 했다.
+- 다이얼로그는 시스템 창이 아니라 화면 위 오버레이(`Box` 맨 위)로 그려 뒤 막이 `scrim` 토큰 그대로다.
+- 시작 화면의 위 96·스낵바 위 40은 시스템 바 안쪽(Scaffold `padding`)을 기준으로 둔다. 보드에는 시스템 바가 없다.
+- `lifecycle-runtime-compose`는 MODULES.md 3장에 없어 `collectAsStateWithLifecycle` 대신 `collectAsState`를 쓴다.
+- 전체 메뉴는 앱바·게스트 배너·"설정" 섹션의 계정 행·로그아웃만 그린다. 프로필 카드·꾸미기·알림 설정·연결 정보(단위 3·7·8)와 정보 섹션·앱 정보 카드(어느 단위에도 없음, 확인 필요 4)는 그리지 않는다.
+- 캘린더 자리표시 화면의 앱바 자리에 임시 [전체 메뉴] 아이콘 버튼(접근성 "전체 메뉴")만 두었다. 단위 4의 앱바가 대신한다.
 
 ## 확인 필요
 

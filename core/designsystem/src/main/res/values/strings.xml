@@ -10,6 +10,16 @@
     <!-- 공통 오류 안내: SCREENS.md 공통 표 "공통 오류" (API.md 5장 INTERNAL_ERROR, 스낵바) -->
     <string name="error_common">문제가 생겼어요. 잠시 후 다시 시도해 주세요</string>
 
+    <!-- 공용 버튼·접근성 문구. "뒤로 가기"·"닫기"는 보드 그대로 (SCREENS.md 공통 "접근성 문구") -->
+    <string name="action_cancel">취소</string>
+    <string name="nav_back">뒤로 가기</string>
+    <string name="nav_close">닫기</string>
+
+    <!-- 로그아웃 확인 다이얼로그: SCREENS.md SCR-SET-01 "다이얼로그 > 로그아웃 확인". 전체 메뉴·계정 화면·SCR-COUPLE-01이 같이 쓴다 (FR-AUTH-05, D-80) -->
+    <string name="action_logout">로그아웃</string>
+    <string name="logout_dialog_title">로그아웃할까요?</string>
+    <string name="logout_dialog_body">다시 로그인하면 기록을 그대로 볼 수 있어요.</string>
+
     <!-- 우리 색상 팔레트 이름 (tokens.json color.pick label, 팔레트 순서) -->
     <string name="pick_label_orange">주황</string>
     <string name="pick_label_rose">로즈</string>

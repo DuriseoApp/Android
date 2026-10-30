@@ -14,10 +14,12 @@ fun NavController.navigateToCalendar(navOptions: NavOptions) {
 
 fun NavGraphBuilder.calendarNavGraph(
     padding: PaddingValues,
+    onOpenMenu: () -> Unit,
 ) {
     composable<MainRouteModel.Calendar> {
         CalendarRoute(
             padding = padding,
+            onOpenMenu = onOpenMenu,
         )
     }
 }

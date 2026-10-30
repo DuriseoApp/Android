@@ -1,0 +1,45 @@
+<resources>
+    <!-- SCR-SET-01 전체 메뉴 (단위 2: 계정 부분만). 문구는 SCREENS.md "SCR-SET-01"과 보드 Menu.dc.html 그대로 -->
+    <string name="settings_title">전체 메뉴</string>
+    <string name="settings_section_settings">설정</string>
+    <string name="settings_account">계정</string>
+    <string name="settings_account_guest">게스트 · 로그인하기</string>
+    <string name="settings_account_google">Google 로그인</string>
+    <string name="settings_account_kakao">카카오 로그인</string>
+    <string name="settings_guest_banner_title">게스트로 사용 중이에요</string>
+    <string name="settings_guest_banner_body">앱을 삭제하거나 기기를 바꾸면 데이터를 복구할 수 없어요.</string>
+    <string name="settings_guest_banner_action">로그인해서 기록 지키기</string>
+
+    <!-- SCR-SET-01 하위 화면 "계정" (게스트·회원). 보드 Account.dc.html -->
+    <string name="account_title">계정</string>
+    <string name="account_guest_banner_title">게스트로 사용 중이에요</string>
+    <string name="account_guest_banner_body">앱을 지우거나 휴대폰을 바꾸면 일정과 메모를 다시 찾을 수 없어요. 로그인하면 지금까지의 기록이 계정으로 그대로 옮겨져요.</string>
+    <string name="account_section_login">로그인 연결</string>
+    <string name="account_link_google">Google로 로그인</string>
+    <string name="account_link_kakao">카카오로 로그인</string>
+    <string name="account_existing_note">이미 둘이서에 가입된 계정이면 그 계정으로 로그인할 수 있어요. 이때 게스트 기록은 옮겨지지 않고 삭제돼요.</string>
+    <string name="account_guest_id_label">게스트 ID</string>
+    <string name="account_withdraw">탈퇴하기</string>
+    <string name="account_just_linked">로그인했어요. 게스트 기록을 계정으로 옮겼어요.</string>
+    <string name="account_signed_in_google">Google로 로그인 중</string>
+    <string name="account_signed_in_kakao">카카오로 로그인 중</string>
+    <string name="account_method_label">로그인 방식</string>
+    <string name="account_method_google">Google</string>
+    <string name="account_method_kakao">카카오</string>
+    <string name="account_joined_label">가입일</string>
+    <!-- 가입일 형식: 연·월·일, 요일 없음, 앞자리 0 없음 (SCREENS.md "가입일 형식") -->
+    <string name="account_joined_date">%1$d년 %2$d월 %3$d일</string>
+
+    <!-- 탈퇴 확인 (FR-AUTH-06) -->
+    <string name="withdraw_dialog_title">정말 탈퇴할까요?</string>
+    <string name="withdraw_dialog_body_couple">먼저 %1$s님과의 연결이 해제되고, 내 계정이 삭제돼요. 탈퇴한 계정은 되돌릴 수 없어요.</string>
+    <string name="withdraw_dialog_body_personal">내 계정과 모든 일정, 기념일, 메모가 바로 삭제돼요. 탈퇴한 계정은 되돌릴 수 없어요.</string>
+
+    <!-- 이미 가입된 계정 ①② (FR-AUTH-03 AC2·AC3, D-67) -->
+    <string name="already_used_dialog_title">이미 가입된 계정이에요</string>
+    <string name="already_used_dialog_body">이 계정은 이미 둘이서에 가입돼 있어요. 그 계정으로 로그인하면 게스트로 쓴 기록은 옮겨지지 않아요.</string>
+    <string name="already_used_dialog_confirm">그 계정으로 로그인</string>
+    <string name="switch_dialog_title">그 계정으로 로그인할까요?</string>
+    <string name="switch_dialog_body">게스트로 쓴 기록은 모두 삭제돼요. 삭제한 기록은 되돌릴 수 없어요.</string>
+    <string name="switch_dialog_confirm">삭제하고 로그인</string>
+</resources>

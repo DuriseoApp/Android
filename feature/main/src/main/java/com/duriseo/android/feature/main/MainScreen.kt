@@ -5,6 +5,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -13,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.duriseo.android.core.designsystem.component.DuriseoSnackbarHost
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 import com.duriseo.android.feature.calendar.CalendarScreen
@@ -28,7 +31,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainScreen(
     navigator: MainNavigator = rememberMainNavigator(),
+    viewModel: MainViewModel = hiltViewModel(),
 ) {
+    val start by viewModel.start.collectAsState()
+    val startDestination = navigator.startDestination(start)
+
     val scope = rememberCoroutineScope()
     val resources = LocalContext.current.resources
     val snackbarHostState = remember { SnackbarHostState() }
@@ -42,17 +49,32 @@ fun MainScreen(
         }
     }
 
+    // 세션이 서버에서 끊기면 시작 화면으로 간다 (FR-AUTH-02 AC3). 내비게이션 그래프가 생긴 뒤부터 받는다
+    val ready = startDestination != null
+    LaunchedEffect(viewModel, ready) {
+        if (!ready) return@LaunchedEffect
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is MainEffect.SessionEnded -> navigator.navigateToStart(sessionReplaced = effect.replaced)
+            }
+        }
+    }
+
     MainScaffold(
         currentTab = navigator.currentTab,
         showBottomBar = navigator.showBottomBar(),
         snackbarHostState = snackbarHostState,
         onTabSelected = navigator::navigate,
     ) { padding ->
-        MainNavHost(
-            navigator = navigator,
-            padding = padding,
-            onShowSnackBar = onShowSnackBar,
-        )
+        // 토큰 저장소를 읽는 동안은 문구 없는 빈 화면이다 (FR-AUTH-01)
+        if (startDestination != null) {
+            MainNavHost(
+                navigator = navigator,
+                startDestination = startDestination,
+                padding = padding,
+                onShowSnackBar = onShowSnackBar,
+            )
+        }
     }
 }
 
@@ -95,7 +117,7 @@ private fun MainScreenCalendarTabPreview() {
             snackbarHostState = remember { SnackbarHostState() },
             onTabSelected = {},
         ) { padding ->
-            CalendarScreen(padding = padding)
+            CalendarScreen(padding = padding, onOpenMenu = {})
         }
     }
 }

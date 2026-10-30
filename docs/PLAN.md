@@ -6,7 +6,7 @@
 | --- | --- | --- | --- | --- |
 | 키트 | 에이전트 지침, Skill, Android CI | | | PR 완료 |
 | 1 | 기반: 템플릿 정리, 디자인 토큰 반영, 하단 탭 2개, `domain`·`data:repository`·`data:local` 모듈, 응답 형식 1.1·오류 변환, 빌드 타입별 서버 주소·설정값(`local.properties`), 온라인 확인, 테스트 도구 | design-system, tokens.json, API.md 1장·5장, NFR-OFF, NFR-COPY | 없음 | PR 완료 |
-| 2 | 인증: SCR-START-01, 게스트 시작, Google·카카오 로그인, 게스트 연동·기존 계정 로그인, 토큰 암호화 저장·자동 갱신·세션 끊김, 로그아웃, 탈퇴, 내 정보, 시간대 갱신, SCR-SET-01의 계정 부분 | FR-AUTH, SCR-START-01, SCR-SET-01, API 3.1·4.1~4.3·4.6~4.7 | 단위 1 | 대기 |
+| 2 | 인증: SCR-START-01, 게스트 시작, Google·카카오 로그인, 게스트 연동·기존 계정 로그인, 토큰 암호화 저장·자동 갱신·세션 끊김, 로그아웃, 탈퇴, 내 정보, 시간대 갱신, SCR-SET-01의 계정 부분 | FR-AUTH, SCR-START-01, SCR-SET-01, API 3.1·4.1~4.3·4.6~4.7 | 단위 1 | PR 완료 |
 | 3 | 커플: SCR-COUPLE-01~04, 초대코드, 연결, 기록 가져오기, 해제·복구, 처음 만난 날, 우리 색상(SCR-SET-03) | FR-COUPLE, FR-CAL-04 | 단위 2 | 대기 |
 | 4 | 캘린더: SCR-CAL-01~03, 일정, 일정 알림 설정, 날짜 범위 | FR-CAL | 단위 3 | 대기 |
 | 5 | 기념일: SCR-ANNIV-01~02, 자동·직접 기념일, 캘린더 표시 | FR-ANNIV | 단위 4 | 대기 |

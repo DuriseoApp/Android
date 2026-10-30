@@ -16,6 +16,8 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
                 add("implementation", libs.findLibrary("androidx-core-ktx").get())
                 add("implementation", libs.findLibrary("androidx-lifecycle-runtime-ktx").get())
                 add("implementation", libs.findLibrary("androidx-activity-compose").get())
+                // domain의 Flow(Repository 인터페이스)를 feature가 직접 쓴다
+                add("implementation", libs.findLibrary("kotlinx-coroutines-core").get())
 
                 // 테스트 도구 (docs/MODULES.md 3장)
                 add("testImplementation", libs.findLibrary("junit").get())
