@@ -5,8 +5,6 @@ import com.duriseo.android.data.remote.auth.AuthApi
 import com.duriseo.android.data.remote.json.createApiJson
 import com.duriseo.android.data.remote.network.AuthInterceptor
 import com.duriseo.android.data.remote.network.TokenAuthenticator
-import com.duriseo.android.data.remote.network.createAuthedClient
-import com.duriseo.android.data.remote.network.createNoAuthClient
 import com.duriseo.android.domain.auth.AuthTokens
 import com.duriseo.android.domain.auth.SessionEndNotifier
 import com.duriseo.android.domain.auth.SessionEndReason
