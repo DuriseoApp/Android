@@ -7,16 +7,16 @@
 | 모듈 | 플러그인 | 생기는 단위 | 비고 |
 | --- | --- | --- | --- |
 | `app` | application, compose, hilt | 있음 | `local.properties` 설정값 -> `BuildConfig` -> `AppConfig` 제공 |
-| `feature:main` | feature | 있음 | 하단 탭 2개(캘린더·메모, D-30). 메모 탭은 `feature:memo`(단위 6) 전까지 빈 자리표시 |
+| `feature:main` | feature | 있음 | 하단 탭 2개(캘린더·메모, D-30). 메모 탭은 `feature:memo`(단위 6) 전까지 빈 자리표시. 단위 2에서 앱 시작 분기(토큰 있으면 캘린더, 없으면 시작 화면)와 세션 끊김 구독(`MainViewModel`) |
 | `feature:calendar` | feature | 있음 | 템플릿 `feature:home`에서 이름 변경 (단위 1). 화면은 단위 4 |
-| `feature:settings` | feature | 있음 | 템플릿 `feature:menu`에서 이름 변경 (단위 1). 하단 탭이 아님, 진입은 캘린더 앱바. 화면은 단위 2부터 (SCR-SET-01 계정 부분, `docs/PLAN.md` 단위 2) |
-| `core:designsystem` | library, compose | 있음 | 단위 1에서 토큰 반영 (`/sync-tokens`), 하단 탭·스낵바 컴포넌트, 오류 -> 문구 도우미 |
-| `core:common` | library, hilt | 있음 | 로거, `AppConfig`, `Clock`·`@IoDispatcher` 제공, 내비게이션 경로 |
-| `domain` | Kotlin JVM (`duriseo.kotlin.jvm`) | 있음 | 순수 Kotlin. Android 의존 없음. `DataError`·`DataResult`(결과·오류 타입), `ErrorCode`, `NetworkMonitor` |
-| `data:remote` | library, hilt | 있음 | 단위 1에서 응답 형식 1.1·오류 변환(`ApiCaller`), `AndroidNetworkMonitor` |
-| `data:local` | library, hilt | 있음 | 단위 1은 DataStore 제공과 Room 의존성까지. `@Database`는 첫 엔티티 단위에서. 암호화 토큰 저장은 단위 2 |
-| `data:repository` | library, hilt | 있음 | 단위 1은 `runOnlineWrite`와 바인딩 모듈 자리. 리포지토리 구현은 기능 단위에서 |
-| `feature:auth` | feature | 2 | |
+| `feature:settings` | feature | 있음 | 템플릿 `feature:menu`에서 이름 변경 (단위 1). 하단 탭이 아님, 진입은 캘린더 앱바(단위 4 전까지 임시 버튼). 단위 2에서 SCR-SET-01 전체 메뉴의 계정 부분과 계정 화면(게스트·회원)·다이얼로그 4종 |
+| `core:designsystem` | library, compose | 있음 | 단위 1에서 토큰 반영 (`/sync-tokens`), 하단 탭·스낵바 컴포넌트, 오류 -> 문구 도우미. 단위 2에서 `DuriseoButton`·`DuriseoDialog`·`DuriseoDialogLayer`(뒤 화면을 접근성에서 가림)·`LogoutConfirmDialog`·`DuriseoTopAppBar`·`DuriseoGuestBanner`·`DuriseoMenuRow`, 아이콘·로고 VectorDrawable, 세션 종료 코드는 문구 없음(`toMessageResOrNull`) |
+| `core:common` | library, hilt | 있음 | 로거, `AppConfig`, `Clock`·`@IoDispatcher`·`@ApplicationScope` 제공, 내비게이션 경로. 단위 2부터 `social` 패키지: Google(Credential Manager)·카카오 로그인 래퍼 `SocialTokenProvider`(Route가 `Context.socialTokenProvider()`로 얻고 `Context.findActivity()`로 Activity를 찾음), 소셜 SDK 정리, 카카오 SDK 초기화 (`feature:auth`·`feature:settings`가 함께 씀, unit-2 확인 필요 16) |
+| `domain` | Kotlin JVM (`duriseo.kotlin.jvm`) | 있음 | 순수 Kotlin. Android 의존 없음. `DataError`·`DataResult`(결과·오류 타입), `ErrorCode`, `NetworkMonitor`. 단위 2부터 인증·내 정보 모델과 `AuthRepository`·`MeRepository`·`TokenStorage` 인터페이스 |
+| `data:remote` | library, hilt | 있음 | 단위 1에서 응답 형식 1.1·오류 변환(`ApiCaller`), `AndroidNetworkMonitor`. 단위 2에서 인증 없음(`@NoAuth`)·인증(`@Authed`) 클라이언트, `AuthApi`·`AuthSessionApi`·`MeApi`, 인증 헤더 인터셉터, 토큰 갱신 `Authenticator` |
+| `data:local` | library, hilt | 있음 | 단위 1은 DataStore 제공과 Room 의존성까지. 단위 2에서 첫 `@Database`(`MeEntity`), Tink로 암호화한 토큰 저장소, 로그아웃·세션 끊김 때 지우기(`LocalDataCleaner`) |
+| `data:repository` | library, hilt | 있음 | 단위 1은 `runOnlineWrite`와 바인딩 모듈 자리. 단위 2에서 `AuthRepository`·`MeRepository` 구현, `SessionManager`(세션 끊김·정리), `SessionStartup`(앱 시작 때 로그인 상태·내 정보·시간대) |
+| `feature:auth` | feature | 있음 | 단위 2. SCR-START-01 시작 화면(게스트 시작, Google·카카오 로그인). `feature:main`이 의존해 NavHost에 연결 |
 | `feature:couple` | feature | 3 | |
 | `feature:anniversary` | feature | 5 | |
 | `feature:memo` | feature | 6 | |
@@ -60,9 +60,10 @@ PRD에 화면이 추가되면 이 표에 먼저 넣고 모듈을 정한다.
 | --- | --- | --- |
 | 로컬 DB | Room (KSP) | 1 (추가됨) |
 | 설정 저장 | DataStore Preferences | 1 (추가됨) |
-| 토큰 암호화 | Tink (Android Keystore) | 2 |
-| Google 로그인 | Credential Manager + Google ID | 2 |
-| 카카오 로그인 | Kakao SDK (user) | 2 |
+| 토큰 암호화 | Tink (`tink-android` 1.18.0, Android Keystore) | 2 (추가됨, 버전은 CI로 확인) |
+| Google 로그인 | Credential Manager (`credentials`, `credentials-play-services-auth` 1.5.0) + Google ID (`googleid` 1.1.1) | 2 (추가됨, 버전은 CI로 확인) |
+| 카카오 로그인 | Kakao SDK (`v2-user` 2.21.0). `settings.gradle.kts`에 `devrepo.kakao.com` 저장소를 `com.kakao.*` 그룹만 받도록 추가 | 2 (추가됨, 버전은 CI로 확인) |
+| 테스트: 메모리 Room | Robolectric 4.15.1 + `androidx.test:core` 1.6.1 (`data:local`, `data:repository`의 `testImplementation`, unit-2 확인 필요 15) | 2 (추가됨) |
 | 푸시 | Firebase Messaging (BOM) | 7 |
 | 프로필 이미지 | Coil | 8 |
 | 테스트 | kotlinx-coroutines-test, Turbine, OkHttp MockWebServer | 1 (추가됨) |

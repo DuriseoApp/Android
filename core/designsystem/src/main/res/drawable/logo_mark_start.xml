@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 시작 화면 로고 112x72. 원본 ../Docs/design/logo/duriseo-mark-start.svg (좌표와 색은 그대로).
+     세 색은 브랜드 고정값이라 테마나 사람 색을 따라가지 않는다: 왼쪽 person-me, 오른쪽 person-partner, 겹침 brand-500. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="112dp"
+    android:height="72dp"
+    android:viewportWidth="112"
+    android:viewportHeight="72">
+    <path
+        android:fillColor="#E0612F"
+        android:pathData="M4,36 a34,34 0 1 0 68,0 a34,34 0 1 0 -68,0 z" />
+    <path
+        android:fillColor="#2F6FDB"
+        android:pathData="M40,36 a34,34 0 1 0 68,0 a34,34 0 1 0 -68,0 z" />
+    <group>
+        <clip-path android:pathData="M4,36 a34,34 0 1 0 68,0 a34,34 0 1 0 -68,0 z" />
+        <path
+            android:fillColor="#6D4AE0"
+            android:pathData="M40,36 a34,34 0 1 0 68,0 a34,34 0 1 0 -68,0 z" />
+    </group>
+</vector>

@@ -8,7 +8,7 @@
 app ──> feature:main ──> feature:<기능> ──> domain <── data:repository ──> data:remote
                                 │                                    └──> data:local
                                 ├──> core:designsystem ──> domain      push ──> domain
-                                └──> core:common
+                                └──> core:common ──> domain
 ```
 
 | 레이어 | 하는 일 | 알면 안 되는 것 |
@@ -22,8 +22,9 @@ app ──> feature:main ──> feature:<기능> ──> domain <── data:re
 | `data:local` | Room(오프라인 보기), DataStore(설정), 암호화 토큰 저장 | Retrofit |
 | `push` | FCM 수신, 동기화 신호(SYNC) 처리, 알림 표시 | 화면 |
 | `core:designsystem` | 토큰(색·글꼴·간격·모서리), 공용 컴포넌트, `PersonColors` | 기능 로직 |
-| `core:common` | 로거, 디스패처(`@IoDispatcher`), `Clock`, 앱 설정(`AppConfig`), 내비게이션 경로 같은 공용 도구 | 기능 로직 |
+| `core:common` | 로거, 디스패처(`@IoDispatcher`), `Clock`, 앱 설정(`AppConfig`), 내비게이션 경로, **소셜 로그인 SDK 래퍼**(`social` 패키지: Google Credential Manager·Kakao SDK를 감싼 `SocialTokenProvider`) 같은 공용 도구. `SocialProvider`를 쓰려고 `domain`에 의존한다 (`domain`은 순수 Kotlin이라 순환이 없다) | 기능 로직, `data:*` |
 
+- 소셜 SDK는 Activity가 필요해서 ViewModel이 부르지 않는다. ViewModel은 SideEffect로 요청만 내보내고, Route(Compose)가 `core:common`의 `SocialTokenProvider`를 현재 Activity로 불러 결과를 Action으로 돌려준다.
 - feature끼리 서로 의존하지 않는다. 다른 기능 화면으로 갈 때는 `feature:main`의 내비게이션이 연결한다.
 - 유스케이스는 리포지토리 하나를 그대로 부르는 것이면 만들지 않는다. ViewModel이 리포지토리 인터페이스를 직접 쓴다.
 

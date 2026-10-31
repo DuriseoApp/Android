@@ -31,6 +31,10 @@ android {
 
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", localProperty("duriseo.google.webClientId").asBuildConfigString())
         buildConfigField("String", "KAKAO_NATIVE_APP_KEY", localProperty("duriseo.kakao.nativeAppKey").asBuildConfigString())
+
+        // 카카오 로그인 리다이렉트 scheme `kakao<네이티브 앱 키>`를 매니페스트에 넣는다. 키가 비면(CI) scheme이 `kakao`인
+        // 채로 빌드되고 카카오 로그인만 동작하지 않는다. 키 값은 레포에 쓰지 않는다 (unit-2.md G절).
+        manifestPlaceholders["kakaoNativeAppKey"] = localProperty("duriseo.kakao.nativeAppKey")
     }
 
     buildTypes {
@@ -48,6 +52,7 @@ dependencies {
     implementation(projects.feature.main)
     implementation(projects.core.designsystem)
     implementation(projects.core.common)
+    implementation(projects.domain)
     // Hilt 바인딩(리포지토리, 원격, 로컬)을 앱 그래프에 모으기 위해
     implementation(projects.data.repository)
 

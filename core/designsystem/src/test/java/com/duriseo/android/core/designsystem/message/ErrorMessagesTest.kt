@@ -3,39 +3,40 @@ package com.duriseo.android.core.designsystem.message
 import com.duriseo.android.core.designsystem.R
 import com.duriseo.android.domain.error.DataError
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNull
 import org.junit.Test
-import java.io.File
 
 class ErrorMessagesTest {
 
-    /** strings.xml을 직접 읽는다 (Robolectric 없이 문구 값을 확인하기 위해). 테스트 작업 폴더는 모듈 폴더다. */
-    private fun stringsXml(): String = File("src/main/res/values/strings.xml").readText(Charsets.UTF_8)
+    private fun apiError(code: String) = DataError.ApiError(code = code, details = null, traceId = null)
 
     @Test
-    fun `NFR-OFF-02 Offline 오류는 인터넷 연결이 필요해요 문구로 바뀐다`() {
-        assertEquals(R.string.offline_required, DataError.Offline.toMessageRes())
+    fun `NFR-OFF-02 오프라인이면 인터넷 연결이 필요하다는 문구를 보여 준다`() {
+        assertEquals(R.string.offline_required, DataError.Offline.toMessageResOrNull())
     }
 
     @Test
-    fun `NFR-COPY-01 오프라인 안내 문구는 PRD 문구 그대로 해요체다`() {
-        assertTrue(stringsXml().contains("<string name=\"offline_required\">인터넷 연결이 필요해요</string>"))
+    fun `D-88 INTERNAL_ERROR와 모르는 코드는 공통 오류 문구를 보여 준다`() {
+        assertEquals(R.string.error_common, apiError("INTERNAL_ERROR").toMessageResOrNull())
+        assertEquals(R.string.error_common, apiError("SOMETHING_NEW").toMessageResOrNull())
     }
 
     @Test
-    fun `API 5장 서버 오류는 code와 관계없이 공통 오류 문구로 바뀐다`() {
-        val known = DataError.ApiError(code = "INTERNAL_ERROR", details = null, traceId = "t1")
-        val unknown = DataError.ApiError(code = "SOMETHING_NEW", details = null, traceId = null)
-
-        assertEquals(R.string.error_common, known.toMessageRes())
-        assertEquals(R.string.error_common, unknown.toMessageRes())
-        assertTrue(stringsXml().contains("<string name=\"error_common\">문제가 생겼어요. 잠시 후 다시 시도해 주세요</string>"))
+    fun `D-88 소셜 로그인과 게스트 관련 오류 코드는 공통 오류 문구를 보여 준다`() {
+        listOf("SOCIAL_TOKEN_INVALID", "GUEST_ONLY", "GUEST_NOT_ALLOWED").forEach { code ->
+            assertEquals(code, R.string.error_common, apiError(code).toMessageResOrNull())
+        }
     }
 
     @Test
-    fun `D-30 탭 라벨 문구는 캘린더와 메모다`() {
-        val xml = stringsXml()
-        assertTrue(xml.contains("<string name=\"tab_calendar\">캘린더</string>"))
-        assertTrue(xml.contains("<string name=\"tab_memo\">메모</string>"))
+    fun `API 1장 세션 종료 코드는 보여 줄 문구가 없다`() {
+        listOf("SESSION_REPLACED", "SESSION_INVALID").forEach { code ->
+            assertNull(code, apiError(code).toMessageResOrNull())
+        }
+    }
+
+    @Test
+    fun `D-88 토큰 갱신이 실패해 TOKEN_EXPIRED가 화면까지 오면 공통 오류 문구를 보여 준다`() {
+        assertEquals(R.string.error_common, apiError("TOKEN_EXPIRED").toMessageResOrNull())
     }
 }

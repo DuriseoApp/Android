@@ -1,0 +1,4 @@
+<resources>
+    <!-- 캘린더 앱바의 전체 메뉴 버튼 접근성 라벨 (보드 Calendar.dc.html 45행). 단위 4에서 앱바를 만들 때까지 임시 진입 버튼 -->
+    <string name="calendar_menu_description">전체 메뉴</string>
+</resources>

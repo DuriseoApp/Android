@@ -7,8 +7,10 @@ android {
 }
 
 dependencies {
+    implementation(projects.feature.auth)
     implementation(projects.feature.calendar)
     implementation(projects.feature.settings)
     implementation(projects.core.designsystem)
     implementation(projects.core.common)
+    implementation(projects.domain)
 }
