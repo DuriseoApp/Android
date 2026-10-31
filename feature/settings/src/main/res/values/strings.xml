@@ -44,4 +44,46 @@
     <string name="switch_dialog_title">그 계정으로 로그인할까요?</string>
     <string name="switch_dialog_body">게스트로 쓴 기록은 모두 삭제돼요. 삭제한 기록은 되돌릴 수 없어요.</string>
     <string name="switch_dialog_confirm">삭제하고 로그인</string>
+
+    <!-- SCR-SET-01 전체 메뉴의 "꾸미기" (단위 3). 보드 Menu.dc.html 99~103행 -->
+    <string name="settings_section_deco">꾸미기</string>
+    <string name="settings_colors">우리 색상</string>
+    <string name="settings_colors_description">현재 색상: 나, 상대, 함께</string>
+
+    <!-- SCR-SET-03 우리 색상 (FR-CAL-04). 문구는 SCREENS.md "SCR-SET-03"과 보드 ColorSettings.dc.html 그대로 -->
+    <string name="colors_title">우리 색상</string>
+    <string name="colors_done">완료</string>
+    <string name="colors_preview_label">미리보기</string>
+    <string name="colors_target_title">바꿀 대상</string>
+    <string name="colors_target_me">나</string>
+    <string name="colors_target_partner">상대</string>
+    <string name="colors_target_together">함께</string>
+    <!-- 원 안의 글자: 나·너·둘 (design-system "사람 호칭") -->
+    <string name="colors_letter_me">나</string>
+    <string name="colors_letter_partner">너</string>
+    <string name="colors_letter_together">둘</string>
+    <string name="colors_palette_title">%1$s 색상 고르기</string>
+    <string name="colors_swatch_selected">%1$s, 선택됨</string>
+    <string name="colors_duplicate_warning">같은 색을 쓰는 대상이 있어요. 캘린더에서 누구 일정인지 구분하기 어려울 수 있어요.</string>
+    <string name="colors_note_couple">바꾼 색상은 두 사람 화면에 똑같이 적용돼요.</string>
+    <string name="colors_note_solo">연결하면 상대와 함께 색도 고를 수 있어요.</string>
+    <string name="colors_reset">기본 색으로 되돌리기</string>
+    <!-- 미리보기 샘플 문구: 보드에만 있고 SCREENS.md에 없다 (unit-3.md 확인 필요 12, 문구는 보드 그대로) -->
+    <string-array name="colors_weekdays">
+        <item>일</item>
+        <item>월</item>
+        <item>화</item>
+        <item>수</item>
+        <item>목</item>
+        <item>금</item>
+        <item>토</item>
+    </string-array>
+    <string name="colors_sample_memo">메모</string>
+    <string name="colors_sample_time_dentist">14:00</string>
+    <string name="colors_sample_time_dinner">19:30</string>
+    <string name="colors_sample_time_pilates">07:30</string>
+    <string name="colors_sample_dentist">치과 예약</string>
+    <string name="colors_sample_dinner">저녁 데이트</string>
+    <string name="colors_sample_gifts">선물 리스트 정리</string>
+    <string name="colors_sample_pilates">필라테스</string>
 </resources>

@@ -8,7 +8,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.duriseo.android.core.common.navigation.MainRouteModel
 import com.duriseo.android.feature.auth.navigation.authNavGraph
+import com.duriseo.android.feature.auth.start.AfterLogin
 import com.duriseo.android.feature.calendar.navigation.calendarNavGraph
+import com.duriseo.android.feature.couple.navigation.coupleNavGraph
 import com.duriseo.android.feature.main.component.MemoTabPlaceholder
 import com.duriseo.android.feature.settings.navigation.settingsNavGraph
 
@@ -35,9 +37,27 @@ fun MainNavHost(
     ) {
         authNavGraph(
             padding = padding,
-            // 신규 회원은 SCR-COUPLE-01, 가져올 기록이 남은 기존 회원은 SCR-COUPLE-04로 가야 하지만
-            // 두 화면은 단위 3에서 만든다. 그때까지는 모두 캘린더로 보낸다 (unit-2.md 확인 필요 2)
-            onLoggedIn = { navigator.navigateToHome() },
+            onLoggedIn = { destination ->
+                when (destination) {
+                    AfterLogin.Home -> navigator.navigateToHome()
+                    // 신규 회원은 SCR-COUPLE-01 (FR-AUTH-02 AC1, D-31). 앞 화면이 없어 뒤로 가기 버튼이 없다
+                    AfterLogin.CoupleConnect -> navigator.navigateToCoupleConnect()
+                    // 가져올 기록이 남은 기존 회원은 캘린더 + 연결 완료 시트(SCR-COUPLE-04)여야 하지만
+                    // 시트는 v0.9 반영 대기다 (unit-3.md 확인 필요 1·7). 그때까지는 캘린더로 보낸다
+                    AfterLogin.ImportPending -> navigator.navigateToHome()
+                }
+            },
+        )
+        coupleNavGraph(
+            padding = padding,
+            canGoBackFromConnect = navigator::hasPreviousScreen,
+            onBack = navigator::navigateUp,
+            onInviteCreate = navigator::navigateToInviteCreate,
+            onInviteEnter = navigator::navigateToInviteEnter,
+            // 연결됨, 혼자 시작하기: 캘린더로 가고 백스택을 비운다
+            onHome = { navigator.navigateToHome() },
+            onLoginAndConnect = navigator::navigateToAccount,
+            onLoggedOut = { navigator.navigateToStart() },
         )
         calendarNavGraph(
             padding = padding,
@@ -54,6 +74,8 @@ fun MainNavHost(
             onClose = navigator::navigateUp,
             onOpenAccount = navigator::navigateToAccount,
             onBackFromAccount = navigator::navigateUp,
+            onOpenColors = navigator::navigateToColors,
+            onBackFromColors = navigator::navigateUp,
             onLoggedOut = { navigator.navigateToStart() },
             onSwitched = { navigator.navigateToHome() },
             onShowSnackBar = onShowSnackBar,

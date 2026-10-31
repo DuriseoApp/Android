@@ -34,6 +34,7 @@ class SettingsViewModel @Inject constructor(
     val uiState: StateFlow<SettingsUiState> = combine(meRepository.observeMe(), local) { me, localState ->
         SettingsUiState(
             account = me?.toAccount(),
+            colorKeys = me?.space?.let { listOfNotNull(it.myColor, it.partner?.color, it.togetherColor) }.orEmpty(),
             logoutDialogVisible = localState.logoutDialogVisible,
             requesting = localState.requesting,
         )

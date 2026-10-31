@@ -16,9 +16,11 @@ sealed interface SettingsAccount {
  * 전체 메뉴(SCR-SET-01)의 상태. 단위 2는 계정 부분만 그린다 (프로필 카드·우리 색상·알림·연결 정보·정보 섹션은 다른 단위).
  *
  * @property account 내 정보를 아직 못 받았으면 null (화면은 앱바만 그린다)
+ * @property colorKeys 꾸미기 › 우리 색상 행에 보일 현재 색 점의 팔레트 키. 나, 상대, 함께 순서이고 개인 공간은 나 하나다
  */
 data class SettingsUiState(
     val account: SettingsAccount? = null,
+    val colorKeys: List<String> = emptyList(),
     val logoutDialogVisible: Boolean = false,
     val requesting: Boolean = false,
 ) {

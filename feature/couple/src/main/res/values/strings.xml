@@ -1,0 +1,42 @@
+<resources>
+    <!-- SCR-COUPLE-01 커플 연결 (연결 방법 선택). 문구는 SCREENS.md "SCR-COUPLE-01"과 보드 Connect.dc.html 그대로 -->
+    <string name="connect_title">상대방과 연결해 주세요</string>
+    <string name="connect_description">둘 중 한 명이 초대코드를 만들고,\n다른 한 명이 입력하면 연결돼요.</string>
+    <string name="connect_make_code">초대코드 만들기</string>
+    <string name="connect_make_code_subtitle">코드를 만들어 상대에게 보내요</string>
+    <string name="connect_enter_code">초대코드 입력하기</string>
+    <string name="connect_enter_code_subtitle">상대에게 받은 코드를 입력해요</string>
+    <string name="connect_solo_start">혼자 시작하기</string>
+    <string name="connect_solo_start_hint">연결은 나중에 메뉴 › 연결 정보에서 할 수 있어요</string>
+    <string name="connect_other_account">다른 계정으로 로그인</string>
+    <string name="connect_guest_title">연결하려면 로그인이 필요해요</string>
+    <string name="connect_guest_body">게스트는 상대와 연결할 수 없어요. Google이나 카카오로 로그인하면 지금까지 쓴 기록을 그대로 두고 연결할 수 있어요.</string>
+    <string name="connect_guest_login">로그인하고 연결하기</string>
+    <string name="connect_guest_solo">혼자 계속 쓰기</string>
+
+    <!-- SCR-COUPLE-02 초대코드 만들기 -->
+    <string name="invite_create_title">초대코드를\n상대에게 보내주세요</string>
+    <string name="invite_create_subtitle">상대가 이 코드를 입력하면 바로 연결돼요.</string>
+    <string name="invite_create_panel_description">내 초대코드</string>
+    <string name="invite_create_code_description">초대코드 %1$s</string>
+    <string name="invite_create_remaining">10분 동안 유효 · %1$d분 %2$d초 남음</string>
+    <string name="invite_create_renewed">시간이 지나 새 코드를 만들었어요.\n새 코드를 다시 보내 주세요.</string>
+    <string name="invite_create_copy">코드 복사</string>
+    <string name="invite_create_copied">복사됨</string>
+    <string name="invite_create_share">공유하기</string>
+    <string name="invite_create_status_description">연결 상태</string>
+    <string name="invite_create_waiting_title">상대방을 기다리는 중이에요</string>
+    <string name="invite_create_waiting_body">연결되면 자동으로 캘린더로 넘어가요</string>
+    <string name="invite_create_reissue">코드 새로 만들기</string>
+    <string name="invite_create_reissue_wait">%1$d초 뒤에 다시 만들 수 있어요</string>
+    <string name="invite_create_check">연결 확인하기</string>
+    <string name="invite_create_not_yet">아직 연결되지 않았어요</string>
+
+    <!-- SCR-COUPLE-03 초대코드 입력하기 -->
+    <string name="invite_enter_title">받은 초대코드를\n입력해 주세요</string>
+    <string name="invite_enter_subtitle">영문과 숫자 6자리예요.</string>
+    <string name="invite_enter_label">초대코드</string>
+    <string name="invite_enter_paste">붙여넣기</string>
+    <string name="invite_enter_connect">연결하고 시작하기</string>
+    <string name="invite_enter_error_expired">만료된 코드예요. 상대에게 새 코드를 받아 주세요.</string>
+</resources>

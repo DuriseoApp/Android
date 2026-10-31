@@ -35,4 +35,23 @@ sealed interface SettingsRouteModel : RouteModel {
     /** 계정 화면 (SCR-SET-01 하위 화면 "계정": 게스트·회원) */
     @Serializable
     data object Account : SettingsRouteModel
+
+    /** 우리 색상 (SCR-SET-03) */
+    @Serializable
+    data object Colors : SettingsRouteModel
+}
+
+/** 커플 연결 화면 (`feature:couple`). 하단 탭이 없다. */
+sealed interface CoupleRouteModel : RouteModel {
+    /** 연결 방법 선택 (SCR-COUPLE-01). 회원·게스트 모양은 화면이 내 정보로 정한다 */
+    @Serializable
+    data object Connect : CoupleRouteModel
+
+    /** 초대코드 만들기 (SCR-COUPLE-02) */
+    @Serializable
+    data object InviteCreate : CoupleRouteModel
+
+    /** 초대코드 입력하기 (SCR-COUPLE-03) */
+    @Serializable
+    data object InviteEnter : CoupleRouteModel
 }
