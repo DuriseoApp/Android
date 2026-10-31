@@ -1,9 +1,7 @@
 package com.duriseo.android.feature.auth.start
 
-import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.duriseo.android.core.common.social.SocialTokenProvider
 import com.duriseo.android.core.common.social.SocialTokenResult
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.message.toMessageResOrNull
@@ -29,7 +27,6 @@ import javax.inject.Inject
 class StartViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val meRepository: MeRepository,
-    private val socialTokenProvider: SocialTokenProvider,
 ) : ViewModel() {
 
     private val mutableState = MutableStateFlow(StartUiState())
@@ -53,17 +50,6 @@ class StartViewModel @Inject constructor(
                 sessionNoticeShown = true
                 effectChannel.trySend(StartSideEffect.ShowMessage(R.string.start_session_replaced))
             }
-        }
-    }
-
-    /**
-     * [StartSideEffect.RequestSocialToken]를 받은 화면이 부른다. SDK 결과는 [StartAction.SocialTokenReceived]로 돌아온다.
-     * ViewModel 범위에서 돌려서 화면이 다시 그려져도 요청이 끊기지 않는다.
-     */
-    fun fetchSocialToken(activity: Activity, provider: SocialProvider) {
-        viewModelScope.launch {
-            val result = socialTokenProvider.requestToken(activity, provider)
-            onAction(StartAction.SocialTokenReceived(provider, result))
         }
     }
 

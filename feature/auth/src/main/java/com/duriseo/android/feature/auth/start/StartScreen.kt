@@ -1,12 +1,10 @@
 package com.duriseo.android.feature.auth.start
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -14,16 +12,21 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
@@ -50,7 +53,11 @@ import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.component.DuriseoButton
 import com.duriseo.android.core.designsystem.component.DuriseoButtonSize
 import com.duriseo.android.core.designsystem.component.DuriseoButtonStyle
+import com.duriseo.android.core.common.social.SocialTokenResult
+import com.duriseo.android.core.common.social.findActivity
+import com.duriseo.android.core.common.social.socialTokenProvider
 import com.duriseo.android.core.designsystem.component.DuriseoSnackbar
+import com.duriseo.android.core.designsystem.component.DuriseoSnackbarHost
 import com.duriseo.android.core.designsystem.theme.DuriseoShapes
 import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
@@ -60,7 +67,9 @@ import com.duriseo.android.core.designsystem.theme.Ink900
 import com.duriseo.android.core.designsystem.theme.Line100
 import com.duriseo.android.domain.me.SocialProvider
 import com.duriseo.android.feature.auth.R
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 // SCR-START-01 시작 (FR-AUTH-01, FR-AUTH-02, FR-AUTH-08). 수치는 design-system.md "시작 화면"과 보드 `Main.dc.html`.
 // 토큰에 없는 수치라 이름을 붙인 상수로 둔다. 여백은 시스템 바 안쪽(Scaffold가 준 padding) 기준이다.
@@ -95,9 +104,6 @@ private val SmallLineHeight = 19.2.sp
 /** 스낵바는 위에서 40 (51행, SCREENS.md SCR-START-01 "오류·안내 위치") */
 private val SnackbarTop = 40.dp
 
-/** 스낵바가 보이는 시간. Material `SnackbarDuration.Short`와 같다 (design-system.md "스낵바") */
-private const val SnackbarMillis = 4_000L
-
 @Composable
 fun StartRoute(
     sessionReplaced: Boolean,
@@ -107,8 +113,11 @@ fun StartRoute(
     viewModel: StartViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
-    val activity = LocalContext.current.findActivity()
-    var snackbarMessage by remember { mutableStateOf<Int?>(null) }
+    val context = LocalContext.current
+    val socialTokenProvider = remember(context) { context.socialTokenProvider() }
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var snackbarJob by remember { mutableStateOf<Job?>(null) }
 
     // 다른 기기 로그인으로 온 경우 안내 스낵바를 한 번 보여 준다 (D-51). 화면이 다시 그려져도 ViewModel이 한 번만 내보낸다
     LaunchedEffect(sessionReplaced) {
@@ -117,55 +126,56 @@ fun StartRoute(
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
-                is StartSideEffect.RequestSocialToken ->
-                    if (activity != null) {
-                        viewModel.fetchSocialToken(activity, effect.provider)
-                    } else {
-                        // Activity를 찾지 못하면 SDK를 열 수 없다. 공통 오류와 같은 안내로 돌려보낸다
-                        viewModel.onAction(
-                            StartAction.SocialTokenReceived(
-                                effect.provider,
-                                com.duriseo.android.core.common.social.SocialTokenResult.Failed(),
-                            ),
+                // 소셜 SDK는 Route가 현재 Activity로 연다. ViewModel에는 결과(토큰·취소·실패)만 넘긴다
+                is StartSideEffect.RequestSocialToken -> scope.launch {
+                    val result = try {
+                        val activity = context.findActivity()
+                        if (activity == null) {
+                            SocialTokenResult.Failed()
+                        } else {
+                            socialTokenProvider.requestToken(activity, effect.provider)
+                        }
+                    } catch (e: CancellationException) {
+                        // 화면이 사라지며 취소됐다: 요청 중 상태가 남지 않게 취소로 알린다
+                        viewModel.onAction(StartAction.SocialTokenReceived(effect.provider, SocialTokenResult.Cancelled))
+                        throw e
+                    }
+                    viewModel.onAction(StartAction.SocialTokenReceived(effect.provider, result))
+                }
+                is StartSideEffect.ShowMessage -> {
+                    snackbarJob?.cancel()
+                    snackbarJob = scope.launch {
+                        // 보이는 시간은 다른 화면과 같은 기본 길이(Short)다
+                        snackbarHostState.showSnackbar(
+                            message = context.resources.getString(effect.messageRes),
+                            duration = SnackbarDuration.Short,
                         )
                     }
-                is StartSideEffect.ShowMessage -> snackbarMessage = effect.messageRes
+                }
                 is StartSideEffect.LoggedIn -> onLoggedIn(effect.destination)
             }
-        }
-    }
-    LaunchedEffect(snackbarMessage) {
-        if (snackbarMessage != null) {
-            delay(SnackbarMillis)
-            snackbarMessage = null
         }
     }
 
     StartScreen(
         state = state,
-        snackbarMessageRes = snackbarMessage,
         padding = padding,
         onAction = viewModel::onAction,
+        snackbarHost = {
+            // 위에서 40에 뜬다 (StartScreen이 자리를 잡는다)
+            DuriseoSnackbarHost(hostState = snackbarHostState)
+        },
         modifier = modifier,
     )
-}
-
-private fun Context.findActivity(): Activity? {
-    var current = this
-    while (current is ContextWrapper) {
-        if (current is Activity) return current
-        current = current.baseContext
-    }
-    return null
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun StartScreen(
     state: StartUiState,
-    snackbarMessageRes: Int?,
     padding: PaddingValues,
     onAction: (StartAction) -> Unit,
+    snackbarHost: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -173,20 +183,29 @@ fun StartScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface),
     ) {
-        Column(
+        // 작은 화면·큰 글꼴에서는 세로로 스크롤한다. 높이가 남으면 위쪽 묶음과 로그인 묶음 사이가 벌어져 로그인 묶음이 아래에 붙는다
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(
-                    top = ScreenTop,
-                    start = DuriseoSpacing.Space6,
-                    end = DuriseoSpacing.Space6,
-                    bottom = DuriseoSpacing.Space8,
-                ),
+                .padding(padding),
         ) {
-            // 위쪽 묶음: 남는 높이를 차지해서 로그인 묶음이 아래에 붙는다
+            val screenHeight = maxHeight
             Column(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .heightIn(min = screenHeight)
+                    .padding(
+                        top = ScreenTop,
+                        start = DuriseoSpacing.Space6,
+                        end = DuriseoSpacing.Space6,
+                        bottom = DuriseoSpacing.Space8,
+                    ),
+                verticalArrangement = Arrangement.SpaceBetween,
+            ) {
+            // 위쪽 묶음 (아래로 최소 28을 띄워 스크롤할 때 로그인 묶음과 붙지 않게 한다)
+            Column(
+                modifier = Modifier.padding(bottom = UpperGroupGap),
                 verticalArrangement = Arrangement.spacedBy(UpperGroupGap),
             ) {
                 Image(
@@ -266,16 +285,17 @@ fun StartScreen(
                 )
                 ConsentText(modifier = Modifier.padding(top = ConsentTopGap))
             }
+            }
         }
 
-        if (snackbarMessageRes != null) {
-            DuriseoSnackbar(
-                message = stringResource(snackbarMessageRes),
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(padding)
-                    .padding(top = SnackbarTop),
-            )
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .padding(padding)
+                .padding(top = SnackbarTop),
+        ) {
+            snackbarHost()
         }
     }
 }
@@ -358,67 +378,42 @@ private fun ConsentText(modifier: Modifier = Modifier) {
     )
 }
 
-@Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun StartScreenPreview() {
+private fun PreviewStartScreen(state: StartUiState = StartUiState(), messageRes: Int? = null) {
     DuriseoTheme {
         StartScreen(
-            state = StartUiState(),
-            snackbarMessageRes = null,
+            state = state,
             padding = PaddingValues(),
             onAction = {},
+            snackbarHost = {
+                // 스낵바가 떠 있는 모습을 정적으로 그린다
+                if (messageRes != null) DuriseoSnackbar(message = stringResource(messageRes))
+            },
         )
     }
 }
 
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun StartScreenSessionReplacedPreview() {
-    DuriseoTheme {
-        StartScreen(
-            state = StartUiState(),
-            snackbarMessageRes = R.string.start_session_replaced,
-            padding = PaddingValues(),
-            onAction = {},
-        )
-    }
-}
+private fun StartScreenPreview() = PreviewStartScreen()
 
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun StartScreenLoadingPreview() {
-    DuriseoTheme {
-        StartScreen(
-            state = StartUiState(requesting = true),
-            snackbarMessageRes = null,
-            padding = PaddingValues(),
-            onAction = {},
-        )
-    }
-}
+private fun StartScreenSessionReplacedPreview() = PreviewStartScreen(messageRes = R.string.start_session_replaced)
 
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun StartScreenCommonErrorPreview() {
-    DuriseoTheme {
-        StartScreen(
-            state = StartUiState(),
-            snackbarMessageRes = DesignR.string.error_common,
-            padding = PaddingValues(),
-            onAction = {},
-        )
-    }
-}
+private fun StartScreenLoadingPreview() = PreviewStartScreen(state = StartUiState(requesting = true))
 
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun StartScreenOfflinePreview() {
-    DuriseoTheme {
-        StartScreen(
-            state = StartUiState(),
-            snackbarMessageRes = DesignR.string.offline_required,
-            padding = PaddingValues(),
-            onAction = {},
-        )
-    }
-}
+private fun StartScreenCommonErrorPreview() = PreviewStartScreen(messageRes = DesignR.string.error_common)
+
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun StartScreenOfflinePreview() = PreviewStartScreen(messageRes = DesignR.string.offline_required)
+
+/** 작은 화면(높이 480)에서 스크롤되는 모습 */
+@Preview(showBackground = true, widthDp = 390, heightDp = 480)
+@Composable
+private fun StartScreenSmallPreview() = PreviewStartScreen()

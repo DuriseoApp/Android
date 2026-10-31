@@ -80,11 +80,14 @@ class AuthRepositoryImpl @Inject constructor(
         networkMonitor.runOnlineWrite {
             when (val result = authRemote.switch(provider, token)) {
                 is DataResult.Success -> {
-                    // 새 토큰을 먼저 저장한다. 토큰을 먼저 지우면 로그인 상태가 잠깐 풀려 시작 화면으로 튄다
-                    tokenStorage.save(result.value.tokens)
-                    sessionManager.clearUserData() // 게스트의 Room·설정
-                    afterLogin()
-                    DataResult.Success(LoginResult(result.value.isNewUser))
+                    // 게스트의 Room·설정을 새 토큰을 저장하기 전에 비운다. 게스트 토큰은 아직 있어서 로그인 상태가 풀리지 않는다
+                    if (!sessionManager.clearUserDataOrFail()) {
+                        localDataFailure()
+                    } else {
+                        tokenStorage.save(result.value.tokens)
+                        afterLogin()
+                        DataResult.Success(LoginResult(result.value.isNewUser))
+                    }
                 }
 
                 is DataResult.Failure -> {
@@ -108,13 +111,24 @@ class AuthRepositoryImpl @Inject constructor(
     private suspend fun completeLogin(result: DataResult<IssuedTokens>): DataResult<LoginResult> =
         when (result) {
             is DataResult.Success -> {
-                tokenStorage.save(result.value.tokens)
-                afterLogin()
-                DataResult.Success(LoginResult(result.value.isNewUser))
+                // 이전 사용자의 Room·설정이 새 계정에 보이지 않게 새 토큰을 저장하기 전에 비운다.
+                // 비우지 못하면 로그인을 실패로 처리한다 (토큰을 저장하지 않는다)
+                if (!sessionManager.clearUserDataOrFail()) {
+                    localDataFailure()
+                } else {
+                    tokenStorage.save(result.value.tokens)
+                    afterLogin()
+                    DataResult.Success(LoginResult(result.value.isNewUser))
+                }
             }
 
             is DataResult.Failure -> result
         }
+
+    /** 기기 안의 오류. 서버 오류 `INTERNAL_ERROR`와 같이 취급해 화면은 공통 오류 안내를 보인다 (D-88) */
+    private fun localDataFailure(): DataResult.Failure = DataResult.Failure(
+        DataError.ApiError(code = ErrorCode.INTERNAL_ERROR.code, details = null, traceId = null),
+    )
 
     /** 사용자 동작이 아니라서 실패는 조용히 넘긴다 (오프라인·서버 오류여도 로그인은 끝난 것이다) */
     private suspend fun afterLogin() {

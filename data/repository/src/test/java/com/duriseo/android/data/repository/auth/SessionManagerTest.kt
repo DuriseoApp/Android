@@ -102,4 +102,17 @@ class SessionManagerTest {
         assertNull(events.await())
         assertEquals(0, h.social.clearCount.get())
     }
+
+    @Test
+    fun `FR-AUTH-02 AC3 구독자가 없을 때 끊긴 세션도 첫 구독자에게 전달한다`() = runTestWithTimeout {
+        val h = harness()
+
+        h.session.end(SessionEndReason.REPLACED)
+        // 정리가 끝날 때까지 기다린다 (아직 아무도 구독하지 않았다)
+        while (h.tokens.current() != null) kotlinx.coroutines.delay(10)
+
+        val received = withTimeoutOrNull(5_000) { h.session.events.take(1).toList() }
+
+        assertEquals(listOf(SessionEndReason.REPLACED), received)
+    }
 }

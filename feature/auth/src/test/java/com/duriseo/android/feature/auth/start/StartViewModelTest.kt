@@ -39,7 +39,7 @@ class StartViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = StartViewModel(auth, me, UnusedSocialTokenProvider)
+    private fun viewModel() = StartViewModel(auth, me)
 
     private fun googleToken(token: String = "google-id-token") =
         StartAction.SocialTokenReceived(SocialProvider.GOOGLE, SocialTokenResult.Success(SocialProvider.GOOGLE, token))

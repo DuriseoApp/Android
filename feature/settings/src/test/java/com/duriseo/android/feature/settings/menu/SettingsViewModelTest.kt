@@ -49,6 +49,26 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `FR-SET-01 전체 메뉴에 들어오면 내 정보를 서버에서 다시 읽는다`() = runTest {
+        viewModel()
+
+        assertEquals(1, me.refreshCalls)
+    }
+
+    @Test
+    fun `FR-SET-01 내 정보 갱신이 실패해도 Room의 값으로 메뉴를 그린다`() = runTest {
+        me.me.value = memberMe()
+        me.refreshResult = apiError("INTERNAL_ERROR")
+        val vm = viewModel()
+
+        vm.effects.test {
+            // 조용히 실패한다: 안내를 띄우지 않고 화면은 Room 값 그대로다
+            expectNoEvents()
+            assertEquals(SettingsAccount.Member(SocialProvider.GOOGLE), vm.uiState.value.account)
+        }
+    }
+
+    @Test
     fun `FR-AUTH-04 AC1 게스트는 전체 메뉴 맨 위에 안내 배너와 로그인 버튼이 보인다`() = runTest {
         me.me.value = guestMe()
         val vm = viewModel()

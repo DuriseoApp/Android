@@ -55,12 +55,17 @@ class AuthRepositoryTest {
         runCatching { server.shutdown() }
     }
 
-    private fun harness(online: Boolean = true, signedIn: Boolean = false): RepoHarness =
+    private fun harness(
+        online: Boolean = true,
+        signedIn: Boolean = false,
+        failClearing: Boolean = false,
+    ): RepoHarness =
         RepoHarness(
             server = server,
             tempDir = tempFolder.root,
             online = online,
             initialTokens = if (signedIn) testTokens() else null,
+            failClearing = failClearing,
         ).also { created = it }
 
     private fun DataResult<*>.apiCode(): String? = ((this as? DataResult.Failure)?.error as? DataError.ApiError)?.code
@@ -246,6 +251,59 @@ class AuthRepositoryTest {
         assertEquals(before, h.tokens.current())
         assertEquals("guest-user", h.roomMe()?.id)
         assertEquals("저장된 설정", h.settingValue())
+    }
+
+    // --- 이전 사용자 데이터가 새 계정에 남지 않게 (FR-AUTH-01 AC3, NFR-SEC-01) ---
+
+    @Test
+    fun `FR-AUTH-01 AC3 로그인하면 이전 사용자의 Room과 설정을 비우고 새 내 정보만 남긴다`() = runTestWithTimeout {
+        val h = harness()
+        h.preload(fixtureMe(id = "previous-user"))
+        server.enqueue(jsonResponse(201, authTokensJson("new-access", "new-refresh", isNewUser = true)))
+        server.enqueue(jsonResponse(200, meJson(id = "new-user")))
+
+        val result = h.authRepository.startAsGuest()
+
+        assertTrue(result is DataResult.Success)
+        assertEquals("new-user", h.roomMe()?.id)
+        assertNull(h.settingValue())
+    }
+
+    @Test
+    fun `FR-AUTH-01 AC3 이전 사용자 데이터를 비우지 못하면 게스트 시작을 실패로 처리하고 토큰을 저장하지 않는다`() = runTestWithTimeout {
+        val h = harness(failClearing = true)
+        server.enqueue(jsonResponse(201, authTokensJson("new-access", "new-refresh", isNewUser = true)))
+
+        val result = h.authRepository.startAsGuest()
+
+        assertEquals("INTERNAL_ERROR", result.apiCode())
+        assertNull(h.tokens.current())
+        // 내 정보(GET /me)도 받지 않는다
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun `FR-AUTH-02 이전 사용자 데이터를 비우지 못하면 소셜 로그인을 실패로 처리하고 토큰을 저장하지 않는다`() = runTestWithTimeout {
+        val h = harness(failClearing = true)
+        server.enqueue(jsonResponse(200, authTokensJson("member-access", "member-refresh")))
+
+        val result = h.authRepository.signIn(SocialProvider.GOOGLE, "google-id-token")
+
+        assertEquals("INTERNAL_ERROR", result.apiCode())
+        assertNull(h.tokens.current())
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun `FR-AUTH-03 AC3 게스트 데이터를 비우지 못하면 switch를 실패로 처리하고 새 토큰을 저장하지 않는다`() = runTestWithTimeout {
+        val h = harness(signedIn = true, failClearing = true)
+        val before = h.tokens.current()
+        server.enqueue(jsonResponse(200, authTokensJson("member-access", "member-refresh")))
+
+        val result = h.authRepository.switchAccount(SocialProvider.KAKAO, "kakao-token")
+
+        assertEquals("INTERNAL_ERROR", result.apiCode())
+        assertEquals(before, h.tokens.current())
     }
 
     // --- FR-AUTH-05 로그아웃, FR-AUTH-06 탈퇴 ---

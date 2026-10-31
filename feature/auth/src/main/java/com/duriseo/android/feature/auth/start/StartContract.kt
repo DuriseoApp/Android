@@ -39,7 +39,7 @@ sealed interface StartAction {
 }
 
 sealed interface StartSideEffect {
-    /** 화면이 Activity로 소셜 SDK를 연다 (Activity는 ViewModel이 들고 있지 않는다) */
+    /** Route가 현재 Activity로 소셜 SDK를 열고, 결과를 [StartAction.SocialTokenReceived]로 돌려준다 (ViewModel은 Activity·SDK를 들고 있지 않는다) */
     data class RequestSocialToken(val provider: SocialProvider) : StartSideEffect
 
     /** 이 화면의 스낵바(위에서 40)에 문구를 보여 준다 */

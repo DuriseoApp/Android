@@ -1,25 +1,26 @@
 package com.duriseo.android.feature.settings.account
 
-import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.ContextWrapper
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -28,24 +29,32 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.duriseo.android.core.common.social.SocialTokenResult
+import com.duriseo.android.core.common.social.findActivity
+import com.duriseo.android.core.common.social.socialTokenProvider
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.component.DuriseoButton
 import com.duriseo.android.core.designsystem.component.DuriseoButtonSize
 import com.duriseo.android.core.designsystem.component.DuriseoButtonStyle
+import com.duriseo.android.core.designsystem.component.DuriseoDialogLayer
 import com.duriseo.android.core.designsystem.component.DuriseoGuestBanner
 import com.duriseo.android.core.designsystem.component.DuriseoSectionTitle
 import com.duriseo.android.core.designsystem.component.DuriseoTopAppBar
@@ -62,6 +71,8 @@ import com.duriseo.android.core.designsystem.theme.Surface0
 import com.duriseo.android.domain.me.SocialProvider
 import com.duriseo.android.feature.settings.R
 import java.time.LocalDate
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 
 // SCR-SET-01 하위 화면 "계정" (게스트 · 회원). 수치는 design-system.md "정보 행 (계정 화면)", "로그인 카드", "게스트 안내 배너"와
 // 보드 `Account.dc.html`. 토큰에 없는 수치는 이름 붙인 상수로 둔다.
@@ -76,10 +87,16 @@ private val BlockGap = DuriseoSpacing.Space6
 /** 로그인 연결 묶음 안 간격 12 (37행) */
 private val LoginGroupGap = DuriseoSpacing.Space3
 
-/** 안내 문구 위로 4 더 (41행) */
+/**
+ * 안내 문구 위로 4 더. 출처: 캔버스 원본 `../Docs/design/source/Account.dc.html` 41행(`margin: 4px 0 0`).
+ * design-system 명세에는 아직 없다 (Docs 후속, unit-2.md).
+ */
 private val NoteTopGap = 4.dp
 
-/** 작은 글 12 / 400, 행간 1.6 = 19.2 (41행). `caption`은 12/500/16이라 따로 쓴다 */
+/**
+ * 작은 글 12 / 400, 행간 1.6 = 19.2. 출처: `../Docs/design/source/Account.dc.html` 41행(`font-size: 12px; line-height: 1.6`).
+ * `caption`은 12/500/16이라 따로 쓴다. design-system 명세에는 아직 없다 (Docs 후속, unit-2.md).
+ */
 private val SmallLineHeight = 19.2.sp
 
 /** 게스트 ID 영역: 위 선 1 아래 안쪽 위 12, 라벨과 값 사이 4 (44~46행) */
@@ -117,23 +134,28 @@ fun AccountRoute(
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val activity = context.findActivity()
+    val socialTokenProvider = remember(context) { context.socialTokenProvider() }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
-                is AccountSideEffect.RequestSocialToken ->
-                    if (activity != null) {
-                        viewModel.fetchSocialToken(activity, effect.provider)
-                    } else {
-                        // Activity를 찾지 못하면 SDK를 열 수 없다. 공통 오류와 같은 안내로 돌려보낸다
-                        viewModel.onAction(
-                            AccountAction.SocialTokenReceived(
-                                effect.provider,
-                                com.duriseo.android.core.common.social.SocialTokenResult.Failed(),
-                            ),
-                        )
+                // 소셜 SDK는 Route가 현재 Activity로 연다. ViewModel은 결과만 Action으로 받는다
+                is AccountSideEffect.RequestSocialToken -> scope.launch {
+                    val result = try {
+                        val activity = context.findActivity()
+                        if (activity == null) {
+                            SocialTokenResult.Failed()
+                        } else {
+                            socialTokenProvider.requestToken(activity, effect.provider)
+                        }
+                    } catch (e: CancellationException) {
+                        // 화면이 사라져도 요청 중 상태가 남지 않게 취소로 돌려보낸다
+                        viewModel.onAction(AccountAction.SocialTokenReceived(effect.provider, SocialTokenResult.Cancelled))
+                        throw e
                     }
+                    viewModel.onAction(AccountAction.SocialTokenReceived(effect.provider, result))
+                }
                 is AccountSideEffect.ShowMessage -> onShowSnackBar(effect.messageRes)
                 AccountSideEffect.NavigateToStart -> onLoggedOut()
                 AccountSideEffect.NavigateToHome -> onSwitched()
@@ -151,15 +173,6 @@ fun AccountRoute(
     )
 }
 
-private fun Context.findActivity(): Activity? {
-    var current = this
-    while (current is ContextWrapper) {
-        if (current is Activity) return current
-        current = current.baseContext
-    }
-    return null
-}
-
 /** 게스트 ID 복사. 복사했다는 안내는 시스템이 보여 주고 스낵바는 따로 띄우지 않는다 (SCREENS.md "게스트 ID (Q-12)") */
 private fun Context.copyToClipboard(text: String) {
     val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
@@ -175,10 +188,10 @@ fun AccountScreen(
     onGuestIdLongClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface),
+    DuriseoDialogLayer(
+        dialogVisible = state.dialog != null,
+        dialog = { AccountDialogs(state = state, onAction = onAction) },
+        modifier = modifier.background(MaterialTheme.colorScheme.surface),
     ) {
         Column(
             modifier = Modifier
@@ -207,8 +220,42 @@ fun AccountScreen(
                 )
             }
         }
+    }
+}
 
-        AccountDialogs(state = state, onAction = onAction)
+/**
+ * 본문 틀: 위 덩어리 아래에 바닥 덩어리를 붙인다 (원본의 `margin-top: auto`).
+ * 글자를 크게 키우거나 화면이 낮아도 잘리지 않게 세로로 스크롤한다. 스크롤 안에서는 weight를 쓸 수 없어
+ * 화면 높이를 최소 높이로 잡고 SpaceBetween으로 벌린다. 두 덩어리 사이에는 최소 [BlockGap]을 둔다.
+ */
+@Composable
+private fun AccountBody(
+    modifier: Modifier = Modifier,
+    top: @Composable ColumnScope.() -> Unit,
+    bottom: @Composable ColumnScope.() -> Unit,
+) {
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val minHeight = maxHeight
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .heightIn(min = minHeight)
+                .padding(
+                    start = DuriseoSpacing.Space5,
+                    end = DuriseoSpacing.Space5,
+                    top = ContentTop,
+                    bottom = ContentBottom,
+                ),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column(
+                modifier = Modifier.padding(bottom = BlockGap),
+                verticalArrangement = Arrangement.spacedBy(BlockGap),
+                content = top,
+            )
+            Column(content = bottom)
+        }
     }
 }
 
@@ -220,81 +267,84 @@ private fun GuestContent(
     onGuestIdLongClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(
-                start = DuriseoSpacing.Space5,
-                end = DuriseoSpacing.Space5,
-                top = ContentTop,
-                bottom = ContentBottom,
-            ),
-        verticalArrangement = Arrangement.spacedBy(BlockGap),
-    ) {
-        DuriseoGuestBanner(
-            title = stringResource(R.string.account_guest_banner_title),
-            body = stringResource(R.string.account_guest_banner_body),
-        )
+    AccountBody(
+        modifier = modifier,
+        top = {
+            DuriseoGuestBanner(
+                title = stringResource(R.string.account_guest_banner_title),
+                body = stringResource(R.string.account_guest_banner_body),
+            )
 
-        Column(verticalArrangement = Arrangement.spacedBy(LoginGroupGap)) {
-            DuriseoSectionTitle(
-                text = stringResource(R.string.account_section_login),
-                color = Ink600,
-            )
-            DuriseoButton(
-                text = stringResource(R.string.account_link_google),
-                onClick = { onAction(AccountAction.LinkClicked(SocialProvider.GOOGLE)) },
-                modifier = Modifier.fillMaxWidth(),
-                style = DuriseoButtonStyle.Filled,
-                size = DuriseoButtonSize.Social,
-                enabled = !requesting,
-            )
-            DuriseoButton(
-                text = stringResource(R.string.account_link_kakao),
-                onClick = { onAction(AccountAction.LinkClicked(SocialProvider.KAKAO)) },
-                modifier = Modifier.fillMaxWidth(),
-                style = DuriseoButtonStyle.Outline,
-                size = DuriseoButtonSize.Social,
-                enabled = !requesting,
-            )
-            Text(
-                text = stringResource(R.string.account_existing_note),
-                modifier = Modifier.padding(top = NoteTopGap),
-                style = SmallTextStyle(),
-                color = Ink600,
-            )
-        }
-
-        // 남는 높이만큼 아래로 붙는다 (margin-top: auto)
-        Spacer(Modifier.weight(1f))
-
-        Column(verticalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space1)) {
-            HorizontalDivider(color = Line100)
-            GuestId(
-                guestId = content.guestId,
-                onLongClick = onGuestIdLongClick,
-                modifier = Modifier.padding(top = GuestIdTopPadding - DuriseoSpacing.Space1),
-            )
-            WithdrawButton(
-                enabled = !requesting,
-                onClick = { onAction(AccountAction.WithdrawClicked) },
-            )
-        }
-    }
+            Column(verticalArrangement = Arrangement.spacedBy(LoginGroupGap)) {
+                DuriseoSectionTitle(
+                    text = stringResource(R.string.account_section_login),
+                    color = Ink600,
+                )
+                DuriseoButton(
+                    text = stringResource(R.string.account_link_google),
+                    onClick = { onAction(AccountAction.LinkClicked(SocialProvider.GOOGLE)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    style = DuriseoButtonStyle.Filled,
+                    size = DuriseoButtonSize.Social,
+                    enabled = !requesting,
+                )
+                DuriseoButton(
+                    text = stringResource(R.string.account_link_kakao),
+                    onClick = { onAction(AccountAction.LinkClicked(SocialProvider.KAKAO)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    style = DuriseoButtonStyle.Outline,
+                    size = DuriseoButtonSize.Social,
+                    enabled = !requesting,
+                )
+                Text(
+                    text = stringResource(R.string.account_existing_note),
+                    modifier = Modifier.padding(top = NoteTopGap),
+                    style = SmallTextStyle(),
+                    color = Ink600,
+                )
+            }
+        },
+        bottom = {
+            Column(verticalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space1)) {
+                HorizontalDivider(color = Line100)
+                GuestId(
+                    guestId = content.guestId,
+                    onCopy = onGuestIdLongClick,
+                    modifier = Modifier.padding(top = GuestIdTopPadding - DuriseoSpacing.Space1),
+                )
+                WithdrawButton(
+                    enabled = !requesting,
+                    onClick = { onAction(AccountAction.WithdrawClicked) },
+                )
+            }
+        },
+    )
 }
 
-/** 게스트 ID: 값은 `Me.id` 그대로, 한 줄에 안 들어가면 줄바꿈하고, 길게 누르면 복사한다 (Q-12) */
-@OptIn(ExperimentalFoundationApi::class)
+/**
+ * 게스트 ID: 값은 `Me.id` 그대로, 한 줄에 안 들어가면 줄바꿈하고, 길게 누르면 복사한다 (Q-12).
+ * 짧게 눌러서는 아무 일도 없으므로 클릭 동작(`combinedClickable`)은 달지 않고, 길게 누르기만 접근성 동작으로 알린다.
+ * 동작 이름 "복사"는 SCREENS.md에 없어 strings.xml에 두었다 (Docs 후속, unit-2.md).
+ */
 @Composable
 private fun GuestId(
     guestId: String,
-    onLongClick: (String) -> Unit,
+    onCopy: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val copyLabel = stringResource(R.string.account_guest_id_copy_label)
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = {}, onLongClick = { onLongClick(guestId) }),
+            .pointerInput(guestId) {
+                detectTapGestures(onLongPress = { onCopy(guestId) })
+            }
+            .semantics {
+                onLongClick(label = copyLabel) {
+                    onCopy(guestId)
+                    true
+                }
+            },
         verticalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space1),
     ) {
         Text(
@@ -318,53 +368,43 @@ private fun MemberContent(
     onAction: (AccountAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(
-                start = DuriseoSpacing.Space5,
-                end = DuriseoSpacing.Space5,
-                top = ContentTop,
-                bottom = ContentBottom,
-            ),
-        verticalArrangement = Arrangement.spacedBy(BlockGap),
-    ) {
-        if (justLinked) {
-            Text(
-                text = stringResource(R.string.account_just_linked),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.small)
-                    .padding(horizontal = StatusHorizontalPadding, vertical = StatusVerticalPadding)
-                    .semantics { liveRegion = LiveRegionMode.Polite },
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = FontWeight.Normal,
-                    lineHeight = StatusLineHeight,
-                ),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-
-        content.provider?.let { LoginCard(provider = it, nickname = content.nickname) }
-
-        Column {
-            content.provider?.let { provider ->
-                InfoRow(
-                    label = stringResource(R.string.account_method_label),
-                    value = providerName(provider),
-                    showDivider = true,
+    AccountBody(
+        modifier = modifier,
+        top = {
+            if (justLinked) {
+                Text(
+                    text = stringResource(R.string.account_just_linked),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.small)
+                        .padding(horizontal = StatusHorizontalPadding, vertical = StatusVerticalPadding)
+                        .semantics { liveRegion = LiveRegionMode.Polite },
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Normal,
+                        lineHeight = StatusLineHeight,
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
-            InfoRow(
-                label = stringResource(R.string.account_joined_label),
-                value = joinedDateText(content.joinedDate),
-                showDivider = false,
-            )
-        }
 
-        Spacer(Modifier.weight(1f))
+            content.provider?.let { LoginCard(provider = it, nickname = content.nickname) }
 
-        Column {
+            Column {
+                content.provider?.let { provider ->
+                    InfoRow(
+                        label = stringResource(R.string.account_method_label),
+                        value = providerName(provider),
+                        showDivider = true,
+                    )
+                }
+                InfoRow(
+                    label = stringResource(R.string.account_joined_label),
+                    value = joinedDateText(content.joinedDate),
+                    showDivider = false,
+                )
+            }
+        },
+        bottom = {
             HorizontalDivider(color = Line100)
             LogoutButton(
                 enabled = !requesting,
@@ -374,8 +414,8 @@ private fun MemberContent(
                 enabled = !requesting,
                 onClick = { onAction(AccountAction.WithdrawClicked) },
             )
-        }
-    }
+        },
+    )
 }
 
 /** 로그인 카드: 체크 원 + "Google로 로그인 중" / "카카오로 로그인 중" + 닉네임 */

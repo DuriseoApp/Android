@@ -29,9 +29,14 @@ class ErrorMessagesTest {
     }
 
     @Test
-    fun `API 1장 세션이 끊긴 코드는 보여 줄 문구가 없다`() {
-        listOf("SESSION_REPLACED", "SESSION_INVALID", "TOKEN_EXPIRED").forEach { code ->
+    fun `API 1장 세션 종료 코드는 보여 줄 문구가 없다`() {
+        listOf("SESSION_REPLACED", "SESSION_INVALID").forEach { code ->
             assertNull(code, apiError(code).toMessageResOrNull())
         }
+    }
+
+    @Test
+    fun `D-88 토큰 갱신이 실패해 TOKEN_EXPIRED가 화면까지 오면 공통 오류 문구를 보여 준다`() {
+        assertEquals(R.string.error_common, apiError("TOKEN_EXPIRED").toMessageResOrNull())
     }
 }

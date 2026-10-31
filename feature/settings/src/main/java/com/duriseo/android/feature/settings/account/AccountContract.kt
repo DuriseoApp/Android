@@ -80,7 +80,7 @@ sealed interface AccountAction {
 }
 
 sealed interface AccountSideEffect {
-    /** 화면이 Activity로 소셜 SDK를 연다 (Activity는 ViewModel이 들고 있지 않는다) */
+    /** Route가 현재 Activity로 소셜 SDK를 열고, 결과를 [AccountAction.SocialTokenReceived]로 돌려준다 (ViewModel은 Activity·SDK를 들고 있지 않는다) */
     data class RequestSocialToken(val provider: SocialProvider) : AccountSideEffect
 
     data class ShowMessage(@StringRes val messageRes: Int) : AccountSideEffect

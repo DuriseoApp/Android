@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.first
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -42,7 +43,7 @@ class SessionStartupTest {
     }
 
     private fun startup(h: RepoHarness) =
-        SessionStartup(h.authRepository, h.meRepository, h.clock, kotlinx.coroutines.CoroutineScope(Dispatchers.IO))
+        SessionStartup(h.authRepository, h.meRepository, h.session, h.clock, kotlinx.coroutines.CoroutineScope(Dispatchers.IO))
 
     @Test
     fun `FR-AUTH-01 AC3 저장된 토큰이 없으면 요청 없이 로그아웃 상태가 된다`() = runTestWithTimeout {
@@ -96,4 +97,26 @@ class SessionStartupTest {
         assertEquals("Asia/Tokyo", h.roomMe()?.timeZone)
     }
 
+    @Test
+    fun `FR-AUTH-01 AC3 토큰이 없으면 남아 있는 이전 사용자의 Room과 설정을 지운다`() = runTestWithTimeout {
+        val h = RepoHarness(server, tempFolder.root, initialTokens = null).also { created = it }
+        h.preload()
+
+        startup(h).run()
+
+        assertNull(h.roomMe())
+        assertNull(h.settingValue())
+        assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun `FR-AUTH-01 AC2 토큰이 있으면 시작할 때 사용자 설정을 지우지 않는다`() = runTestWithTimeout {
+        val h = RepoHarness(server, tempFolder.root, initialTokens = testTokens()).also { created = it }
+        h.preload()
+        server.enqueue(jsonResponse(200, meJson(accountType = "MEMBER")))
+
+        startup(h).run()
+
+        assertEquals("저장된 설정", h.settingValue())
+    }
 }

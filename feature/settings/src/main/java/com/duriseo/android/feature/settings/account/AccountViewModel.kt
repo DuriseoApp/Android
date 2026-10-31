@@ -1,9 +1,7 @@
 package com.duriseo.android.feature.settings.account
 
-import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.duriseo.android.core.common.social.SocialTokenProvider
 import com.duriseo.android.core.common.social.SocialTokenResult
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.message.toMessageResOrNull
@@ -36,8 +34,7 @@ import javax.inject.Inject
 @HiltViewModel
 class AccountViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    meRepository: MeRepository,
-    private val socialTokenProvider: SocialTokenProvider,
+    private val meRepository: MeRepository,
     private val clock: Clock,
 ) : ViewModel() {
 
@@ -80,6 +77,11 @@ class AccountViewModel @Inject constructor(
     private val effectChannel = Channel<AccountSideEffect>(Channel.BUFFERED)
     val effects = effectChannel.receiveAsFlow()
 
+    init {
+        // 화면에 들어올 때 내 정보를 새로 받는다. 오프라인이면 조용히 실패하고 Room의 값을 그대로 보여 준다 (ARCHITECTURE.md 2장, NFR-OFF-01)
+        viewModelScope.launch { meRepository.refreshMe() }
+    }
+
     fun onAction(action: AccountAction) {
         when (action) {
             is AccountAction.LinkClicked -> startLink(action.provider)
@@ -96,17 +98,6 @@ class AccountViewModel @Inject constructor(
             AccountAction.LogoutConfirmed -> leave(AccountDialog.Logout) { authRepository.logout() }
             AccountAction.WithdrawConfirmed -> leave(AccountDialog.Withdraw) { authRepository.withdraw() }
             AccountAction.DialogDismissed -> dismissDialog()
-        }
-    }
-
-    /**
-     * [AccountSideEffect.RequestSocialToken]를 받은 화면이 부른다. SDK 결과는 [AccountAction.SocialTokenReceived]로 돌아온다.
-     * ViewModel 범위에서 돌려서 화면이 다시 그려져도 요청이 끊기지 않는다.
-     */
-    fun fetchSocialToken(activity: Activity, provider: SocialProvider) {
-        viewModelScope.launch {
-            val result = socialTokenProvider.requestToken(activity, provider)
-            onAction(AccountAction.SocialTokenReceived(provider, result))
         }
     }
 

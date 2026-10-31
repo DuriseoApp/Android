@@ -10,7 +10,6 @@ import com.duriseo.android.domain.result.DataResult
 import com.duriseo.android.feature.settings.FakeAuthRepository
 import com.duriseo.android.feature.settings.FakeMeRepository
 import com.duriseo.android.feature.settings.GuestId
-import com.duriseo.android.feature.settings.UnusedSocialTokenProvider
 import com.duriseo.android.feature.settings.apiError
 import com.duriseo.android.feature.settings.guestMe
 import com.duriseo.android.feature.settings.memberMe
@@ -52,7 +51,7 @@ class AccountViewModelTest {
     }
 
     private fun TestScope.viewModel(clock: Clock = seoul): AccountViewModel {
-        val vm = AccountViewModel(auth, me, UnusedSocialTokenProvider, clock)
+        val vm = AccountViewModel(auth, me, clock)
         // stateIn(WhileSubscribed)라서 값을 읽는 동안 구독해 둔다
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect { } }
         return vm
@@ -70,6 +69,15 @@ class AccountViewModelTest {
         vm.onAction(AccountAction.LinkClicked(provider))
         assertEquals(AccountSideEffect.RequestSocialToken(provider), awaitItem())
         vm.received(provider, socialToken(provider, token))
+    }
+
+    // ---- 진입 시 내 정보 갱신 (FR-AUTH-03, FR-SET-01) ----
+
+    @Test
+    fun `FR-AUTH-03 계정 화면에 들어오면 내 정보를 서버에서 다시 읽는다`() = runTest {
+        viewModel()
+
+        assertEquals(1, me.refreshCalls)
     }
 
     // ---- 게스트 연동 (FR-AUTH-03 AC1) ----

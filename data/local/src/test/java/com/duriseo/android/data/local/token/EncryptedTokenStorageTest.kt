@@ -182,4 +182,103 @@ class EncryptedTokenStorageTest {
 
         assertEquals(tokens, storage.current())
     }
+
+    @Test
+    fun `FR-AUTH-01 AC3 복호화할 수 없으면 깨진 키셋을 버리고 이전 사용자 데이터도 지운다`() = runTest {
+        val (dataStore, _) = dataStore()
+        storage(dataStore, key = 0x11).apply {
+            restore()
+            save(tokens)
+        }
+        var keyResets = 0
+        var userDataClears = 0
+
+        val restored = EncryptedTokenStorage(
+            dataStore,
+            aeadProvider = { FakeAead(0x22) },
+            resetKeys = { keyResets++ },
+            clearUserData = { userDataClears++ },
+        )
+        restored.restore()
+
+        assertEquals(TokenState.Empty, restored.state.value)
+        assertEquals(1, keyResets)
+        assertEquals(1, userDataClears)
+    }
+
+    @Test
+    fun `FR-AUTH-01 AC3 저장된 토큰이 없으면 키셋도 사용자 데이터도 건드리지 않는다`() = runTest {
+        val (dataStore, _) = dataStore()
+        var keyResets = 0
+        var userDataClears = 0
+
+        val empty = EncryptedTokenStorage(
+            dataStore,
+            aeadProvider = { FakeAead(0x5A) },
+            resetKeys = { keyResets++ },
+            clearUserData = { userDataClears++ },
+        )
+        empty.restore()
+
+        assertEquals(TokenState.Empty, empty.state.value)
+        assertEquals(0, keyResets)
+        assertEquals(0, userDataClears)
+    }
+
+    @Test
+    fun `FR-AUTH-01 AC3 이전 사용자 데이터를 지우지 못해도 로그아웃 상태가 된다`() = runTest {
+        val (dataStore, _) = dataStore()
+        storage(dataStore, key = 0x11).apply {
+            restore()
+            save(tokens)
+        }
+
+        val restored = EncryptedTokenStorage(
+            dataStore,
+            aeadProvider = { FakeAead(0x22) },
+            clearUserData = { throw IllegalStateException("지우기 실패") },
+        )
+        restored.restore()
+
+        // 시작 때 `SessionStartup`이 한 번 더 지운다
+        assertEquals(TokenState.Empty, restored.state.value)
+    }
+
+    @Test
+    fun `NFR-SEC-01 키셋을 만들지 못해 저장이 실패하면 키셋을 다시 만들어 저장한다`() = runTest {
+        val (dataStore, _) = dataStore()
+        var providerCalls = 0
+        var keyResets = 0
+        val storage = EncryptedTokenStorage(
+            dataStore,
+            aeadProvider = {
+                if (providerCalls++ == 0) throw GeneralSecurityException("키셋이 깨졌어요")
+                FakeAead(0x5A)
+            },
+            resetKeys = { keyResets++ },
+        )
+        storage.restore()
+
+        storage.save(tokens)
+
+        assertEquals(1, keyResets)
+        assertEquals(2, providerCalls)
+        // 다시 시작해도 읽힌다: 평문이 아니라 새 키셋으로 암호화해 저장했다
+        val restarted = storage(dataStore)
+        restarted.restore()
+        assertEquals(tokens, restarted.current())
+    }
+
+    @Test
+    fun `NFR-SEC-01 키셋을 다시 만들어도 실패하면 메모리 값으로 계속 쓰고 평문은 남기지 않는다`() = runTest {
+        val (dataStore, file) = dataStore()
+        val storage = EncryptedTokenStorage(dataStore, aeadProvider = { throw GeneralSecurityException("Keystore 오류") })
+        storage.restore()
+
+        storage.save(tokens)
+
+        assertEquals(tokens, storage.current())
+        assertNull(dataStore.data.first()[EncryptedTokenStorage.KEY_TOKENS])
+        assertFalse(file.exists() && file.readBytes().toString(Charsets.ISO_8859_1).contains(tokens.accessToken))
+    }
 }

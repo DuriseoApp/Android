@@ -19,6 +19,8 @@
     <string name="account_link_kakao">카카오로 로그인</string>
     <string name="account_existing_note">이미 둘이서에 가입된 계정이면 그 계정으로 로그인할 수 있어요. 이때 게스트 기록은 옮겨지지 않고 삭제돼요.</string>
     <string name="account_guest_id_label">게스트 ID</string>
+    <!-- SCREENS.md에 없는 접근성 동작 이름. Docs 후속(unit-2.md) -->
+    <string name="account_guest_id_copy_label">복사</string>
     <string name="account_withdraw">탈퇴하기</string>
     <string name="account_just_linked">로그인했어요. 게스트 기록을 계정으로 옮겼어요.</string>
     <string name="account_signed_in_google">Google로 로그인 중</string>

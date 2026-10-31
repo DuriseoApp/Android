@@ -152,6 +152,8 @@ class RepoHarness(
     online: Boolean = true,
     initialTokens: AuthTokens? = null,
     zoneId: String = "Asia/Seoul",
+    /** true면 사용자 데이터 정리가 실패한다 (이전 사용자 데이터를 못 지우는 경우) */
+    failClearing: Boolean = false,
 ) {
     val monitor = FakeNetworkMonitor(online)
     val tokens = FakeTokenStorage(initialTokens)
@@ -183,9 +185,19 @@ class RepoHarness(
         retrofit.create(AuthSessionApi::class.java),
         apiCaller,
     )
+    private val cleaner: LocalDataCleaner =
+        if (failClearing) {
+            object : LocalDataCleaner(database, settings, Dispatchers.IO) {
+                override suspend fun clearUserData() {
+                    throw IllegalStateException("지우기 실패")
+                }
+            }
+        } else {
+            LocalDataCleaner(database, settings, Dispatchers.IO)
+        }
     val session = SessionManager(
         tokenStorage = tokens,
-        localData = LocalDataCleaner(database, settings, Dispatchers.IO),
+        localData = cleaner,
         social = social,
         scope = ioScope,
     )

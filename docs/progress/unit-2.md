@@ -1,6 +1,6 @@
 # 단위 2: 인증
 
-> 브랜치: `feat/2-auth` · PR: (아직 없음) · 상태: 리뷰 중 (1부 데이터 계층 + 2부 화면 구현 끝, CI 확인 대기)
+> 브랜치: `feat/2-auth` · PR: https://github.com/DuriseoApp/Android/pull/9 · 상태: 리뷰 1회차 수정 반영 (CI 202 통과 이후 수정분은 CI 재확인 대기)
 > 기준: PRD v0.8 (Docs main, Docs PR #9 머지), SCREENS.md(캔버스 버전 38, 2026-10-26 갱신), API.md(2026-10-26 갱신: 1장 토큰 형식·인증 실패 순서, 3.1 `AuthTokens`·`Me`, 4.1~4.3·4.6·4.7, 5장), design-system.md(Android 매핑, 스낵바), tokens.json
 > 서버: Server 단위 1(계정) 머지됨. 개발 서버 배포는 사용자 확인 (아래 "서버 연동")
 
@@ -92,7 +92,7 @@
 
 - `AuthTokens`: `accessToken`, `accessTokenExpiresAt`(Instant), `refreshToken`(43자), `refreshTokenExpiresAt`(Instant), `isNewUser`. DTO의 `toString`은 토큰 값을 가린다.
 - `Me.providers`의 `GOOGLE`·`KAKAO` 밖 값, `accountType`·`space.type`의 모르는 값은 매퍼에서 무시·기본 처리하지 않고 공통 오류로 본다 (문서에 없는 값을 지어내지 않음).
-- 오류 문구: `SESSION_REPLACED`·`SESSION_INVALID`·`TOKEN_EXPIRED`는 화면 스낵바를 띄우지 않는다 (세션 종료 흐름이 처리). `DataError.toMessageRes()`를 이 세 코드에서 "보여 줄 것 없음"으로 바꾸는 도우미를 `core:designsystem`에 더한다.
+- 오류 문구: 세션이 끝나는 `SESSION_REPLACED`·`SESSION_INVALID`만 화면 스낵바를 띄우지 않는다 (세션 종료 흐름이 처리). `DataError.toMessageResOrNull()`이 이 두 코드에서 `null`("보여 줄 것 없음")을 돌려준다. `TOKEN_EXPIRED`는 갱신에 실패해 화면까지 올라온 경우이므로 공통 오류 문구를 보여 준다 (리뷰 1회차 Major 1).
 
 ### D. 토큰 저장 (NFR-SEC-01, MODULES.md 3장 "Tink (Android Keystore)")
 
@@ -101,7 +101,7 @@
 | 인터페이스 (`domain`) | `AuthTokens`(값 객체, `toString` 가림), `interface TokenStorage { fun current(): AuthTokens?; suspend fun save(tokens); suspend fun clear() }`, `SessionEndReason { REPLACED, INVALID }`. `data:remote`(Authenticator)와 `data:repository`가 같이 쓰려면 둘 다 아는 `domain`에 둔다 (`data:remote`는 `data:local`을 모름) | — |
 | 구현 (`data:local`) | `EncryptedTokenStorage`: Tink `Aead`(AES256_GCM). 키셋은 `AndroidKeysetManager`가 SharedPreferences(`duriseo_auth_keyset`)에 두고 Android Keystore 마스터 키(`android-keystore://duriseo_auth_master_key`)로 감싼다. 암호문(Base64)은 별도 DataStore 파일 `auth_tokens`에 저장, associated data = `"duriseo.auth.tokens"`. 직렬화는 kotlinx.serialization JSON | `` `NFR-SEC-01 저장소에는 토큰 평문이 남지 않는다`() `` (가짜 `Aead`로 저장 바이트에 토큰 문자열이 없음) · `` `저장한 토큰을 다시 읽으면 같은 값이다`() `` · `` `clear 뒤에는 토큰이 없다`() `` |
 | 메모리 캐시 | OkHttp 스레드가 매 요청 복호화하지 않도록 앱 시작 때 한 번 읽어 `AtomicReference`에 둔다. 저장은 캐시 갱신 후 DataStore에 쓴다 (Authenticator 안에서는 `runBlocking`으로 저장 완료를 기다림) | `` `저장 직후 current는 새 토큰을 돌려준다`() `` |
-| 복호화 실패 | Keystore 키 없음·키셋 손상·`GeneralSecurityException` → 저장소를 비우고 로그아웃 상태 (FR-AUTH-01 AC3) | `` `FR-AUTH-01 AC3 토큰을 복호화할 수 없으면 저장소를 비우고 시작 화면을 보여 준다`() `` |
+| 복호화 실패 | Keystore 키 없음·키셋 손상·`GeneralSecurityException` → 저장소를 비우고, 키셋 SharedPreferences(`duriseo_auth_keyset`)와 Keystore 마스터 키를 지워 새로 만들 수 있게 하고, 이전 사용자의 Room·설정도 지우고 로그아웃 상태 (FR-AUTH-01 AC3, 리뷰 1회차 Major 3·4). 저장(`save`) 중 키셋을 못 불러오면 같은 방식으로 한 번 초기화하고 다시 시도 | `` `FR-AUTH-01 AC3 토큰을 복호화할 수 없으면 저장소를 비우고 시작 화면을 보여 준다`() `` |
 | 백업 | `allowBackup="true"`, 백업 규칙이 템플릿 그대로라 지금은 모든 파일이 클라우드 백업·기기 이전 대상이다. 토큰·키셋·Room이 새 기기로 옮겨지면 Keystore 키가 없어 복호화가 실패하고, D-02("기기 변경 시 복구 불가")와도 어긋난다 → 결정 3 | 실기기 확인 |
 
 ### E. 자동 갱신 (OkHttp `Authenticator`, ARCHITECTURE.md 4장)
@@ -116,7 +116,7 @@
 
 ### F. 세션 끊김·로그아웃·탈퇴 (API 1장, SCREENS 공통 "다른 기기 로그인")
 
-- `SessionManager` (`data:repository`, 싱글턴, 앱 범위 코루틴): `end(reason)` 한 번만(이미 끝났으면 무시) → `TokenStorage.clear()` → `DuriseoDatabase.clearAllTables()` → 사용자 DataStore 비우기 → 소셜 SDK 상태 정리(확인 필요 11) → `sessionEvents: SharedFlow<SessionEndReason>` 방출.
+- `SessionManager` (`data:repository`, 싱글턴, 앱 범위 코루틴): `end(reason)` 한 번만(이미 끝났으면 무시) → `TokenStorage.clear()` → `DuriseoDatabase.clearAllTables()` → 사용자 DataStore 비우기 → 소셜 SDK 상태 정리(확인 필요 11) → `sessionEvents` 방출. `sessionEvents`는 버퍼가 있는 `Channel` 기반 `Flow`라 구독자가 없을 때 낸 이벤트도 사라지지 않는다 (리뷰 1회차 Minor).
 - 같은 정리 함수를 로그아웃(204 뒤), 탈퇴(204 뒤), switch(새 토큰 저장 전 게스트 데이터 정리)가 쓴다. 이때는 이벤트 대신 각 ViewModel이 시작 화면/캘린더로 보낸다.
 - `feature:main`의 `MainViewModel`이 `authState`(로그인 여부)와 `sessionEvents`를 구독: 끊기면 `navigate(Start) { popUpTo(graph) { inclusive = true } }`, `REPLACED`면 시작 화면 인자 `sessionReplaced = true` → 시작 화면이 스낵바 "다른 기기에서 로그인해서 로그아웃됐어요"(위에서 40). `INVALID`는 안내 없음.
 - 앱 시작 분기: 토큰 저장소를 읽는 동안은 빈 `surface` 화면(문구 없음) → 토큰 있음: 캘린더 + 뒤에서 `GET /me`·시간대 갱신, 없음: SCR-START-01. 뒤로 가기로 시작 화면 ↔ 캘린더를 오가지 않게 로그인·로그아웃 이동은 백스택을 비운다.
@@ -185,6 +185,35 @@ Android 레포 안에서 정할 수 있는 것. 리드가 범위 확인 때 함�
 
 | 회차 | Critical | Major | 비고 |
 | --- | --- | --- | --- |
+| 1 | 0 | 7 | Minor 9. 아래 "리뷰 1회차 처리". CI 202는 리뷰 전 상태에서 통과, 수정분은 CI 재확인 대기 |
+
+### 리뷰 1회차 처리
+
+| 항목 | 처리 |
+| --- | --- |
+| Major 1 `TOKEN_EXPIRED` 문구 | 세션 종료 코드(`SESSION_REPLACED`·`SESSION_INVALID`)만 문구 없음. `TOKEN_EXPIRED`는 공통 오류. `` `ErrorMessagesTest` `` 수정 |
+| Major 2 진입 시 `GET /me` | `SettingsViewModel`·`AccountViewModel`이 `init`에서 `refreshMe()`. 실패는 조용히. 테스트 `FR-SET-01 전체 메뉴에 들어오면…`, `FR-AUTH-03 계정 화면에 들어오면…` |
+| Major 3 이전 사용자 데이터 | 복호화 실패 시 `clearUserData()`, 시작 때 토큰 없으면 `clearUserData()`, 로그인·switch는 토큰 저장 전에 정리하고 정리 실패 시 로그인 실패. `EncryptedTokenStorageTest`·`SessionStartupTest`·`AuthRepositoryTest` 테스트 추가 |
+| Major 4 키셋 초기화 | 복호화·키셋 로드 실패 시 `duriseo_auth_keyset` SharedPreferences와 Keystore 마스터 키를 지우고 새로 만든다. **실기기 확인 필요**(JVM 테스트는 가짜 `Aead`와 훅만 확인) |
+| Major 5 소셜 SDK 위치 | ViewModel에서 Route로 이동 (G절, "구현 중 정한 것 2부"). `StartViewModel`·`AccountViewModel` 생성자에서 `SocialTokenProvider` 제거 |
+| Major 6 다이얼로그 접근성 | `DuriseoDialogLayer` (2부 결정). **실기기 TalkBack 확인 필요** |
+| Major 7 토큰에 없는 값의 출처 | `NoteTopGap 4`·`SmallLineHeight 19.2` = `Account.dc.html` 41행(`margin: 4px 0 0`, `line-height: 1.6`), `ContentTop 4`(메뉴) = `Menu.dc.html` 24행(`padding: 4px 20px 0`). 모두 원본에 있어 유지하고 코드 주석에 출처를 적었다. **design-system 명세에 추가 필요(Docs 후속)** |
+| Minor 스크롤 | 시작·계정 화면 세로 스크롤 |
+| Minor `GuestId` | `combinedClickable(onClick = {})` 제거, 길게 누르기에 접근성 동작 이름 "복사" (SCREENS에 없음, Docs 후속) |
+| Minor 스낵바 4초 | `SnackbarDuration.Short` |
+| Minor `SessionManager.events` | 버퍼 `Channel` 기반. 테스트 `…구독 전에 낸 세션 종료 이벤트도 구독하면 받는다` |
+| Minor 문서 | 이 파일, `ARCHITECTURE.md` 1장, `PLAN.md` 단위 8(FR-SET-02) |
+
+### Docs 후속 (이 레포에서 고치지 않음)
+
+- design-system: 계정 화면 안내 문구 위 여백 4와 작은 글 12/400 행간 1.6(19.2), 전체 메뉴 본문 위 여백 4.
+- SCREENS SCR-SET-01: 게스트 ID 길게 누르기의 접근성 동작 이름("복사").
+
+### 남은 일
+
+- 첫 빌드가 만든 Room 스키마 JSON(`data/local/schemas/`)을 커밋한다.
+- FR-SET-02(정보: 문의하기·약관·오픈소스 라이선스·앱 정보 카드)는 단위 8에서 만든다 (`PLAN.md` 단위 8에 적었다).
+- 실기기 확인: 키셋 초기화(Major 4), TalkBack 포커스(Major 6), Google·카카오 로그인.
 
 ## 위험
 
@@ -237,16 +266,21 @@ Android 레포 안에서 정할 수 있는 것. 리드가 범위 확인 때 함�
 - 시간대는 `Clock`(`Clock.systemDefaultZone()`)의 zone으로 비교한다. 프로세스가 도는 동안 기기 시간대를 바꾸면 다음 실행에 반영된다 (결정 5).
 - Room 스키마 JSON(`data/local/schemas/`)은 첫 CI/맥 빌드가 만든다. 만들어지면 커밋한다 (이 환경은 Gradle을 못 돌려 아직 없다).
 - 1부 검증은 CI에서만 한다 (이 환경은 Google Maven에 닿지 않는다). 라이브러리 버전과 `AGP 9` 호환(Tink, Credential Manager, Kakao `v2-user`, Robolectric `sdk = [35]`)은 CI 결과로 확인한다.
-- `DataError.toMessageRes()`의 `SESSION_*`·`TOKEN_EXPIRED` "보여 줄 것 없음" 도우미(C절)는 화면이 쓰는 2부에서 더한다.
-- switch는 새 토큰을 먼저 저장하고 그 뒤에 게스트 Room·설정을 지운다 (토큰을 먼저 지우면 로그인 상태가 잠깐 풀려 시작 화면으로 튄다).
+- `DataError.toMessageResOrNull()`("보여 줄 것 없음" 도우미, C절)은 2부에서 더했고 `SESSION_*` 두 코드만 `null`이다.
+- 이전 사용자의 데이터는 새 토큰을 저장하기 **전에** 지운다 (리뷰 1회차 Major 3). 로그인(게스트 시작·소셜)·switch 모두 서버 성공 → Room·설정 정리(`clearUserDataOrFail`) → 토큰 저장 → `GET /me`·시간대 순서다. 정리가 실패하면 토큰을 저장하지 않고 공통 오류(`INTERNAL_ERROR`)로 로그인을 실패시킨다. 이 순서는 토큰 저장소가 비어 있는 동안 `authState`가 `SignedOut`이라 화면이 바뀌지 않으므로 시작 화면으로 튀지 않는다 (switch는 게스트 토큰이 그대로 남아 있다).
+- 앱 시작 때 토큰이 없으면 `SessionStartup`이 남은 Room·설정을 지운다 (복호화 실패 등으로 토큰만 사라진 경우의 보험).
+- 위험: switch에서 서버는 이미 계정을 바꿨는데 로컬 정리만 실패하면 화면에는 오류가 보이고 앱은 이전 게스트 토큰을 들고 있다. 다시 시도하면 서버가 같은 토큰으로 switch를 받아 주므로 복구된다.
 
 구현 중 정한 것 (2부)
 
 - 화면 이동은 `authState` 변화가 아니라 **명시한 곳**에서 한다: 앱 시작 분기와 세션 끊김은 `feature:main`의 `MainViewModel`(`start`, `effects`), 로그인·로그아웃·탈퇴·switch는 각 화면 ViewModel의 SideEffect → `MainNavigator.navigateToStart/Home`(백스택을 모두 비움). 세션 끊김 이벤트는 구독자가 없으면 사라지므로 `MainViewModel`이 만들어지자마자 구독해 `Channel`에 쌓는다.
-- 소셜 SDK에는 Activity가 필요한데 ViewModel이 Activity를 들고 있으면 안 되므로, ViewModel이 SideEffect `RequestSocialToken(provider)`를 내보내면 Route가 `viewModel.fetchSocialToken(activity, provider)`를 부르고 결과는 `SocialTokenReceived` 액션으로 돌아온다. SDK 호출은 ViewModel 범위에서 돈다. 단위 테스트는 액션으로 결과를 넣는다.
-- 시작 화면 스낵바는 화면 상태(`snackbarMessageRes`)로 그려 Preview에서 볼 수 있다(위에서 40, 4초). 전체 메뉴·계정 화면의 스낵바는 `MainScreen`의 공통 스낵바(`onShowSnackBar`)를 쓴다.
+- 소셜 SDK에는 Activity가 필요한데 ViewModel이 Activity를 들고 있으면 안 되므로, ViewModel이 SideEffect `RequestSocialToken(provider)`를 내보내면 **Route**가 `rememberCoroutineScope`와 현재 Activity(`Context.findActivity()`)로 `SocialTokenProvider.requestToken`을 부르고 결과는 `SocialTokenReceived` 액션으로 돌아온다 (리뷰 1회차 Major 5). ViewModel은 SDK·Activity를 모른다. 화면이 사라져 SDK 호출이 취소되면 `Cancelled`를 돌려줘 요청 중 상태가 남지 않게 한다. `SocialTokenProvider`는 Hilt EntryPoint(`Context.socialTokenProvider()`, `core:common`)로 Route가 얻는다. 단위 테스트는 액션으로 결과를 넣는다.
+- 계정 화면·전체 메뉴는 들어올 때 `refreshMe()`를 한 번 부른다 (오프라인이면 조용히 실패, 화면은 Room 값 그대로. 리뷰 1회차 Major 2).
+- 시작 화면 스낵바는 Route가 `SnackbarHostState`로 띄우고(`SnackbarDuration.Short`, 위에서 40) Screen에는 `snackbarHost` 슬롯으로 넘긴다. Preview에서는 정적 스낵바를 슬롯에 넣는다. 전체 메뉴·계정 화면의 스낵바는 `MainScreen`의 공통 스낵바(`onShowSnackBar`)를 쓴다.
 - 비활성 버튼은 면 `line-100`(tokens.json), 글자색은 문서에 없어 `ink-600`으로 했다.
-- 다이얼로그는 시스템 창이 아니라 화면 위 오버레이(`Box` 맨 위)로 그려 뒤 막이 `scrim` 토큰 그대로다.
+- 다이얼로그는 시스템 창(Compose `Dialog`)이 아니라 화면 위 오버레이로 그려 뒤 막이 `scrim` 토큰 그대로이고 Preview에도 보인다. 접근성은 `DuriseoDialogLayer`가 맡는다: 다이얼로그가 떠 있는 동안 뒤 화면을 `clearAndSetSemantics {}`로 TalkBack 탐색에서 빼고, 패널은 `paneTitle`(제목)과 `isTraversalGroup`을 갖고, 열릴 때 `FocusRequester`로 패널에 포커스를 준다 (리뷰 1회차 Major 6). `dialog()` semantics는 쓰지 않았다. **실기기 TalkBack 확인 필요.**
+- 계정 화면 게스트 ID는 짧게 눌러서는 아무 일도 없다. 길게 누르기만 `pointerInput`과 `semantics { onLongClick(label = "복사") }`로 달았다. 동작 이름 "복사"는 SCREENS에 없어 strings.xml에 두었다 (Docs 후속).
+- 시작 화면·계정 화면(게스트·회원)은 세로로 스크롤한다 (큰 글자·낮은 화면에서 잘리지 않게). 스크롤 안에서는 `weight`를 못 쓰므로 `BoxWithConstraints`의 높이를 최소 높이로 잡고 `SpaceBetween`으로 바닥 덩어리를 아래에 붙인다.
 - 시작 화면의 위 96·스낵바 위 40은 시스템 바 안쪽(Scaffold `padding`)을 기준으로 둔다. 보드에는 시스템 바가 없다.
 - `lifecycle-runtime-compose`는 MODULES.md 3장에 없어 `collectAsStateWithLifecycle` 대신 `collectAsState`를 쓴다.
 - 전체 메뉴는 앱바·게스트 배너·"설정" 섹션의 계정 행·로그아웃만 그린다. 프로필 카드·꾸미기·알림 설정·연결 정보(단위 3·7·8)와 정보 섹션·앱 정보 카드(어느 단위에도 없음, 확인 필요 4)는 그리지 않는다.
@@ -254,21 +288,21 @@ Android 레포 안에서 정할 수 있는 것. 리드가 범위 확인 때 함�
 
 ## 확인 필요
 
-문서끼리 다르거나 비어 있는 곳. Docs 수정은 Docs 레포 `/prd-sync`·`/design-sync`로.
+문서끼리 다르거나 비어 있던 곳. 1~16 모두 위 "확인 필요 해결" 표대로 해결됐다. Docs 수정은 Docs 레포 `/prd-sync`·`/design-sync`로.
 
-1. **가입일 필드가 없음 (막힘)**: SCREENS SCR-SET-01 "계정 · 회원 … 로그인 방식, 가입일"과 `SCR-SET-01--account-member.png`·`Account.dc.html`("2026년 10월 12일")에는 가입일이 있는데, API.md 3.1 `Me` 표에는 가입 일시 필드가 없다 (ERD `users.created_at`은 있음). A) `/prd-sync`로 `Me`에 `createdAt`(일시) 추가 + 서버 변경 (추천), B) SCREENS에서 가입일 행 삭제, C) 단위 2는 행을 숨기고 A를 기다림. 날짜 표기 형식("2026년 10월 12일", 기기 시간대 기준)도 SCREENS에 적어야 한다.
-2. **신규 소셜 회원의 첫 화면**: FR-AUTH-02 AC1·D-31·SCREENS SCR-START-01 "신규 소셜 회원 → SCR-COUPLE-01"인데 SCR-COUPLE-01은 단위 3이다. 기존 회원의 `importPending`(→ SCR-COUPLE-04)도 같다. A) 단위 2는 분기 결과(`NewMember`)까지 만들고 캘린더로 보낸 뒤 단위 3에서 연결 (추천), B) SCR-COUPLE-01 회원 화면을 단위 2로 당김(카드가 가리킬 SCR-COUPLE-02·03은 없음).
-3. **전체 메뉴로 들어갈 길이 없음**: 진입은 SCR-CAL-01 앱바의 전체 메뉴 버튼(단위 4)뿐이라 단위 2의 연동·로그아웃·탈퇴를 실기기에서 누를 수 없다. A) 단위 2에서 캘린더 자리표시 화면 위에 앱바의 [전체 메뉴] 아이콘 버튼만 둠 (`Calendar.dc.html` 45행, 접근성 "전체 메뉴", 추천), B) debug 빌드 전용 진입, C) Preview·테스트만 하고 실기기 확인은 단위 4.
-4. **SCR-SET-01을 어디까지 그릴지**: 단위 2는 앱바, 게스트 배너, "설정" 섹션의 계정 행, 로그아웃과 다이얼로그만 그리고 나머지(프로필 카드·우리 색상·연결 정보 → 단위 3, 알림 설정 → 7, 프로필 → 8)는 그 단위에서 더하는 안. 또 **FR-SET-02 정보(문의하기, 약관, 오픈소스 라이선스, 앱 정보 카드·인앱 업데이트)는 Android `docs/PLAN.md` 어느 단위에도 없다** → 어느 단위에 넣을지 (출시 단위 또는 단위 8 추천, PLAN은 이 PR에서 고칠 수 있음).
-5. **보드·이미지에만 있고 SCREENS.md에 없는 문구** (CONVENTIONS "없는 문구는 만들지 않는다"): 기능 칩 "쉐어 캘린더"·"공지사항"·"메모장"(SCREENS는 "기능 칩 3개"와 "공지사항" 유지만 적음), 계정 · 게스트 배너 본문 "앱을 지우거나 휴대폰을 바꾸면 일정과 메모를 다시 찾을 수 없어요. 로그인하면 지금까지의 기록이 계정으로 그대로 옮겨져요."(전체 메뉴 배너 본문과 다름, SCREENS는 "안내 배너"만), 섹션 제목 "로그인 연결"·"설정", 계정 행 값 "Google 로그인"(카카오 회원 값은 보드에도 없음, "카카오 로그인"?), "게스트 ID", "로그인 방식", 로그인 방식 값 "Google"/"카카오", "가입일", 접근성 "뒤로 가기"·"닫기"·로고 "두 원이 겹친 둘이서 로고", 연동 성공 안내 "로그인했어요. 게스트 기록을 계정으로 옮겼어요."(`Account.dc.html` `justLinked`, 보일지 자체가 SCREENS에 없음). A) SCREENS가 요소를 가리키는 곳은 보드 문구를 그대로 쓰고 Docs에 반영 (추천), B) `/prd-sync`로 SCREENS에 먼저 적은 뒤 구현.
-6. **문서에 없는 상태·오류 처리** (SCREENS SCR-START-01·SCR-SET-01에 상태 없음): (a) 로그인·연동 요청 중 표시 — 안: 버튼 비활성만, 문구·스피너 없음. (b) Google 계정이 기기에 없음(`NoCredentialException`)·SDK 실패 — 안: 공통 오류 스낵바. (c) `SOCIAL_TOKEN_INVALID`·`GUEST_ONLY`·`GUEST_NOT_ALLOWED` — 안: 공통 오류. (d) switch의 404 `SOCIAL_NOT_REGISTERED`("앱은 `/auth/link`로 연동하면 된다", API 4.7 3단계) — 안: 같은 토큰으로 `POST /auth/link`를 한 번 자동으로 보냄 vs 공통 오류. (e) switch의 `SOCIAL_TOKEN_INVALID`(토큰 만료) — 안: 소셜 SDK에서 토큰을 한 번 다시 받아 재시도. (f) 시작 화면의 오프라인·공통 오류 스낵바 위치 (결정 6).
-7. **토큰에 없는 크기 값** (보드 원본): 시작 — 버튼 높이 54(design-system "버튼 56/48/44"와 다름), 위 여백 96, 로고 112×72, 묶음 간격 28, 소개 17/400 행간 1.55(`title-md`는 17/700), 칩 안쪽 6·12와 13/500(`label`은 13/600), 작은 글 12/400 행간 1.6(`caption`은 12/500/16), 게스트 아이콘 20. 계정·메뉴 — 버튼 54, 배너 안쪽 18·아이콘 22·본문 13 행간 1.6, 메뉴 행 높이 56·52, 섹션 제목 13/600, 로그인 카드 안쪽 20·체크 선 2.2, 정보 행 높이 52, 다이얼로그 안쪽 24/20/20·제목 아래 간격 8·버튼 위 16. A) 단위 1처럼 Docs 보충 PR(design-system에 버튼·배너·메뉴 행·다이얼로그·시작 화면 수치)을 먼저 (추천), B) 보드 값을 이름 붙인 상수로(단위 1 스낵바 방식). 54는 `size-button-lg` 56으로 맞출지도.
-8. **로고 파일 없음**: design-system "로고"는 `Logos` 그룹의 `duriseo-mark.svg`를 말하지만 Docs에 파일이 없다. 보드 인라인 SVG는 두 가지(`Main.dc.html` 25~30행 112×72 클립 방식, `Menu.dc.html` 앱 정보 36×25 path 방식). 겹친 부분 색은 `brand-500`. Docs `design/icons/`에 넣을지(탭 아이콘처럼), 보드 SVG를 VectorDrawable로 옮겨도 될지.
-9. **약관 링크 주소**: FR-AUTH-08 AC2·Q-03 미정. 안: 단위 2는 링크 모양만 두고 누르면 아무 동작 없음, 주소가 정해지면 설정값으로 추가.
-10. **로그아웃·탈퇴 실패 처리**: FR-AUTH-05 AC1은 "확인하면 지워지고 이동"만 적었다. 안: 오프라인이면 실행하지 않고 "인터넷 연결이 필요해요", 서버 오류(5xx)면 공통 오류 후 그대로(서버의 `devices` 삭제(D-50)가 보장되도록), 응답이 `SESSION_*`면 이미 끊긴 세션이므로 로컬 정리 후 시작 화면. "서버 실패여도 로컬은 로그아웃"을 원하면 알려 주기.
-11. **로그아웃 때 소셜 SDK 정리**: 문서에 없다. 안: 로그아웃·탈퇴·세션 끊김 때 카카오 `UserApiClient.logout()`(기기의 카카오 토큰 삭제)과 `CredentialManager.clearCredentialState()`를 부르고 실패는 무시. 카카오 연결 끊기는 서버가 한다(API 4.6).
-12. **게스트 ID 표시**: `[게스트 ID]`가 `Me.id`(UUID 36자 전체)인지, 줄여 보여 주는지, 길게 눌러 복사할 수 있는지 문서에 없다 (FR-AUTH-09 AC3: 게스트는 본인 확인 수단이 없음 — 표시 목적도 불분명).
-13. **탈퇴 다이얼로그 이미지가 원본과 다름**: `SCR-SET-01--withdraw-dialog.png` 뒤 화면은 맨 아래가 "회원 탈퇴"인데 원본 `Account.dc.html`과 `SCR-SET-01--account-member.png`는 "탈퇴하기". SCREENS 문구 "[탈퇴하기]"를 따른다 (이미지 재생성은 `/design-sync`).
-14. **Server PLAN 배포 표시**: Server `docs/PLAN.md`의 "배포 1"은 "대기"(단위 2까지 묶어 배포)인데 사용자는 단위 1이 개발 서버에 배포됐다고 했다. 맥에서 실제 호출로 확인하고, Server 문서도 맞춰 두기.
-15. **Robolectric 추가** (unit-1 결정 3): `MeEntity`가 첫 Room 엔티티라 CONVENTIONS "data:repository: 메모리 Room 테스트"에 Robolectric이 필요하다. MODULES.md 3장에 없다. A) `testImplementation`으로 추가 (추천), B) Room 테스트를 androidTest로(CI에서 안 돎).
-16. **소셜 로그인 코드 위치**: `feature:auth`와 `feature:settings`가 같이 쓰는데 feature끼리 의존할 수 없다. A) `core:common`의 `social` 패키지 (지금 규칙 안, 추천. `core:common`에 Credential Manager·카카오 의존성이 생김), B) 새 모듈 `core:social`(MODULES.md 계획·`feature/CLAUDE.md` 의존 목록 변경).
+1. (해결됨) **가입일 필드가 없음 (막힘)**: SCREENS SCR-SET-01 "계정 · 회원 … 로그인 방식, 가입일"과 `SCR-SET-01--account-member.png`·`Account.dc.html`("2026년 10월 12일")에는 가입일이 있는데, API.md 3.1 `Me` 표에는 가입 일시 필드가 없다 (ERD `users.created_at`은 있음). A) `/prd-sync`로 `Me`에 `createdAt`(일시) 추가 + 서버 변경 (추천), B) SCREENS에서 가입일 행 삭제, C) 단위 2는 행을 숨기고 A를 기다림. 날짜 표기 형식("2026년 10월 12일", 기기 시간대 기준)도 SCREENS에 적어야 한다.
+2. (해결됨) **신규 소셜 회원의 첫 화면**: FR-AUTH-02 AC1·D-31·SCREENS SCR-START-01 "신규 소셜 회원 → SCR-COUPLE-01"인데 SCR-COUPLE-01은 단위 3이다. 기존 회원의 `importPending`(→ SCR-COUPLE-04)도 같다. A) 단위 2는 분기 결과(`NewMember`)까지 만들고 캘린더로 보낸 뒤 단위 3에서 연결 (추천), B) SCR-COUPLE-01 회원 화면을 단위 2로 당김(카드가 가리킬 SCR-COUPLE-02·03은 없음).
+3. (해결됨) **전체 메뉴로 들어갈 길이 없음**: 진입은 SCR-CAL-01 앱바의 전체 메뉴 버튼(단위 4)뿐이라 단위 2의 연동·로그아웃·탈퇴를 실기기에서 누를 수 없다. A) 단위 2에서 캘린더 자리표시 화면 위에 앱바의 [전체 메뉴] 아이콘 버튼만 둠 (`Calendar.dc.html` 45행, 접근성 "전체 메뉴", 추천), B) debug 빌드 전용 진입, C) Preview·테스트만 하고 실기기 확인은 단위 4.
+4. (해결됨) **SCR-SET-01을 어디까지 그릴지**: 단위 2는 앱바, 게스트 배너, "설정" 섹션의 계정 행, 로그아웃과 다이얼로그만 그리고 나머지(프로필 카드·우리 색상·연결 정보 → 단위 3, 알림 설정 → 7, 프로필 → 8)는 그 단위에서 더하는 안. 또 **FR-SET-02 정보(문의하기, 약관, 오픈소스 라이선스, 앱 정보 카드·인앱 업데이트)는 Android `docs/PLAN.md` 어느 단위에도 없다** → 어느 단위에 넣을지 (출시 단위 또는 단위 8 추천, PLAN은 이 PR에서 고칠 수 있음).
+5. (해결됨) **보드·이미지에만 있고 SCREENS.md에 없는 문구** (CONVENTIONS "없는 문구는 만들지 않는다"): 기능 칩 "쉐어 캘린더"·"공지사항"·"메모장"(SCREENS는 "기능 칩 3개"와 "공지사항" 유지만 적음), 계정 · 게스트 배너 본문 "앱을 지우거나 휴대폰을 바꾸면 일정과 메모를 다시 찾을 수 없어요. 로그인하면 지금까지의 기록이 계정으로 그대로 옮겨져요."(전체 메뉴 배너 본문과 다름, SCREENS는 "안내 배너"만), 섹션 제목 "로그인 연결"·"설정", 계정 행 값 "Google 로그인"(카카오 회원 값은 보드에도 없음, "카카오 로그인"?), "게스트 ID", "로그인 방식", 로그인 방식 값 "Google"/"카카오", "가입일", 접근성 "뒤로 가기"·"닫기"·로고 "두 원이 겹친 둘이서 로고", 연동 성공 안내 "로그인했어요. 게스트 기록을 계정으로 옮겼어요."(`Account.dc.html` `justLinked`, 보일지 자체가 SCREENS에 없음). A) SCREENS가 요소를 가리키는 곳은 보드 문구를 그대로 쓰고 Docs에 반영 (추천), B) `/prd-sync`로 SCREENS에 먼저 적은 뒤 구현.
+6. (해결됨) **문서에 없는 상태·오류 처리** (SCREENS SCR-START-01·SCR-SET-01에 상태 없음): (a) 로그인·연동 요청 중 표시 — 안: 버튼 비활성만, 문구·스피너 없음. (b) Google 계정이 기기에 없음(`NoCredentialException`)·SDK 실패 — 안: 공통 오류 스낵바. (c) `SOCIAL_TOKEN_INVALID`·`GUEST_ONLY`·`GUEST_NOT_ALLOWED` — 안: 공통 오류. (d) switch의 404 `SOCIAL_NOT_REGISTERED`("앱은 `/auth/link`로 연동하면 된다", API 4.7 3단계) — 안: 같은 토큰으로 `POST /auth/link`를 한 번 자동으로 보냄 vs 공통 오류. (e) switch의 `SOCIAL_TOKEN_INVALID`(토큰 만료) — 안: 소셜 SDK에서 토큰을 한 번 다시 받아 재시도. (f) 시작 화면의 오프라인·공통 오류 스낵바 위치 (결정 6).
+7. (해결됨) **토큰에 없는 크기 값** (보드 원본): 시작 — 버튼 높이 54(design-system "버튼 56/48/44"와 다름), 위 여백 96, 로고 112×72, 묶음 간격 28, 소개 17/400 행간 1.55(`title-md`는 17/700), 칩 안쪽 6·12와 13/500(`label`은 13/600), 작은 글 12/400 행간 1.6(`caption`은 12/500/16), 게스트 아이콘 20. 계정·메뉴 — 버튼 54, 배너 안쪽 18·아이콘 22·본문 13 행간 1.6, 메뉴 행 높이 56·52, 섹션 제목 13/600, 로그인 카드 안쪽 20·체크 선 2.2, 정보 행 높이 52, 다이얼로그 안쪽 24/20/20·제목 아래 간격 8·버튼 위 16. A) 단위 1처럼 Docs 보충 PR(design-system에 버튼·배너·메뉴 행·다이얼로그·시작 화면 수치)을 먼저 (추천), B) 보드 값을 이름 붙인 상수로(단위 1 스낵바 방식). 54는 `size-button-lg` 56으로 맞출지도.
+8. (해결됨) **로고 파일 없음**: design-system "로고"는 `Logos` 그룹의 `duriseo-mark.svg`를 말하지만 Docs에 파일이 없다. 보드 인라인 SVG는 두 가지(`Main.dc.html` 25~30행 112×72 클립 방식, `Menu.dc.html` 앱 정보 36×25 path 방식). 겹친 부분 색은 `brand-500`. Docs `design/icons/`에 넣을지(탭 아이콘처럼), 보드 SVG를 VectorDrawable로 옮겨도 될지.
+9. (해결됨) **약관 링크 주소**: FR-AUTH-08 AC2·Q-03 미정. 안: 단위 2는 링크 모양만 두고 누르면 아무 동작 없음, 주소가 정해지면 설정값으로 추가.
+10. (해결됨) **로그아웃·탈퇴 실패 처리**: FR-AUTH-05 AC1은 "확인하면 지워지고 이동"만 적었다. 안: 오프라인이면 실행하지 않고 "인터넷 연결이 필요해요", 서버 오류(5xx)면 공통 오류 후 그대로(서버의 `devices` 삭제(D-50)가 보장되도록), 응답이 `SESSION_*`면 이미 끊긴 세션이므로 로컬 정리 후 시작 화면. "서버 실패여도 로컬은 로그아웃"을 원하면 알려 주기.
+11. (해결됨) **로그아웃 때 소셜 SDK 정리**: 문서에 없다. 안: 로그아웃·탈퇴·세션 끊김 때 카카오 `UserApiClient.logout()`(기기의 카카오 토큰 삭제)과 `CredentialManager.clearCredentialState()`를 부르고 실패는 무시. 카카오 연결 끊기는 서버가 한다(API 4.6).
+12. (해결됨) **게스트 ID 표시**: `[게스트 ID]`가 `Me.id`(UUID 36자 전체)인지, 줄여 보여 주는지, 길게 눌러 복사할 수 있는지 문서에 없다 (FR-AUTH-09 AC3: 게스트는 본인 확인 수단이 없음 — 표시 목적도 불분명).
+13. (해결됨) **탈퇴 다이얼로그 이미지가 원본과 다름**: `SCR-SET-01--withdraw-dialog.png` 뒤 화면은 맨 아래가 "회원 탈퇴"인데 원본 `Account.dc.html`과 `SCR-SET-01--account-member.png`는 "탈퇴하기". SCREENS 문구 "[탈퇴하기]"를 따른다 (이미지 재생성은 `/design-sync`).
+14. (해결됨) **Server PLAN 배포 표시**: Server `docs/PLAN.md`의 "배포 1"은 "대기"(단위 2까지 묶어 배포)인데 사용자는 단위 1이 개발 서버에 배포됐다고 했다. 맥에서 실제 호출로 확인하고, Server 문서도 맞춰 두기.
+15. (해결됨) **Robolectric 추가** (unit-1 결정 3): `MeEntity`가 첫 Room 엔티티라 CONVENTIONS "data:repository: 메모리 Room 테스트"에 Robolectric이 필요하다. MODULES.md 3장에 없다. A) `testImplementation`으로 추가 (추천), B) Room 테스트를 androidTest로(CI에서 안 돎).
+16. (해결됨) **소셜 로그인 코드 위치**: `feature:auth`와 `feature:settings`가 같이 쓰는데 feature끼리 의존할 수 없다. A) `core:common`의 `social` 패키지 (지금 규칙 안, 추천. `core:common`에 Credential Manager·카카오 의존성이 생김), B) 새 모듈 `core:social`(MODULES.md 계획·`feature/CLAUDE.md` 의존 목록 변경).

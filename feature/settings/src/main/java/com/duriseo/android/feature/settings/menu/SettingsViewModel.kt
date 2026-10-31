@@ -24,7 +24,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    meRepository: MeRepository,
+    private val meRepository: MeRepository,
 ) : ViewModel() {
 
     private data class Local(val logoutDialogVisible: Boolean = false, val requesting: Boolean = false)
@@ -41,6 +41,11 @@ class SettingsViewModel @Inject constructor(
 
     private val effectChannel = Channel<SettingsSideEffect>(Channel.BUFFERED)
     val effects = effectChannel.receiveAsFlow()
+
+    init {
+        // 화면에 들어올 때 내 정보를 새로 받는다. 오프라인이면 조용히 실패하고 Room의 값을 그대로 보여 준다 (ARCHITECTURE.md 2장, NFR-OFF-01)
+        viewModelScope.launch { meRepository.refreshMe() }
+    }
 
     fun onAction(action: SettingsAction) {
         when (action) {

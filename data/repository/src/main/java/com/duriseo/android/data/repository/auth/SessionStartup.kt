@@ -15,12 +15,13 @@ import javax.inject.Singleton
  * 앱 시작 때 한 번 하는 일 (`MyApp`이 부른다):
  * 토큰 저장소를 읽어 로그인 상태를 정하고(FR-AUTH-01 AC2·AC3), 로그인 상태면 뒤에서 `GET /me`를 새로 받고
  * 기기 시간대가 다르면 `PATCH /me`로 맞춘다 (NFR-TIME-01). 로그인 상태가 아니면 요청을 보내지 않는다.
- * 실패는 조용히 넘긴다 (사용자 동작이 아님).
+ * 로그인 상태가 아니면 남아 있을 수 있는 이전 사용자 데이터를 지운다. 실패는 조용히 넘긴다 (사용자 동작이 아님).
  */
 @Singleton
 class SessionStartup @Inject constructor(
     private val authRepository: AuthRepository,
     private val meRepository: MeRepository,
+    private val sessionManager: SessionManager,
     private val clock: Clock,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
@@ -30,7 +31,11 @@ class SessionStartup @Inject constructor(
 
     internal suspend fun run() {
         authRepository.restoreSession()
-        if (authRepository.authState.first() != AuthState.SignedIn) return
+        if (authRepository.authState.first() != AuthState.SignedIn) {
+            // 로그아웃 상태인데 이전 사용자의 Room·설정이 남아 있으면 지운다 (로그아웃·탈퇴·세션 끊김 정리가 중간에 끊긴 경우)
+            sessionManager.clearUserData()
+            return
+        }
         meRepository.refreshMe()
         meRepository.syncTimeZone(clock.zone.id)
     }

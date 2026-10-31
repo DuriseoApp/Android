@@ -31,6 +31,7 @@ import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.component.DuriseoButton
 import com.duriseo.android.core.designsystem.component.DuriseoButtonStyle
 import com.duriseo.android.core.designsystem.component.DuriseoCloseTopAppBar
+import com.duriseo.android.core.designsystem.component.DuriseoDialogLayer
 import com.duriseo.android.core.designsystem.component.DuriseoGuestBanner
 import com.duriseo.android.core.designsystem.component.DuriseoMenuRow
 import com.duriseo.android.core.designsystem.component.DuriseoSectionTitle
@@ -47,7 +48,10 @@ import com.duriseo.android.feature.settings.R
 // 정보 섹션과 앱 정보 카드는 어느 단위에도 계획이 없어 unit-2.md 확인 필요 4에 올렸다.
 // 수치는 design-system.md "메뉴 행"과 보드 `Menu.dc.html`. 토큰에 없는 수치는 이름 붙인 상수로 둔다.
 
-/** 앱바 아래 위 여백 4 (`Menu.dc.html` 24행) */
+/**
+ * 앱바 아래 위 여백 4. 출처: 캔버스 원본 `../Docs/design/source/Menu.dc.html` 24행(`padding: 4px 20px 0`).
+ * design-system 명세에는 아직 없다 (Docs 후속: "전체 메뉴 본문 위 여백 4" 추가 필요, unit-2.md).
+ */
 private val ContentTop = 4.dp
 
 /** 덩어리 사이 간격 24 (24행, `space-6`) */
@@ -96,10 +100,16 @@ fun SettingsScreen(
     onAction: (SettingsAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface),
+    DuriseoDialogLayer(
+        dialogVisible = state.logoutDialogVisible,
+        dialog = {
+            LogoutConfirmDialog(
+                onCancel = { onAction(SettingsAction.DialogDismissed) },
+                onConfirm = { onAction(SettingsAction.LogoutConfirmed) },
+                buttonsEnabled = !state.requesting,
+            )
+        },
+        modifier = modifier.background(MaterialTheme.colorScheme.surface),
     ) {
         Column(
             modifier = Modifier
@@ -161,14 +171,6 @@ fun SettingsScreen(
                     }
                 }
             }
-        }
-
-        if (state.logoutDialogVisible) {
-            LogoutConfirmDialog(
-                onCancel = { onAction(SettingsAction.DialogDismissed) },
-                onConfirm = { onAction(SettingsAction.LogoutConfirmed) },
-                buttonsEnabled = !state.requesting,
-            )
         }
     }
 }

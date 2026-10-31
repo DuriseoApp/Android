@@ -1,8 +1,5 @@
 package com.duriseo.android.feature.auth.start
 
-import android.app.Activity
-import com.duriseo.android.core.common.social.SocialTokenProvider
-import com.duriseo.android.core.common.social.SocialTokenResult
 import com.duriseo.android.domain.auth.AuthRepository
 import com.duriseo.android.domain.auth.AuthState
 import com.duriseo.android.domain.auth.LoginResult
@@ -66,12 +63,6 @@ class FakeMeRepository(initial: Me? = null) : MeRepository {
     override suspend fun refreshMe(): DataResult<Unit> = DataResult.Success(Unit)
 
     override suspend fun syncTimeZone(zoneId: String): DataResult<Unit> = DataResult.Success(Unit)
-}
-
-/** SDK 호출은 이 테스트들이 직접 부르지 않는다 (결과는 `SocialTokenReceived` 액션으로 넣는다) */
-object UnusedSocialTokenProvider : SocialTokenProvider {
-    override suspend fun requestToken(activity: Activity, provider: SocialProvider): SocialTokenResult =
-        SocialTokenResult.Cancelled
 }
 
 fun apiError(code: String) = DataResult.Failure(DataError.ApiError(code = code, details = null, traceId = null))
