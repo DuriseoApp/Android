@@ -54,7 +54,7 @@ class EncryptedTokenStorageTest {
     }
 
     private fun storage(dataStore: DataStore<Preferences>, key: Int = 0x5A) =
-        EncryptedTokenStorage(dataStore) { FakeAead(key) }
+        EncryptedTokenStorage(dataStore, aeadProvider = { FakeAead(key) })
 
     @Test
     fun `저장소를 읽기 전에는 로그인 여부를 모르는 상태다`() = runTest {
@@ -164,7 +164,7 @@ class EncryptedTokenStorageTest {
             save(tokens)
         }
 
-        val broken = EncryptedTokenStorage(dataStore) { throw GeneralSecurityException("Keystore 키가 없어요") }
+        val broken = EncryptedTokenStorage(dataStore, aeadProvider = { throw GeneralSecurityException("Keystore 키가 없어요") })
         broken.restore()
 
         assertEquals(TokenState.Empty, broken.state.value)
