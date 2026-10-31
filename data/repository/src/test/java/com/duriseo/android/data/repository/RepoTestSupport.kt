@@ -15,11 +15,14 @@ import com.duriseo.android.data.remote.auth.AuthApi
 import com.duriseo.android.data.remote.auth.AuthRemoteDataSource
 import com.duriseo.android.data.remote.auth.AuthSessionApi
 import com.duriseo.android.data.remote.call.ApiCaller
+import com.duriseo.android.data.remote.couple.CoupleApi
+import com.duriseo.android.data.remote.couple.CoupleRemoteDataSource
 import com.duriseo.android.data.remote.json.createApiJson
 import com.duriseo.android.data.remote.me.MeApi
 import com.duriseo.android.data.remote.me.MeRemoteDataSource
 import com.duriseo.android.data.repository.auth.AuthRepositoryImpl
 import com.duriseo.android.data.repository.auth.SessionManager
+import com.duriseo.android.data.repository.couple.CoupleRepositoryImpl
 import com.duriseo.android.data.repository.me.MeRepositoryImpl
 import com.duriseo.android.data.repository.me.toEntity
 import com.duriseo.android.domain.auth.AuthTokens
@@ -204,6 +207,8 @@ class RepoHarness(
     val clock: Clock = Clock.fixed(Instant.parse("2026-10-30T00:00:00Z"), ZoneId.of(zoneId))
     val meRepository = MeRepositoryImpl(meRemote, meLocal, monitor)
     val authRepository = AuthRepositoryImpl(authRemote, meRemote, tokens, session, meRepository, monitor, clock)
+    val coupleRemote = CoupleRemoteDataSource(retrofit.create(CoupleApi::class.java), apiCaller)
+    val coupleRepository = CoupleRepositoryImpl(coupleRemote, meRepository, session, monitor)
 
     /** Room에 내 정보를, 설정 DataStore에 값을 미리 넣어 둔다 (지워지는지 보려고) */
     suspend fun preload(me: Me = fixtureMe()) {

@@ -33,4 +33,24 @@
     <string name="pick_label_brown">브라운</string>
     <string name="pick_label_gray">회색</string>
     <string name="pick_label_ink">먹색</string>
+
+    <!-- 처음 만난 날 선택 시트 (SCREENS.md "처음 만난 날 선택 시트", 보드 StartDateSheet.dc.html). 연·월 제목을 눌러 고르는 동작은 v0.9 반영 대기 -->
+    <string name="start_date_sheet_title">처음 만난 날</string>
+    <string name="start_date_sheet_description">D-day와 기념일이 이 날을 1일로 계산돼요.</string>
+    <string name="start_date_sheet_month">%1$d년 %2$d월</string>
+    <string name="start_date_sheet_previous_month">이전 달</string>
+    <string name="start_date_sheet_next_month">다음 달</string>
+    <string name="start_date_sheet_day">%1$d월 %2$d일</string>
+    <string name="start_date_sheet_day_selected">%1$d월 %2$d일, 선택됨</string>
+    <string name="start_date_sheet_range_note">오늘 이후 날짜는 고를 수 없어요. 1950년 1월부터 고를 수 있어요.</string>
+    <string name="start_date_sheet_save">저장</string>
+    <string-array name="weekday_short">
+        <item>일</item>
+        <item>월</item>
+        <item>화</item>
+        <item>수</item>
+        <item>목</item>
+        <item>금</item>
+        <item>토</item>
+    </string-array>
 </resources>

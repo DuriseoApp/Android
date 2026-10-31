@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -37,6 +41,8 @@ import com.duriseo.android.core.designsystem.component.DuriseoMenuRow
 import com.duriseo.android.core.designsystem.component.DuriseoSectionTitle
 import com.duriseo.android.core.designsystem.component.LogoutConfirmDialog
 import com.duriseo.android.core.designsystem.theme.Danger700
+import com.duriseo.android.core.designsystem.theme.DuriseoPickPalette
+import com.duriseo.android.core.designsystem.theme.DuriseoShapes
 import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 import com.duriseo.android.core.designsystem.theme.Line100
@@ -57,6 +63,10 @@ private val ContentTop = 4.dp
 /** 덩어리 사이 간격 24 (24행, `space-6`) */
 private val BlockGap = DuriseoSpacing.Space6
 
+/** 현재 색 점 지름 14, 사이 4 (105·206행) */
+private val DotSize = 14.dp
+private val DotGap = 4.dp
+
 /** 로그아웃 행 높이 52 (139행) */
 private val LogoutHeight = 52.dp
 
@@ -65,6 +75,7 @@ fun SettingsRoute(
     padding: PaddingValues,
     onClose: () -> Unit,
     onOpenAccount: () -> Unit,
+    onOpenColors: () -> Unit,
     onLoggedOut: () -> Unit,
     onShowSnackBar: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -86,6 +97,7 @@ fun SettingsRoute(
         padding = padding,
         onClose = onClose,
         onOpenAccount = onOpenAccount,
+        onOpenColors = onOpenColors,
         onAction = viewModel::onAction,
         modifier = modifier,
     )
@@ -97,6 +109,7 @@ fun SettingsScreen(
     padding: PaddingValues,
     onClose: () -> Unit,
     onOpenAccount: () -> Unit,
+    onOpenColors: () -> Unit,
     onAction: (SettingsAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -149,6 +162,19 @@ fun SettingsScreen(
                         )
                     }
 
+                    // 꾸미기 › 우리 색상 (단위 3). 프로필 카드·알림 설정·연결 정보는 다른 단위·v0.9 반영 대기
+                    if (state.colorKeys.isNotEmpty()) {
+                        Column {
+                            DuriseoSectionTitle(text = stringResource(R.string.settings_section_deco))
+                            DuriseoMenuRow(
+                                label = stringResource(R.string.settings_colors),
+                                onClick = onOpenColors,
+                                iconRes = DesignR.drawable.ic_palette,
+                                trailing = { ColorDots(state.colorKeys) },
+                            )
+                        }
+                    }
+
                     Column {
                         DuriseoSectionTitle(text = stringResource(R.string.settings_section_settings))
                         DuriseoMenuRow(
@@ -171,6 +197,28 @@ fun SettingsScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * 현재 색 점: 지름 14, 사이 4 (보드 `Menu.dc.html` 105·206행). 커플은 나·상대·함께 3개, 개인 공간은 나 1개.
+ * 팔레트에 없는 키는 그리지 않는다. 읽는 이름은 행 전체에 붙는다 ("현재 색상: 나, 상대, 함께", 커플일 때).
+ */
+@Composable
+private fun ColorDots(keys: List<String>) {
+    val description = if (keys.size > 1) stringResource(R.string.settings_colors_description) else ""
+    Row(
+        modifier = Modifier.semantics { contentDescription = description },
+        horizontalArrangement = Arrangement.spacedBy(DotGap),
+    ) {
+        keys.forEach { key ->
+            val color = DuriseoPickPalette.colorOf(key) ?: return@forEach
+            Box(
+                modifier = Modifier
+                    .size(DotSize)
+                    .background(color, DuriseoShapes.Full),
+            )
         }
     }
 }
@@ -212,6 +260,7 @@ private fun SettingsScreenGuestPreview() {
             padding = PaddingValues(),
             onClose = {},
             onOpenAccount = {},
+            onOpenColors = {},
             onAction = {},
         )
     }
@@ -226,6 +275,7 @@ private fun SettingsScreenMemberPreview() {
             padding = PaddingValues(),
             onClose = {},
             onOpenAccount = {},
+            onOpenColors = {},
             onAction = {},
         )
     }
@@ -240,6 +290,7 @@ private fun SettingsScreenKakaoMemberPreview() {
             padding = PaddingValues(),
             onClose = {},
             onOpenAccount = {},
+            onOpenColors = {},
             onAction = {},
         )
     }
@@ -257,6 +308,7 @@ private fun SettingsScreenLogoutDialogPreview() {
             padding = PaddingValues(),
             onClose = {},
             onOpenAccount = {},
+            onOpenColors = {},
             onAction = {},
         )
     }
@@ -275,6 +327,45 @@ private fun SettingsScreenLogoutRequestingPreview() {
             padding = PaddingValues(),
             onClose = {},
             onOpenAccount = {},
+            onOpenColors = {},
+            onAction = {},
+        )
+    }
+}
+
+/** 꾸미기 › 우리 색상 행: 커플은 색 점 3개 (`SCR-SET-01.png`의 해당 줄) */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun SettingsScreenCoupleColorsPreview() {
+    DuriseoTheme {
+        SettingsScreen(
+            state = SettingsUiState(
+                account = SettingsAccount.Member(SocialProvider.GOOGLE),
+                colorKeys = listOf("pick-orange", "pick-blue", "pick-purple"),
+            ),
+            padding = PaddingValues(),
+            onClose = {},
+            onOpenAccount = {},
+            onOpenColors = {},
+            onAction = {},
+        )
+    }
+}
+
+/** 개인 공간은 나 색 점 하나 */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun SettingsScreenSoloColorsPreview() {
+    DuriseoTheme {
+        SettingsScreen(
+            state = SettingsUiState(
+                account = SettingsAccount.Member(SocialProvider.GOOGLE),
+                colorKeys = listOf("pick-orange"),
+            ),
+            padding = PaddingValues(),
+            onClose = {},
+            onOpenAccount = {},
+            onOpenColors = {},
             onAction = {},
         )
     }

@@ -191,4 +191,21 @@ class SettingsViewModelTest {
             assertEquals(1, auth.logoutCalls)
         }
     }
+    @Test
+    fun `FR-CAL-04 AC1 커플이면 우리 색상 행에 나 상대 함께 색 점 셋이 보인다`() = runTest {
+        me.me.value = memberMe(partnerNickname = "둘").let {
+            it.copy(space = it.space.copy(myColor = "pick-rose", partner = it.space.partner?.copy(color = "pick-teal"), togetherColor = "pick-ink"))
+        }
+        val vm = viewModel()
+
+        assertEquals(listOf("pick-rose", "pick-teal", "pick-ink"), vm.uiState.value.colorKeys)
+    }
+
+    @Test
+    fun `FR-CAL-04 AC5 개인 공간이면 우리 색상 행에 나 색 점 하나만 보인다`() = runTest {
+        me.me.value = memberMe().let { it.copy(space = it.space.copy(myColor = "pick-rose")) }
+        val vm = viewModel()
+
+        assertEquals(listOf("pick-rose"), vm.uiState.value.colorKeys)
+    }
 }
