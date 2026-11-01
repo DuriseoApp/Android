@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,15 +38,12 @@ import com.duriseo.android.core.designsystem.R
 import com.duriseo.android.core.designsystem.theme.Brand500
 import com.duriseo.android.core.designsystem.theme.Danger600
 import com.duriseo.android.core.designsystem.theme.DuriseoShapes
-import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 import com.duriseo.android.core.designsystem.theme.Ink300
 import com.duriseo.android.core.designsystem.theme.Ink500
 import com.duriseo.android.core.designsystem.theme.Ink600
 import com.duriseo.android.core.designsystem.theme.Ink900
-import com.duriseo.android.core.designsystem.theme.Line300
 import com.duriseo.android.core.designsystem.theme.OnBrand
-import com.duriseo.android.core.designsystem.theme.Surface0
 import com.duriseo.android.domain.couple.StartDateRules
 import java.time.LocalDate
 import java.time.YearMonth
@@ -56,15 +51,8 @@ import java.time.YearMonth
 // 처음 만난 날 선택 시트 (SCREENS.md "처음 만난 날 선택 시트", FR-COUPLE-04 AC3, D-74, D-84).
 // 수치는 보드 `StartDateSheet.dc.html`. 토큰에 없는 값이라 이름을 붙인 상수로 둔다 (unit-3.md 확인 필요 14).
 
-/** 시트 안쪽: 위 10·좌우 24·아래 28, 덩어리 사이 16, 위 모서리 24 (19행) */
-private val SheetPaddingTop = 10.dp
-private val SheetPaddingBottom = 28.dp
+/** 덩어리 사이 16 (19행). 면(위 모서리 24, 손잡이, 안쪽 여백)은 [DuriseoSheetPanel] */
 private val SheetGap = 16.dp
-
-/** 손잡이 36x4, 모서리 2, `line-300` (20행) */
-private val HandleWidth = 36.dp
-private val HandleHeight = 4.dp
-private val HandleRadius = 2.dp
 
 /** 제목 위 4, 제목과 설명 사이 6 (21~22행). 설명 13/400 행간 1.6 */
 private val TitleTop = 4.dp
@@ -101,7 +89,7 @@ private const val DAYS_PER_WEEK = 7
  *
  * - 고를 수 있는 날은 1950-01-01 ~ [today]다 (`StartDateRules`). 범위 밖 날짜는 비활성이고, 이전·다음 달 버튼도
  *   그 범위 끝에서 꺼진다. 지우기는 없다 (D-84).
- * - **연·월 제목을 눌러 연도·월을 고르는 동작은 디자인이 없어 만들지 않았다** (v0.9 반영 대기, unit-3.md 확인 필요 6).
+ * - **연·월 제목을 눌러 연도·월을 고르는 동작은 디자인이 없어 만들지 않았다** (SCREENS.md "연도·월 선택": 이미지 예정 `SCR-SET-01--start-date-sheet-year-month.png`, 그때까지 구현은 문서 밖. unit-3.md 확인 필요 6).
  *   제목은 글자만 보인다.
  * - 상태는 호출하는 쪽이 들고 있다: 보이는 달 [visibleMonth], 고른 날 [selectedDate].
  *
@@ -119,25 +107,7 @@ fun StartDatePickerSheet(
     modifier: Modifier = Modifier,
     saveEnabled: Boolean = true,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Surface0, RoundedCornerShape(topStart = SheetTopRadius, topEnd = SheetTopRadius))
-            .padding(
-                start = DuriseoSpacing.Space6,
-                end = DuriseoSpacing.Space6,
-                top = SheetPaddingTop,
-                bottom = SheetPaddingBottom,
-            ),
-        verticalArrangement = Arrangement.spacedBy(SheetGap),
-    ) {
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .size(width = HandleWidth, height = HandleHeight)
-                .background(Line300, RoundedCornerShape(HandleRadius))
-                .clearAndSetSemantics { },
-        )
+    DuriseoSheetPanel(modifier = modifier, gap = SheetGap) {
         Column(
             modifier = Modifier.padding(top = TitleTop),
             verticalArrangement = Arrangement.spacedBy(TitleGap),
@@ -190,9 +160,6 @@ fun StartDatePickerSheet(
         )
     }
 }
-
-/** 시트 위 모서리 24 (`radius-2xl`, 19행) */
-private val SheetTopRadius = 24.dp
 
 @Composable
 private fun MonthHeader(

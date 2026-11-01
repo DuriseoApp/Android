@@ -31,7 +31,7 @@ fun NavController.navigateToInviteEnter(navOptions: NavOptions? = null) {
  * @param onInviteCreate [초대코드 만들기]
  * @param onInviteEnter [초대코드 입력하기]
  * @param onHome [혼자 시작하기]·[혼자 계속 쓰기], 연결됨 → SCR-CAL-01 (백스택을 비운다).
- *   연결 완료 시트(SCR-COUPLE-04)는 v0.9 반영 대기
+ *   연결 완료 시트(SCR-COUPLE-04)는 이 그래프가 아니라 `feature:main`이 캘린더 위에 띄운다
  * @param onLoginAndConnect 게스트의 [로그인하고 연결하기] → 계정 화면
  * @param onLoggedOut "다른 계정으로 로그인"으로 로그아웃을 마쳤다 → SCR-START-01 (백스택을 비운다)
  */

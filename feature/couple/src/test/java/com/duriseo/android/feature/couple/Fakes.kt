@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.couple
 
+import com.duriseo.android.domain.me.SpaceChange
 import com.duriseo.android.domain.auth.AuthRepository
 import com.duriseo.android.domain.auth.AuthState
 import com.duriseo.android.domain.auth.LoginResult
@@ -11,6 +12,7 @@ import com.duriseo.android.domain.couple.InviteCode
 import com.duriseo.android.domain.error.DataError
 import com.duriseo.android.domain.error.ErrorDetails
 import com.duriseo.android.domain.me.AccountType
+import com.duriseo.android.domain.me.ImportCounts
 import com.duriseo.android.domain.me.Me
 import com.duriseo.android.domain.me.MePartner
 import com.duriseo.android.domain.me.MeRepository
@@ -67,7 +69,13 @@ class FakeCoupleRepository : CoupleRepository {
     val startDateCalls = mutableListOf<LocalDate>()
     val colorCalls = mutableListOf<ColorChange>()
     var colorResult: DataResult<Unit> = DataResult.Success(Unit)
+    var importResult: DataResult<Unit> = DataResult.Success(Unit)
+    var startDateResult: DataResult<Unit> = DataResult.Success(Unit)
+    var unlinkResult: DataResult<Unit> = DataResult.Success(Unit)
     var unlinkCalls = 0
+
+    /** 쓰기 호출 순서를 기록한다 ("startDate", "import:true" 같은 이름). [시작하기] 순서를 확인하려고 */
+    val writeOrder = mutableListOf<String>()
 
     override suspend fun currentInviteCode(): DataResult<InviteCode?> {
         currentCalls++
@@ -85,14 +93,20 @@ class FakeCoupleRepository : CoupleRepository {
         return joinResult
     }
 
+    /** 설정하면 decideImport가 이 신호를 받을 때까지 멈춘다 */
+    var importGate: CompletableDeferred<Unit>? = null
+
     override suspend fun decideImport(import: Boolean): DataResult<Unit> {
         importCalls += import
-        return DataResult.Success(Unit)
+        writeOrder += "import:$import"
+        importGate?.await()
+        return importResult
     }
 
     override suspend fun updateStartDate(date: LocalDate): DataResult<Unit> {
         startDateCalls += date
-        return DataResult.Success(Unit)
+        writeOrder += "startDate"
+        return startDateResult
     }
 
     override suspend fun updateColors(change: ColorChange): DataResult<Unit> {
@@ -102,7 +116,7 @@ class FakeCoupleRepository : CoupleRepository {
 
     override suspend fun unlink(): DataResult<Unit> {
         unlinkCalls++
-        return DataResult.Success(Unit)
+        return unlinkResult
     }
 }
 
@@ -124,6 +138,23 @@ class FakeMeRepository(initial: Me? = null) : MeRepository {
     }
 
     override suspend fun syncTimeZone(zoneId: String): DataResult<Unit> = DataResult.Success(Unit)
+
+    val changes = MutableSharedFlow<SpaceChange>(extraBufferCapacity = 4)
+    override val spaceChanges: Flow<SpaceChange> = changes
+
+    val sheetNeeded = MutableStateFlow(false)
+    override fun observeLinkedSheetNeeded(): Flow<Boolean> = sheetNeeded
+
+    var acknowledgeCalls = 0
+    override suspend fun acknowledgeSpace() {
+        acknowledgeCalls++
+        sheetNeeded.value = false
+    }
+
+    var resetCalls = 0
+    override suspend fun resetAfterUnlink() {
+        resetCalls++
+    }
 }
 
 /** 커플 연결 화면은 로그아웃만 쓴다 */
@@ -168,6 +199,10 @@ fun offline() = DataResult.Failure(DataError.Offline)
 fun testMe(
     type: SpaceType = SpaceType.PERSONAL,
     accountType: AccountType = AccountType.MEMBER,
+    startDate: LocalDate? = null,
+    importPending: Boolean = false,
+    importCounts: ImportCounts? = null,
+    linkedAt: Instant? = null,
 ) = Me(
     id = "11111111-1111-1111-1111-111111111111",
     accountType = accountType,
@@ -182,8 +217,10 @@ fun testMe(
         myColor = "pick-orange",
         partner = if (type == SpaceType.COUPLE) MePartner("33333333-3333-3333-3333-333333333333", "둘", "pick-blue", false) else null,
         togetherColor = if (type == SpaceType.COUPLE) "pick-purple" else null,
-        startDate = null,
-        importPending = false,
+        startDate = startDate,
+        importPending = importPending,
+        linkedAt = linkedAt,
+        importCounts = importCounts,
     ),
 )
 

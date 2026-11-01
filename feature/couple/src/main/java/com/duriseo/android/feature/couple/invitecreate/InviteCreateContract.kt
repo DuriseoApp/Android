@@ -5,7 +5,7 @@ import androidx.annotation.StringRes
 /**
  * SCR-COUPLE-02의 상태 (FR-COUPLE-01, FR-COUPLE-02).
  *
- * @property code 6자리 대문자 코드. 아직 받지 못했으면 null (칸이 빈 채로 보인다. 첫 진입 모양은 문서에 없어 v0.9 반영 대기)
+ * @property code 6자리 대문자 코드. 아직 받지 못했으면 null (D-95 코드 받는 중. 디자인 반영 후 맞춤(이미지 대기): 칸이 빈 채로 보이고 남은 시간 줄은 숨긴다)
  * @property remainingSeconds 코드가 만료되기까지 남은 초 (기기 시계 기준, 진행 기록 결정 4)
  * @property reissueWaitSeconds 0보다 크면 [코드 새로 만들기]가 꺼지고 "N초 뒤에 다시 만들 수 있어요"가 보인다
  * @property renewedNotice 만료돼 앱이 새 코드를 받았다는 안내 (FR-COUPLE-01 AC5)
@@ -47,7 +47,7 @@ sealed interface InviteCreateSideEffect {
     /** Route가 공유 시트(`ACTION_SEND`, `text/plain`)에 [code]를 넘긴다 (코드만, unit-3.md 확인 필요 13) */
     data class ShareCode(val code: String) : InviteCreateSideEffect
 
-    /** 연결됐다 → SCR-CAL-01 (연결 완료 시트는 v0.9 반영 대기) */
+    /** 연결됐다 → SCR-CAL-01 (연결 완료 시트 SCR-COUPLE-04는 캘린더 위에 `feature:main`이 띄운다) */
     data object NavigateToHome : InviteCreateSideEffect
 
     /** 화면 아래(버튼 위 112)의 스낵바 */

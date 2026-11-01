@@ -331,7 +331,7 @@ private fun MemberSection(onAction: (ConnectAction) -> Unit) {
         ConnectCard(
             title = stringResource(R.string.connect_make_code),
             subtitle = stringResource(R.string.connect_make_code_subtitle),
-            iconRes = R.drawable.ic_ticket_plus,
+            iconRes = DesignR.drawable.ic_ticket_plus,
             onClick = { onAction(ConnectAction.MakeCodeClicked) },
             container = Brand500,
             titleColor = OnBrand,
@@ -343,7 +343,7 @@ private fun MemberSection(onAction: (ConnectAction) -> Unit) {
         ConnectCard(
             title = stringResource(R.string.connect_enter_code),
             subtitle = stringResource(R.string.connect_enter_code_subtitle),
-            iconRes = R.drawable.ic_keyboard,
+            iconRes = DesignR.drawable.ic_keyboard,
             onClick = { onAction(ConnectAction.EnterCodeClicked) },
             container = Surface100,
             titleColor = Ink900,

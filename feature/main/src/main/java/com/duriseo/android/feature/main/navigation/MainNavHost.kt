@@ -42,8 +42,8 @@ fun MainNavHost(
                     AfterLogin.Home -> navigator.navigateToHome()
                     // 신규 회원은 SCR-COUPLE-01 (FR-AUTH-02 AC1, D-31). 앞 화면이 없어 뒤로 가기 버튼이 없다
                     AfterLogin.CoupleConnect -> navigator.navigateToCoupleConnect()
-                    // 가져올 기록이 남은 기존 회원은 캘린더 + 연결 완료 시트(SCR-COUPLE-04)여야 하지만
-                    // 시트는 v0.9 반영 대기다 (unit-3.md 확인 필요 1·7). 그때까지는 캘린더로 보낸다
+                    // 가져올 기록이 남은 기존 회원은 캘린더로 간다. 그 위의 연결 완료 시트(SCR-COUPLE-04)는
+                    // `MainScreen`이 `importPending`을 보고 띄운다 (FR-COUPLE-03 AC4, FR-AUTH-02 AC1)
                     AfterLogin.ImportPending -> navigator.navigateToHome()
                 }
             },
@@ -76,6 +76,11 @@ fun MainNavHost(
             onBackFromAccount = navigator::navigateUp,
             onOpenColors = navigator::navigateToColors,
             onBackFromColors = navigator::navigateUp,
+            onOpenConnect = navigator::navigateToConnect,
+            onOpenConnectionInfo = navigator::navigateToConnectionInfo,
+            onBackFromConnectionInfo = navigator::navigateUp,
+            onOpenInviteCreate = navigator::navigateToInviteCreate,
+            onOpenInviteEnter = navigator::navigateToInviteEnter,
             onLoggedOut = { navigator.navigateToStart() },
             onSwitched = { navigator.navigateToHome() },
             onShowSnackBar = onShowSnackBar,

@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.settings.colors
 
+import androidx.annotation.StringRes
 import java.time.LocalDate
 
 /** 바꿀 대상 (SCR-SET-03 "바꿀 대상" [나 | 상대 | 함께]) */
@@ -14,11 +15,12 @@ object ColorDefaults {
 
 /**
  * SCR-SET-03의 상태 (FR-CAL-04). 색은 팔레트 키(`pick-*`)이고 Room의 내 정보에서 읽는다.
- * 사용자가 고른 색은 화면에만 반영되는 초안이다. **저장 시점·방식은 v0.9 반영 대기** (unit-3.md 확인 필요 10)라 서버로 보내지 않는다.
+ * 사용자가 고른 색은 [완료]를 누를 때까지 화면에만 반영되는 초안이다 (D-100).
  *
  * @property loaded 내 정보를 읽었다. 읽기 전에는 앱바만 그린다
  * @property isCouple 커플 공간이면 [나·상대·함께] 셋, 개인 공간이면 [나]만 (FR-CAL-04 AC5)
- * @property weekDays 미리보기 한 주 (일~토). 오늘이 든 주 (unit-3.md 확인 필요 12 A)
+ * @property weekDays 미리보기 한 주 (일~토). 오늘이 든 주 (SCREENS.md SCR-SET-03, 확인 필요 12)
+ * @property saving [완료]의 `PATCH /space/colors` 요청 중. 이 동안 색 고르기와 [완료]는 받지 않는다
  */
 data class ColorsUiState(
     val loaded: Boolean = false,
@@ -27,8 +29,9 @@ data class ColorsUiState(
     val partnerColor: String = ColorDefaults.PARTNER,
     val togetherColor: String = ColorDefaults.TOGETHER,
     val target: ColorTarget = ColorTarget.Me,
-    val today: LocalDate = LocalDate.EPOCH,
+    val today: LocalDate = LocalDate.of(1970, 1, 1),
     val weekDays: List<LocalDate> = emptyList(),
+    val saving: Boolean = false,
 ) {
     fun colorKeyOf(target: ColorTarget): String = when (target) {
         ColorTarget.Me -> myColor
@@ -53,9 +56,14 @@ sealed interface ColorsAction {
 
     data object ResetClicked : ColorsAction
 
-    /**
-     * [완료]. 저장 시점·방식이 v0.9에서 정해질 때까지 아무 일도 하지 않는다 (unit-3.md 확인 필요 10).
-     * 이 화면이 만든 색 변경을 서버로 보내는 리포지토리 호출(`CoupleRepository.updateColors`)은 이미 있다.
-     */
+    /** [완료]: 바뀐 색만 한 번에 저장하고 닫는다. 바뀐 것이 없으면 요청 없이 닫는다 (D-100) */
     data object DoneClicked : ColorsAction
+}
+
+sealed interface ColorsSideEffect {
+    /** 저장했거나 바뀐 것이 없어 화면을 닫는다 */
+    data object Close : ColorsSideEffect
+
+    /** 실패·오프라인 안내 스낵바. 화면은 그대로 둔다 */
+    data class ShowMessage(@StringRes val messageRes: Int) : ColorsSideEffect
 }

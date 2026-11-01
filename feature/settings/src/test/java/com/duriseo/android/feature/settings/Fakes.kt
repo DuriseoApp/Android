@@ -1,11 +1,16 @@
 package com.duriseo.android.feature.settings
 
+import com.duriseo.android.domain.me.SpaceChange
 import com.duriseo.android.core.common.social.SocialTokenResult
 import com.duriseo.android.domain.auth.AuthRepository
 import com.duriseo.android.domain.auth.AuthState
 import com.duriseo.android.domain.auth.LoginResult
 import com.duriseo.android.domain.auth.SessionEndReason
 import com.duriseo.android.domain.error.DataError
+import com.duriseo.android.domain.couple.ColorChange
+import com.duriseo.android.domain.couple.CoupleJoinResult
+import com.duriseo.android.domain.couple.CoupleRepository
+import com.duriseo.android.domain.couple.InviteCode
 import com.duriseo.android.domain.me.AccountType
 import com.duriseo.android.domain.me.Me
 import com.duriseo.android.domain.me.MePartner
@@ -34,6 +39,23 @@ class FakeMeRepository(initial: Me? = null) : MeRepository {
     }
 
     override suspend fun syncTimeZone(zoneId: String): DataResult<Unit> = DataResult.Success(Unit)
+
+    val changes = MutableSharedFlow<SpaceChange>(extraBufferCapacity = 4)
+    override val spaceChanges: Flow<SpaceChange> = changes
+
+    val sheetNeeded = MutableStateFlow(false)
+    override fun observeLinkedSheetNeeded(): Flow<Boolean> = sheetNeeded
+
+    var acknowledgeCalls = 0
+    override suspend fun acknowledgeSpace() {
+        acknowledgeCalls++
+        sheetNeeded.value = false
+    }
+
+    var resetCalls = 0
+    override suspend fun resetAfterUnlink() {
+        resetCalls++
+    }
 }
 
 /**
@@ -143,3 +165,39 @@ fun memberMe(
         }
     },
 )
+
+/** 커플 공간의 내 정보. 처음 만난 날과 연결한 시각을 고를 수 있다 */
+fun coupleMe(startDate: LocalDate? = LocalDate.of(2026, 10, 12), linkedAt: Instant? = Instant.parse("2026-10-12T03:00:00Z")) =
+    memberMe(partnerNickname = "지우").let { me ->
+        me.copy(space = me.space.copy(startDate = startDate, linkedAt = linkedAt))
+    }
+
+/** 설정 화면 테스트용 가짜 CoupleRepository. 쓰는 것만 기록하고 나머지는 쓰지 않는다 */
+class FakeCoupleRepository : CoupleRepository {
+    val startDateCalls = mutableListOf<LocalDate>()
+    var startDateResult: DataResult<Unit> = DataResult.Success(Unit)
+    val colorCalls = mutableListOf<ColorChange>()
+    var colorResult: DataResult<Unit> = DataResult.Success(Unit)
+    var unlinkCalls = 0
+    var unlinkResult: DataResult<Unit> = DataResult.Success(Unit)
+
+    override suspend fun currentInviteCode(): DataResult<InviteCode?> = error("설정 화면은 쓰지 않아요")
+    override suspend fun issueInviteCode(): DataResult<InviteCode> = error("설정 화면은 쓰지 않아요")
+    override suspend fun join(code: String): DataResult<CoupleJoinResult> = error("설정 화면은 쓰지 않아요")
+    override suspend fun decideImport(import: Boolean): DataResult<Unit> = error("설정 화면은 쓰지 않아요")
+
+    override suspend fun updateStartDate(date: LocalDate): DataResult<Unit> {
+        startDateCalls += date
+        return startDateResult
+    }
+
+    override suspend fun updateColors(change: ColorChange): DataResult<Unit> {
+        colorCalls += change
+        return colorResult
+    }
+
+    override suspend fun unlink(): DataResult<Unit> {
+        unlinkCalls++
+        return unlinkResult
+    }
+}

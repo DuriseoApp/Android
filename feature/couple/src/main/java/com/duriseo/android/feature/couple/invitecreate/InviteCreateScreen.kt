@@ -302,25 +302,29 @@ private fun CodePanel(state: InviteCreateUiState, onAction: (InviteCreateAction)
             code = state.code,
             description = stringResource(R.string.invite_create_code_description, state.code.orEmpty()),
         )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(TimerGap),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_clock),
-                contentDescription = null,
-                modifier = Modifier.size(TimerIconSize),
-                tint = Ink600,
-            )
-            Text(
-                text = stringResource(
-                    R.string.invite_create_remaining,
-                    state.remainingSeconds / SECONDS_PER_MINUTE,
-                    state.remainingSeconds % SECONDS_PER_MINUTE,
-                ),
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Normal),
-                color = Ink600,
-            )
+        // 코드를 받기 전에는 남은 시간 값이 없어 줄 자체를 두지 않는다. 이미지 `SCR-COUPLE-02--loading.png`가 이 줄을
+        // 어떻게 하는지 정하면 맞춘다 (디자인 반영 후 맞춤, D-95)
+        if (state.code != null) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(TimerGap),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_clock),
+                    contentDescription = null,
+                    modifier = Modifier.size(TimerIconSize),
+                    tint = Ink600,
+                )
+                Text(
+                    text = stringResource(
+                        R.string.invite_create_remaining,
+                        state.remainingSeconds / SECONDS_PER_MINUTE,
+                        state.remainingSeconds % SECONDS_PER_MINUTE,
+                    ),
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Normal),
+                    color = Ink600,
+                )
+            }
         }
         if (state.renewedNotice) {
             Text(
@@ -497,7 +501,7 @@ private fun InviteCreateScreenCopiedPreview() = PreviewInviteCreate(
     InviteCreateUiState(code = "K7Q29X", remainingSeconds = 8 * 60 + 12, copied = true),
 )
 
-/** 첫 코드를 받는 중: 문서에 없는 상태라 빈 칸으로 둔다 (v0.9 반영 대기, unit-3.md 확인 필요 3) */
+/** 첫 코드를 받는 중: D-95 코드 받는 중. 디자인 반영 후 맞춤(이미지 대기): `SCR-COUPLE-02--loading.png` 예정이라 칸을 비워 두고 남은 시간 줄은 숨긴다 */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun InviteCreateScreenLoadingPreview() = PreviewInviteCreate(InviteCreateUiState())

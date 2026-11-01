@@ -10,6 +10,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.duriseo.android.data.local.cleanup.LocalDataCleaner
 import com.duriseo.android.data.local.db.DuriseoDatabase
+import com.duriseo.android.data.local.me.AcknowledgedSpaceLocalDataSource
 import com.duriseo.android.data.local.me.MeLocalDataSource
 import com.duriseo.android.data.remote.auth.AuthApi
 import com.duriseo.android.data.remote.auth.AuthRemoteDataSource
@@ -30,6 +31,8 @@ import com.duriseo.android.domain.auth.SocialSessionCleaner
 import com.duriseo.android.domain.auth.TokenState
 import com.duriseo.android.domain.auth.TokenStorage
 import com.duriseo.android.domain.me.AccountType
+import com.duriseo.android.domain.me.ImportCounts
+import com.duriseo.android.domain.me.MePartner
 import com.duriseo.android.domain.me.Me
 import com.duriseo.android.domain.me.MeSpace
 import com.duriseo.android.domain.me.SpaceType
@@ -122,6 +125,20 @@ fun meJson(
         "space":{"id":"22222222-2222-2222-2222-222222222222","type":"PERSONAL","myColor":"pick-orange",
         "partner":null,"togetherColor":null,"startDate":null,"importPending":false}}"""
 
+/** `GET /me` 응답: 커플 공간. [importCountsJson]은 `importCounts` 값 그대로 (`null`이면 JSON null) */
+fun coupleMeJson(
+    spaceId: String = "33333333-3333-3333-3333-333333333333",
+    importPending: Boolean = false,
+    importCountsJson: String = "null",
+    startDate: String? = null,
+): String =
+    """{"id":"11111111-1111-1111-1111-111111111111","accountType":"MEMBER","nickname":"민수",
+        "timeZone":"Asia/Seoul","providers":["GOOGLE"],"hasProfileImage":false,"createdAt":"2026-10-12T03:00:00Z",
+        "space":{"id":"$spaceId","type":"COUPLE","myColor":"pick-orange",
+        "partner":{"id":"44444444-4444-4444-4444-444444444444","nickname":"지우","color":"pick-blue","hasProfileImage":false},
+        "togetherColor":"pick-purple","startDate":${startDate?.let { "\"$it\"" } ?: "null"},
+        "linkedAt":"2026-10-12T03:00:00Z","importPending":$importPending,"importCounts":$importCountsJson}}"""
+
 fun fixtureMe(
     id: String = "11111111-1111-1111-1111-111111111111",
     accountType: AccountType = AccountType.GUEST,
@@ -144,6 +161,28 @@ fun fixtureMe(
         importPending = false,
     ),
 )
+
+/** 커플 공간의 내 정보 (API.md 3.1 `MeSpace`의 커플 모양) */
+fun fixtureCoupleMe(
+    spaceId: String = "33333333-3333-3333-3333-333333333333",
+    startDate: java.time.LocalDate? = null,
+    importPending: Boolean = false,
+    importCounts: ImportCounts? = null,
+    linkedAt: Instant? = Instant.parse("2026-10-12T03:00:00Z"),
+): Me = fixtureMe().let { base ->
+    base.copy(
+        space = base.space.copy(
+            id = spaceId,
+            type = SpaceType.COUPLE,
+            partner = MePartner("44444444-4444-4444-4444-444444444444", "지우", "pick-blue", false),
+            togetherColor = "pick-purple",
+            startDate = startDate,
+            importPending = importPending,
+            linkedAt = linkedAt,
+            importCounts = importCounts,
+        ),
+    )
+}
 
 /**
  * 리포지토리 테스트 한 벌: 메모리 Room + 임시 설정 DataStore + MockWebServer를 가리키는 실제 Retrofit.
@@ -205,10 +244,11 @@ class RepoHarness(
         scope = ioScope,
     )
     val clock: Clock = Clock.fixed(Instant.parse("2026-10-30T00:00:00Z"), ZoneId.of(zoneId))
-    val meRepository = MeRepositoryImpl(meRemote, meLocal, monitor)
+    val acknowledgedSpace = AcknowledgedSpaceLocalDataSource(settings)
+    val meRepository = MeRepositoryImpl(meRemote, meLocal, monitor, acknowledgedSpace, session)
     val authRepository = AuthRepositoryImpl(authRemote, meRemote, tokens, session, meRepository, monitor, clock)
     val coupleRemote = CoupleRemoteDataSource(retrofit.create(CoupleApi::class.java), apiCaller)
-    val coupleRepository = CoupleRepositoryImpl(coupleRemote, meRepository, session, monitor)
+    val coupleRepository = CoupleRepositoryImpl(coupleRemote, meRepository, monitor)
 
     /** Room에 내 정보를, 설정 DataStore에 값을 미리 넣어 둔다 (지워지는지 보려고) */
     suspend fun preload(me: Me = fixtureMe()) {

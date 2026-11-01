@@ -39,6 +39,10 @@ sealed interface SettingsRouteModel : RouteModel {
     /** 우리 색상 (SCR-SET-03) */
     @Serializable
     data object Colors : SettingsRouteModel
+
+    /** 연결 정보 (SCR-SET-01 하위 화면 "연결 정보": 연결됨·혼자 사용 중) */
+    @Serializable
+    data object ConnectionInfo : SettingsRouteModel
 }
 
 /** 커플 연결 화면 (`feature:couple`). 하단 탭이 없다. */

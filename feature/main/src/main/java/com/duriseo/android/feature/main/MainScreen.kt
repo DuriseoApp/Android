@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.main
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -19,6 +20,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.duriseo.android.core.designsystem.component.DuriseoSnackbarHost
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 import com.duriseo.android.feature.calendar.CalendarScreen
+import com.duriseo.android.feature.couple.linkedsheet.LinkedSheetRoute
 import com.duriseo.android.feature.main.component.MainBottomBar
 import com.duriseo.android.feature.main.component.MainTab
 import com.duriseo.android.feature.main.component.MemoTabPlaceholder
@@ -34,6 +36,7 @@ fun MainScreen(
     viewModel: MainViewModel = hiltViewModel(),
 ) {
     val start by viewModel.start.collectAsState()
+    val linkedSheetNeeded by viewModel.linkedSheetNeeded.collectAsState()
     val startDestination = navigator.startDestination(start)
 
     val scope = rememberCoroutineScope()
@@ -56,24 +59,33 @@ fun MainScreen(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is MainEffect.SessionEnded -> navigator.navigateToStart(sessionReplaced = effect.replaced)
+                // 연결 해제를 알았다: 앱 초기화가 끝났으니 SCR-COUPLE-01 하나로 다시 만든다 (D-37, D-103)
+                MainEffect.SpaceUnlinked -> navigator.navigateToCoupleConnect()
             }
         }
     }
 
-    MainScaffold(
-        currentTab = navigator.currentTab,
-        showBottomBar = navigator.showBottomBar(),
-        snackbarHostState = snackbarHostState,
-        onTabSelected = navigator::navigate,
-    ) { padding ->
-        // 토큰 저장소를 읽는 동안은 문구 없는 빈 화면이다 (FR-AUTH-01)
-        if (startDestination != null) {
-            MainNavHost(
-                navigator = navigator,
-                startDestination = startDestination,
-                padding = padding,
-                onShowSnackBar = onShowSnackBar,
-            )
+    val currentTab = navigator.currentTab
+    Box {
+        MainScaffold(
+            currentTab = currentTab,
+            showBottomBar = navigator.showBottomBar(),
+            snackbarHostState = snackbarHostState,
+            onTabSelected = navigator::navigate,
+        ) { padding ->
+            // 토큰 저장소를 읽는 동안은 문구 없는 빈 화면이다 (FR-AUTH-01)
+            if (startDestination != null) {
+                MainNavHost(
+                    navigator = navigator,
+                    startDestination = startDestination,
+                    padding = padding,
+                    onShowSnackBar = onShowSnackBar,
+                )
+            }
+        }
+        // 연결 완료 시트(SCR-COUPLE-04)는 캘린더(SCR-CAL-01) 위에 뜬다 (D-48, D-49). 새 내비게이션 경로가 아니다
+        if (linkedSheetNeeded && currentTab == MainTab.CALENDAR) {
+            LinkedSheetRoute()
         }
     }
 }

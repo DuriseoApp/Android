@@ -24,4 +24,12 @@ object StartDateRules {
     /** [month] 다음 달. 오늘이 든 달보다 뒤면 null (다음 달 버튼이 비활성) */
     fun nextMonth(month: YearMonth, today: LocalDate): YearMonth? =
         month.plusMonths(1).takeIf { !it.isAfter(YearMonth.from(today)) }
+
+    /**
+     * 함께한 지 D+N의 N: 처음 만난 날이 1일이다 (`오늘 − 처음 만난 날 + 1`, FR-CAL-01 AC3, NFR-TIME-01).
+     * [today]는 기기 시계의 오늘이다. 시간대가 서로 달라 처음 만난 날이 오늘보다 뒤로 보이면 0 이하가 될 수 있고
+     * 그대로 돌려준다 (규칙이 문서에 없어 단위 5와 함께 정한다, unit-3.md 위험 5).
+     */
+    fun dayNumber(startDate: LocalDate, today: LocalDate): Long =
+        java.time.temporal.ChronoUnit.DAYS.between(startDate, today) + 1
 }

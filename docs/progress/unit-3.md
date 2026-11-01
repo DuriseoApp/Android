@@ -1,8 +1,50 @@
 # 단위 3: 커플
 
-> 브랜치: `feat/3-couple` · PR: (링크) · 상태: 구현 1부 완료 (문서로 확정된 부분만, 빌드·테스트는 CI 확인 대기). 나머지는 v0.9 반영 대기
-> 기준: PRD v0.8 (Docs main `afc3d1b`), SCREENS.md(캔버스 버전 38, 2026-10-27 갱신), API.md(2026-10-27 갱신: 3.1 `Me`·`MeSpace`, 3.2, 4.4, 4.5, 5장, 6장), design-system.md(Android 매핑, 다이얼로그, 스낵바, 버튼), tokens.json
+> 브랜치: `feat/3-couple` · PR: #10(초안) · 상태: 구현 1부 완료(CI 313개 통과, 커밋 a84ad1b), **구현 2부 완료(PRD v0.9 반영, 빌드·테스트는 CI 확인 대기)**. 남은 것은 아래 "남은 일"
+> 기준: PRD v0.9 (Docs main `728ea08`, Docs PR #10). 1부는 v0.8 (`afc3d1b`) 기준이었다. SCREENS.md(캔버스 버전 38, 2026-10-27 갱신), API.md(2026-10-27 갱신: 3.1 `Me`·`MeSpace`, 3.2, 4.4, 4.5, 5장, 6장), design-system.md(Android 매핑, 다이얼로그, 스낵바, 버튼), tokens.json
 > 서버: Server 단위 2(커플) 머지됨, 개발 서버 배포는 사용자 확인 (아래 "서버 연동")
+
+## 확인 필요 해결 (PRD v0.9, Docs PR #10)
+
+확인 필요 1~18은 사용자가 추천안으로 정했고 Docs PRD v0.9(`728ea08`)로 반영됐다. 아래 표는 각 항목이 **어느 문서 위치로 정해졌는지**와 이 레포가 한 일이다. 문서와 이 기록의 추천안이 다르면 문서가 맞으므로 문서를 따랐고, 다른 곳은 "추천안과 다름"으로 표시했다.
+
+| # | 정해진 곳 | 이 레포가 한 일 | 상태 |
+| --- | --- | --- | --- |
+| 1 개수 값 | D-93, API.md 3.1 `MeSpace.importCounts`(`ImportCounts{events,anniversaries,memos}`, `importPending`이 false면 null), FR-COUPLE-03 AC1·AC2, Q-13(0개도 보여 줌) | DTO·도메인·Room에 반영, 시트 문구와 가져오지 않기 다이얼로그 본문에 세 종류를 모두 보여 줌 | 완료 (서버는 Server 단위 3 PR에서 나옴. 가짜 응답으로 테스트) |
+| 2 연결한 날 | D-94, API.md 3.1 `MeSpace.linkedAt`·3.2 `Space.linkedAt`, FR-SET-01 AC1 | DTO·도메인·Room, 연결 정보 "연결한 날" = `linkedAt`을 기기 시간대 날짜로. 서버가 안 주면(null) 그 행만 숨김 | 완료 |
+| 3 오류·상태 문구 | D-95, SCREENS SCR-COUPLE-03 문구 표와 FR-COUPLE-02 "초대코드 오류 문구" 6줄, API.md 4.4의 12단계 대응표 | 6종 문구, 429 입력 제한(`retryAfterSeconds` 올림 분, 풀리면 문구 지우고 버튼 켬, 화면을 나가면 초기화), 오프라인, `ALREADY_COUPLED`·`GUEST_NOT_ALLOWED`는 공통 오류 + `GET /me` 재읽기. 코드 받는 중은 빈 칸 6개 | 완료. 이미지 대기 상태는 아래 표 |
+| 4 COUPLE-01 뒤로 | D-96 | 앞 화면이 있을 때만 뒤로 버튼. 전체 메뉴·연결 정보 진입은 백스택을 남기는 `navigateToConnect()` | 완료 (추천안과 같음) |
+| 5 연결 정보 버튼 | D-97, SCREENS "연결 정보 · 혼자 사용 중" | [초대코드 만들기] → SCR-COUPLE-02, [받은 초대코드 입력하기] → SCR-COUPLE-03. 코드 패널·해제 안내 없음 | 완료 |
+| 6 연도·월 선택 | SCREENS "연도·월 선택": 이미지 예정(`SCR-SET-01--start-date-sheet-year-month.png`), **그때까지 구현은 Android가 정함(문서 밖)** | **만들지 않음.** 모양(연도 목록인지 월 격자인지 한 화면인지)을 명세 글만으로 정할 수 없다. 제목은 글자만, 이전·다음 달 버튼만 있음 | 이미지 대기 (리드에게 보고) |
+| 7 COUPLE-04 날짜 칸 | D-98, FR-COUPLE-03 AC6, FR-COUPLE-04 AC4 | 칸을 누르면 날짜 시트가 한 겹 위에 뜨고 [저장]은 칸만 채움, [시작하기]에서 서버 저장, [나중에 하기]는 날짜 비움, 다시 뜨는 조건(확인한 공간 ID) | 완료 |
+| 8 [내 프로필 수정]·연필 배지 | SCREENS SCR-SET-01 프로필 카드: 두 버튼이 **그대로 보인다**고 적음 → **추천안 A와 다름** | 그리지 않음. 갈 곳(SCR-SET-04)이 단위 8이라 눌러도 아무 일 없는 버튼이 된다. 카드 아래 버튼 하나는 가로 전체 | 문서와 다름 (리드에게 보고. 단위 8에서 더함) |
+| 9 처음 만난 날 없는 커플 | D-99, FR-COUPLE-04 AC5. 프로필 카드는 D+N·"부터 함께하고 있어요" 줄을 숨김. 연결 정보는 "행을 숨기는지 라벨만 남기는지는 요청서 5번의 그림대로" | 프로필 카드는 문서대로. 연결 정보는 두 행을 숨김(그림 오기 전 임시) | 완료 + 연결 정보 이미지 대기 |
+| 10 색 저장 시점 | D-100, SCREENS SCR-SET-03 "저장 시점", FR-CAL-04 AC2 | [완료]에서 바뀐 색만 한 번에 `PATCH /space/colors`, 성공하면 닫기, 바뀐 것 없으면 요청 없이 닫기, 실패·오프라인은 안내만, 뒤로 가기는 저장 없이 닫기 | 완료 |
+| 11 되돌리기 값 | D-101, FR-CAL-04 AC7 | 나 주황·상대 파랑·함께 보라, 개인 공간은 나 주황. 저장은 [완료]에서 | 완료 |
+| 12 보드 문구·샘플 | SCREENS 화면별 "보드 문구" 항목(보드 파일·행 표시), SCR-SET-03 샘플 일정과 "미리보기의 한 주는 오늘이 든 주" | 그대로 사용 | 완료 (추천안과 같음) |
+| 13 공유·복사 | D-102 | 공유는 코드 6자리만, 복사는 "복사됨"으로 라벨 변경 | 완료 (1부에 이미 있음) |
+| 14 토큰에 없는 수치 | SCREENS·design-system: 보드 값을 쓰되 이름 붙인 상수 + 보드 행 주석. 이미지 대기 상태는 기존 컴포넌트·토큰만 | 새 컴포넌트 `DuriseoCoupleMarks`·`DuriseoAvatar`·`DuriseoBottomSheet`의 수치는 모두 보드 값 상수. 점선 원 테두리의 점·간격(6·4)만 보드가 CSS `dashed`라 비슷하게 그린 값 | 완료 (점선 원 간격은 이미지와 맞는지 확인 필요) |
+| 15 "재시작" | D-103, FR-COUPLE-05 AC3·AC5, API.md 4.5의 6단계·1단계 | 토큰·소셜 SDK는 두고 Room·설정을 지운 뒤 백스택을 SCR-COUPLE-01 하나로. `PATCH /space`·`PATCH /space/colors`·`POST /couple/import`·`DELETE /couple`의 `NOT_COUPLE`도 같은 초기화 | 완료 (추천안과 같음) |
+| 16 시트 조건·저장 시점 | API.md 4.4의 8단계: 확인한 공간 ID 저장 시점 **3가지** — ① 개인 공간을 주는 모든 `GET /me`에서 그 ID ② 시트를 닫거나 [시작하기]를 마칠 때 커플 공간 ID ③ 앱 초기화 때 새 개인 공간 ID. 해제 감지는 4.5의 6단계: ID가 다르거나 Room 공간 `type`이 COUPLE→PERSONAL, **저장보다 먼저** → **추천안(시트 닫을 때만 갱신)과 다름** | 문서대로. 시트가 필요한 조건은 Room이 COUPLE이고 (`importPending` 또는 저장된 ID가 있고 현재 ID와 다름). 처음 로그인한 기기(저장값 없음)는 `importPending`만 본다 | 완료 (결정 5를 아래에서 고침) |
+| 17 게스트 연결 정보 행 | SCREENS SCR-SET-01 "게스트의 연결 정보 행" → SCR-COUPLE-01(게스트 모양), FR-AUTH-04 AC2 | 게스트는 연결 정보 행과 [상대와 연결하기] 둘 다 SCR-COUPLE-01로 | 완료 |
+| 18 모르는 팔레트 키 | API.md 3.2 "앱 동작", SCREENS SCR-SET-03 "모르는 팔레트 키": 오류로 보지 않고 값은 두고 기본 사람 색으로 그림 | 매퍼는 키 그대로 저장, `DuriseoAvatar`·색 점·마크가 기본 색으로 대신 그림 | 완료 |
+
+기타 PRD v0.9에서 이 단위에 걸리는 것: Q-14(내 정보를 한 번도 못 받았을 때: 들어올 때마다 다시 불러오고 실패하면 공통 오류 스낵바, 계정 영역은 비움)는 전체 메뉴에 반영했다. 같은 항목이 계정 화면에는 단위 2에서 이미 있다.
+
+### 디자인 반영 후 맞춤 (이미지 대기)
+
+SCREENS가 "이미지 예정"으로 둔 7개 상태다 (COUPLE-02 코드 받는 중, COUPLE-03 오류와 입력 제한 둘, COUPLE-04 날짜를 고른 시트, SET-01 처음 만난 날 없는 메뉴와 연결 정보 둘, 연도·월 선택 = 7개를 아래 표 6줄에 담았다. COUPLE-03의 두 상태는 한 줄이다). 명세 글과 기존 컴포넌트·토큰만으로 만들었고 **새 수치를 만들지 않았다.** 이미지가 오면 모양만 맞추면 된다 (동작·문구는 문서대로라 바뀌지 않는다). 코드 주석과 Preview 이름에 "디자인 반영 후 맞춤(이미지 대기)"를 적어 두었다.
+
+| 상태 | 이미지 예정 | 지금 모양 | 위치 / Preview |
+| --- | --- | --- | --- |
+| SCR-COUPLE-02 코드 받는 중 | `SCR-COUPLE-02--loading.png` | 코드 칸 6개를 비움, 문구·스피너 없음, [코드 복사]·[공유하기] 비활성(문서대로), 남은 시간 줄은 숨김(요청서 2번의 그림대로 정해질 부분) | `InviteCreateScreen` / `InviteCreateScreenLoadingPreview` |
+| SCR-COUPLE-03 오류 · 입력 제한 | (오류 문구 표시 줄) | 코드 칸 아래 `danger-600` 한 줄(보드 `AddEventError` 규칙), 칸 테두리는 그대로, 입력 제한이면 [연결하고 시작하기] 비활성 | `InviteEnterScreen` / `InviteEnterScreenErrorPreview`, `...ExpiredPreview`, `...RateLimitedPreview` |
+| SCR-COUPLE-04 처음 만난 날을 고른 시트 | 날짜가 채워진 필드 | 필드에 "2026년 10월 12일" 글자(`date_year_month_day`)와 달력 아이콘 | `LinkedSheetScreen` / `LinkedSheetDateSetPreview` |
+| SCR-SET-01 처음 만난 날 없는 메뉴 | `SCR-SET-01--no-start-date.png` | D+N 글자와 "부터 함께하고 있어요" 줄만 빼고 "함께" 마크·[처음 만난 날 수정]은 그대로 | `SettingsScreen` / `SettingsScreenCoupleNoStartDatePreview` |
+| SCR-SET-01 처음 만난 날 없는 연결 정보 | `SCR-SET-01--couple-no-start-date.png` | "처음 만난 날"·"함께한 지" 행을 숨김 | `ConnectionInfoScreen` / `ConnectionInfoScreenCoupleNoStartDatePreview` |
+| 연도·월 선택 | `SCR-SET-01--start-date-sheet-year-month.png` | **만들지 않음** (확인 필요 6) | |
+
+연도·월 선택만 명세 글로 모양을 정할 수 없어 만들지 않았다. 나머지 6개 상태는 만들었다.
 
 단위 3은 두 사람을 잇는 단위다. 커플 연결 방법 선택(SCR-COUPLE-01), 초대코드 만들기·입력하기(SCR-COUPLE-02·03), 연결 완료 시트(SCR-COUPLE-04: 처음 만난 날, 기록 가져오기), 연결 해제·복구, 우리 색상(SCR-SET-03), 그리고 전체 메뉴(SCR-SET-01)의 커플 부분(프로필 카드, 꾸미기 행, 연결 정보 행과 하위 화면, 처음 만난 날 시트)을 만든다. 단위 2가 미뤄 둔 커플 연결 쪽 인증 AC도 여기서 잇는다.
 
@@ -180,7 +222,7 @@ Android 레포 안에서 정할 수 있는 것. 리드가 범위 확인 때 함�
 2. **쓰기 순서 (시트 [시작하기])**: ① 처음 만난 날을 골랐으면 `PATCH /space` → ② 기록 선택이 있으면 `POST /couple/import` → ③ 시트 닫기 + `acknowledgedSpaceId` 갱신. 실패하면 거기서 멈추고 공통 오류, 시트 유지(다시 누르면 처음부터. 날짜 PATCH는 같은 값이라 무해). 기록 삭제는 되돌릴 수 없으니 가장 나중에 한다. `NO_IMPORT_PENDING`은 이미 정한 것으로 보고 ③으로. `NOT_COUPLE`은 해제와 겹친 것이라 앱 초기화.
 3. **`GET /space`는 부르지 않는다**: API.md 3.2 설명은 "SCR-SET-01·SCR-SET-03용"이지만 `Me.space`에 `myColor`, `partner{id,nickname,color}`, `togetherColor`, `startDate`가 모두 있어 두 번 읽을 이유가 없다. `PATCH` 응답의 `Space`를 `me` 행에 합친다. (문서와 다르게 하는 점이 아니라 쓰지 않는 것이다. PR 본문에 적는다.)
 4. **코드 남은 시간·재요청 시각 기준**: 응답의 `expiresAt`·`reissueAvailableAt`을 기기 `Clock`과 비교한다 (서버 시각을 따로 받지 않음). 기기 시계가 어긋나 "만료"로 보여도 `current`를 먼저 불러 200이면 그 코드를 그대로 유지하고 몇 초 뒤 다시 본다(함부로 `POST`하지 않음). 429 `INVITE_REISSUE_TOO_SOON`이면 `retryAfterSeconds`를 따른다.
-5. **`acknowledgedSpaceId`**: DataStore에 둔다. 연결을 "알아본" 시점(시트 [시작하기]·닫기)에만 갱신한다. 그래서 시트를 닫기 전에 앱을 끄면 다음 실행 때 다시 뜬다 (SCREENS SCR-COUPLE-04 "진입"). 처음 로그인한 기기(저장값 없음)는 변화로 보지 않고 `importPending`만 본다.
+5. **`acknowledgedSpaceId`**: DataStore에 둔다. **저장 시점은 API.md 4.4의 8단계 3가지**다 (v0.9, 이 기록의 1부 추천안 "시트 닫을 때만"을 고침): ① 개인 공간을 주는 모든 `GET /me`에서 그 ID, ② 시트를 닫거나 [시작하기]를 마칠 때 커플 공간 ID, ③ 앱 초기화 때 새 개인 공간 ID(①이 초기화 뒤 `GET /me`에서 같이 한다). 그래서 시트를 닫기 전에 앱을 끄면 저장값은 개인 공간 ID 그대로라 다음 실행 때 다시 뜬다. 처음 로그인한 기기(저장값 없음)는 변화로 보지 않고 `importPending`만 본다. 해제 감지(ID 다름 또는 Room `COUPLE`→`PERSONAL`)는 항상 ①보다 먼저다.
 6. **계정 화면 출처 인자**: `SettingsRouteModel.Account(fromCouple)`. `fromCouple = true`면 연동(`POST /auth/link`) 204 + `GET /me` 뒤 성공 안내 없이 `feature:main`이 SCR-COUPLE-01(회원)로 보낸다. 뒤로 가기는 SCR-COUPLE-01(게스트)로. 연동 대신 switch(기존 계정 로그인)를 하면 단위 2 그대로 그 계정의 상태로 간다.
 7. **시트 호스트**: `feature:couple`이 `CoupleLinkedSheetRoute`를 공개하고 `feature:main`의 `MainScreen`이 `MainViewModel.linkedSheetRequested`가 true인 동안 캘린더 위에 그린다 (뒤로 가기는 시트가 가로챔). 새 내비게이션 경로가 아니다.
 8. **앱 초기화**: 토큰·소셜 SDK 상태는 두고 Room·설정을 지운 뒤 내비게이션 백스택을 SCR-COUPLE-01 하나로 다시 만든다 (프로세스 재시작은 하지 않는다. "재시작"은 앱 상태를 처음부터 다시 만드는 뜻으로 읽는다 — 확인 필요 15 A). 그 뒤 `refreshMe()`가 새 개인 공간을 채운다.
@@ -190,6 +232,12 @@ Android 레포 안에서 정할 수 있는 것. 리드가 범위 확인 때 함�
 12. **요청 중**: 눌린 버튼과 같은 화면의 다른 시작 버튼을 비활성 (SCREENS 공통 "요청 중"). 문구·스피너 없음. 5초 확인과 [연결 확인하기]의 요청 중은 버튼을 막지 않는다 (조용한 읽기).
 13. **"둘" 아바타**: SET-03의 "함께" 원 글자 "둘"은 design-system "사람 호칭"에 있다 (아바타 "나/너", 함께 "둘").
 14. **지금 `StartViewModel`·`MainNavHost`의 임시 분기 제거**: `AfterLogin.NewMember`/`ImportPending`을 캘린더로 보내던 곳(`MainNavHost.kt` 38~40행)을 위 이동표대로 바꾼다.
+15. **Room `me` 스키마 버전 2는 파괴적 재생성**: `linked_at`·`import_events`·`import_anniversaries`·`import_memos` 4칸을 더하면서 버전을 2로 올렸다. `me`는 서버 값의 캐시일 뿐이고(`GET /me`가 다시 채움) 쓰지 않은 사용자 입력이 없어서 마이그레이션 없이 `fallbackToDestructiveMigration`을 쓴다 (DatabaseModule에 이미 있음). 스키마 JSON은 아직 커밋하지 않는다 (단위 2 결정 그대로).
+16. **시트 필요 여부는 사건이 아니라 파생 값**: `observeLinkedSheetNeeded()` = Room 공간이 COUPLE이고 (`importPending` 또는 (저장된 ID가 있고 현재 ID와 다름)). 한 번만 오는 이벤트로 두면 앱이 꺼졌다 켜지면 사라지므로 Room·DataStore 두 값에서 매번 계산한다. 이벤트는 해제(`SpaceChange.UNLINKED`) 하나뿐이다.
+17. **`NOT_COUPLE` 처리 위치**: PATCH space·colors·import는 저장소가 초기화(`resetAfterUnlink`)하고 **실패를 그대로 돌려준다**. 화면 ViewModel은 `NOT_COUPLE`이면 아무것도 보여 주지 않고 이동하지 않는다 (초기화가 비운 백스택에서 `popBackStack`하지 않으려고). 이동은 `UNLINKED`를 받는 `feature:main`만 한다. `DELETE /couple`은 `NOT_COUPLE`도 성공으로 본다 (API.md 4.5의 1단계).
+18. **입력 제한 문구**: [N]은 `ceil(retryAfterSeconds/60)` (최소 1), 오류가 난 시점에 고정. 코드를 고쳐도 제한 문구는 유지하고(다른 코드 오류는 고치면 지움) 버튼은 `retryAfterSeconds`가 지나면 켜진다. 화면을 나가면 ViewModel과 함께 사라진다.
+19. **연결 완료 시트의 상태 모양**: 서버 값(`observeMe()`)과 화면 안 선택(고른 날짜, 기록 선택)을 합치고, 요청 중에는 그 시점의 값을 얼려서 보여 준다(요청 중 서버가 바뀌어도 시트가 흔들리지 않게). 시트를 마치면 화면 안 선택을 모두 지운다.
+20. **날짜 시트 호스트 공용화**: 처음 만난 날 시트 면은 `StartDatePickerSheet`(designsystem), 뒤 막·위치는 `DuriseoBottomSheetLayer`가 맡아 SET-01·COUPLE-04가 같이 쓴다. 저장 요청 중에는 뒤 막·뒤로 가기로 닫히지 않는다.
 
 ## 확인 필요
 
@@ -269,7 +317,7 @@ Android 레포 안에서 정할 수 있는 것. 리드가 범위 확인 때 함�
 
 ## 구현 현황 (1부: 문서로 확정된 부분)
 
-확인 필요 1~18은 사용자가 모두 추천안으로 정했고 리드가 Docs에 PRD v0.9로 반영 중이다. 머지 전까지 **이미 문서에 있는 부분만** 만들었다. Gradle·Android SDK가 없는 환경이라 `./gradlew assembleDebug testDebugUnitTest`는 **돌리지 못했다** (리드가 CI로 확인).
+1부는 PRD v0.9 머지 전에 **이미 문서에 있던 부분만** 만든 것이다 (CI 313개 통과, 커밋 a84ad1b). 이 절의 아래 표는 그 기록이고, 1부가 비워 둔 것은 바로 아래 "2부"에서 채웠다.
 
 ### 만든 것
 
@@ -286,19 +334,33 @@ Android 레포 안에서 정할 수 있는 것. 리드가 범위 확인 때 함�
 
 Preview: `ConnectScreen` 6종(`Member`·`Guest`·`NoBack`·`LogoutDialog`·`LoggingOut`·`Offline`), `InviteCreateScreen` 7종(기본·`Cooldown`·`Renewed`·`NotYet`·`Copied`·`Loading`·`Offline`), `InviteEnterScreen` 5종(기본·`Typing`·`Filled`·`Expired`·`Requesting`), `ColorsScreen` 4종(`Couple`·`SameColor`·`PartnerTarget`·`Solo`), 설정 메뉴 2종 추가, `StartDatePickerSheet` 4종.
 
-### v0.9 반영 대기 (일부러 만들지 않았거나 자리만 둔 것)
+### 2부: PRD v0.9 반영 (이 절이 1부의 "v0.9 반영 대기" 표를 대신한다)
 
-| 항목 | 지금 상태 | 확인 필요 |
+1부가 "반영 대기"로 둔 것을 문서대로 모두 채웠다. 남은 것은 이 표 맨 아래 "아직 안 한 것"뿐이다. `./gradlew assembleDebug testDebugUnitTest`는 이 환경에 Gradle·Android SDK가 없어 **돌리지 못했다** (리드가 CI로 확인).
+
+| 영역 | 내용 | 테스트 / Preview |
 | --- | --- | --- |
-| `INVITE_NOT_FOUND/USED/SELF/UNAVAILABLE/RATE_LIMITED`, `ALREADY_COUPLED`, `GUEST_NOT_ALLOWED`의 문구·위치 | 공통 오류 스낵바로 처리 (`InviteEnterViewModel`에 `TODO v0.9`). 만료만 문구가 있어 `errorRes`로 표시하되 표시 위치·모양은 임시 | 3 |
-| SCR-COUPLE-02 "코드 받는 중" 첫 모양, 읽기(`current`·5초 확인)의 오프라인 표시 | 빈 칸 + 5초 간격 재시도, 실패 연속 중 안내 1회. 정식 모양은 대기 | 3 |
-| SCR-COUPLE-04 시트(혼자 쓴 기록 개수, 처음 만난 날 필드, 가져오기 결정), 연결 직후 시트 요청, `acknowledgedSpaceId`, `SpaceChange` | 안 만듦. 02·03은 `COUPLE`이 되면 홈으로만 이동 | 1, 7, 16 |
-| 연결 정보 화면(연결한 날 포함), 프로필 카드, 처음 만난 날 시트 호스팅(SET-01) | 안 만듦. `StartDatePickerSheet` 면만 있고 쓰는 곳 없음 | 2, 5, 8, 9, 17 |
-| 시트의 연·월 제목을 눌러 연도·월 고르기 | 제목은 글자만 (동작 없음) | 6 |
-| SET-03 저장 시점 | 화면 안 초안까지만. [완료]는 동작 없음(`DoneClicked` TODO), "바뀐 필드만 PATCH" 저장·FR-CAL-04 AC2 저장 테스트 안 씀 | 10 |
-| `DELETE /couple` 이외 `NOT_COUPLE`의 앱 초기화(PATCH space·colors·import) | `unlink`만 처리. 나머지는 공통 오류 | 15 |
-| FR-AUTH-03 AC4 `Account(fromCouple)` 복귀 | 안 만듦 (게스트의 [로그인하고 연결하기]는 계정 화면 이동까지) | 6(결정) |
-| `PersonColors` → `DuriseoTheme` 연결(FR-CAL-04 AC1), D+N 도우미 | 안 만듦 | 단위 4·5 |
+| `domain` | `ImportCounts`, `MeSpace.importCounts`·`linkedAt`, `Space.linkedAt`, `SpaceChange.UNLINKED`, `MeRepository`에 `spaceChanges`·`observeLinkedSheetNeeded()`·`acknowledgeSpace()`·`resetAfterUnlink()`, `InviteRateLimit.minutesFor`(올림, 최소 1), `StartDateRules.dayNumber`, `DataError.hasCode` | `StartDateRulesTest`(dayNumber) |
+| `data:remote` | `MeSpaceDto`·`SpaceDto`에 `linkedAt`·`importCounts` (없거나 null이면 null) | `MeRemoteDataSourceTest` +2 |
+| `data:local` | `me` 행에 `linked_at`·`import_*` 4칸, **DB 버전 2(파괴적 재생성, 결정 15)**, `AcknowledgedSpaceLocalDataSource`(DataStore `acknowledged_space_id`) | |
+| `data:repository` | `MeRepositoryImpl`: 해제 감지(ID 다름 또는 Room COUPLE→PERSONAL, **저장보다 먼저**) → 사용자 데이터 삭제(토큰 유지) → 새 내 정보 저장 → ID 저장 → `UNLINKED`; 확인한 공간 ID 저장 3곳; `CoupleRepositoryImpl`: PATCH space·colors·import의 `NOT_COUPLE`은 초기화 + 실패 반환, `unlink`는 `NOT_COUPLE`도 초기화 후 성공, `ALREADY_COUPLED`·`GUEST_NOT_ALLOWED`는 `GET /me` 재읽기 | `SpaceChangeTest`(importCounts 왕복, 저장 3곳, 시트 필요 조건, 해제 감지 ①②, NOT_COUPLE 3경로, 직접 해제는 한 번만, 재읽기) |
+| `core:designsystem` | `DuriseoBottomSheet`(`DuriseoSheetPanel`·`DuriseoBottomSheetLayer`), `DuriseoAvatar`, `DuriseoCoupleMarks`(`DuriseoTogetherMark`·`DuriseoDashedLink`·`DuriseoEmptyPartnerSlot`), 아이콘 `ic_link`·`ic_calendar`(couple)·`ic_plus`, `ic_ticket_plus`·`ic_keyboard`(couple에서 옮김) | Preview: 각 컴포넌트 |
+| `feature:couple` | 입력 오류 6종 문구와 입력 제한(올림 분, 풀리면 지우고 버튼 켬), 코드 받는 중(빈 칸), **SCR-COUPLE-04 연결 완료 시트**(`linkedsheet/`: 개수 문구·0개도 표시, 처음 만난 날 칸과 한 겹 위 날짜 시트, 가져오기·가져오지 않기·삭제 확인 다이얼로그, [시작하기] 순서 ①PATCH ②import ③저장, 기록 고르기 전에는 닫히지 않음) | `InviteEnterViewModelTest`(오류 6종, 제한 타이밍), `LinkedSheetViewModelTest`(FR-COUPLE-03 AC1·AC2·AC4·AC6, FR-COUPLE-04 AC4, D-93, D-98, Q-13 …) · Preview: `InviteEnterScreenErrorPreview`·`...ExpiredPreview`·`...RateLimitedPreview`, `InviteCreateScreenLoadingPreview`, `LinkedSheetWithRecordsPreview`·`NoRecordsPreview`·`DropDialogPreview`·`DatePickedPreview`·`DateSetPreview`·`DatePickerPreview`·`RequestingPreview` |
+| `feature:main` | `MainViewModel`: `linkedSheetNeeded`, `spaceChanges` → `MainEffect.SpaceUnlinked` → SCR-COUPLE-01(백스택 비움). `MainScreen`이 캘린더 탭 위에 시트를 띄움. `navigateToConnect()`(백스택 유지), `navigateToConnectionInfo()` | `MainViewModelTest` +3 |
+| `feature:settings` 전체 메뉴 | 우리 프로필 카드(커플·혼자·게스트, D+N, "부터 함께하고 있어요", [처음 만난 날 수정] → 날짜 시트 → `PATCH /space`, [상대와 연결하기]), 설정 › 연결 정보 행(연결됨·혼자 사용 중, 게스트는 COUPLE-01), Q-14 스낵바 | `SettingsViewModelTest` +12 (Q-14 둘, FR-SET-01 AC1 셋, D-94, D-99, FR-COUPLE-04 AC1·AC3, NFR-OFF-02, FR-COUPLE-05 AC5) · Preview: `SettingsScreenCouplePreview`·`AlonePreview`·`GuestProfilePreview`·`CoupleNoStartDatePreview`·`StartDateSheetPreview` |
+| `feature:settings` 연결 정보 | `connection/`: 커플(상태 카드, 연결한 날·처음 만난 날·함께한 지·함께 쓰는 것, 안내, [연결 해제] + 확인 다이얼로그) / 혼자(소개문, [초대코드 만들기]→COUPLE-02, [받은 초대코드 입력하기]→COUPLE-03). 들어올 때 `GET /me` | `ConnectionInfoViewModelTest`(13건: FR-COUPLE-05 AC1·AC3, FR-SET-01, D-94, D-97, D-99, NFR-OFF-02) · Preview: `ConnectionInfoScreenCouplePreview`·`SoloPreview`·`UnlinkDialogPreview`·`UnlinkRequestingPreview`·`CoupleNoStartDatePreview` |
+| `feature:settings` 우리 색상 | [완료]에서 바뀐 색만 `PATCH /space/colors`(내 색은 내 userId, 상대 색은 상대 userId, 함께는 `together`), 바뀐 것 없으면 요청 없이 닫기, 실패·오프라인은 안내만, `NOT_COUPLE`은 조용히, 요청 중에는 [완료]·색 고르기 막음 | `ColorsViewModelTest` +8 (FR-CAL-04 AC2·AC5·AC7, D-100, D-101, NFR-OFF-02, FR-COUPLE-05 AC5) |
+| 내비게이션 | `SettingsRouteModel.ConnectionInfo`, `settingsNavGraph`에 연결 정보·연결 콜백 5개 | |
+
+**아직 안 한 것**
+
+| 항목 | 이유 |
+| --- | --- |
+| 연도·월 선택 | 이미지 대기, 모양을 명세 글로 정할 수 없음 (확인 필요 6) |
+| [내 프로필 수정]·연필 배지 | SCR-SET-04가 단위 8 (확인 필요 8, 문서와 다름) |
+| FR-AUTH-03 AC4 `Account(fromCouple)` 복귀 | 계정 화면의 연동 성공 뒤 복귀 흐름이 단위 2 화면을 고쳐야 하고 이 2부 범위(리드 지시)에 없었다. 게스트의 [로그인하고 연결하기]는 계정 화면 이동까지 |
+| `PersonColors` → `DuriseoTheme` 연결(FR-CAL-04 AC1), SCR-CAL-01 위 D-day | 단위 4·5 |
+| 동기화 신호 수신 | 단위 7 |
 
 ### 가정한 것 (PR 본문에 적을 것)
 
@@ -307,6 +369,11 @@ Preview: `ConnectScreen` 6종(`Member`·`Guest`·`NoBack`·`LogoutDialog`·`Logg
 - 우리 색상 행의 색 점은 개인 공간이면 1개.
 - 달력에서 비활성 날짜는 `ink-300`, 끝에서 꺼진 달 이동 버튼도 `ink-300` (보드에 모양 없음).
 - 보드 수치는 이름 붙은 상수로 두고 주석에 보드 행을 적었다 (확인 필요 14 A).
+- (2부) 연결 완료 시트 위 스낵바 위치는 위 40, 시트 위에 한 겹 더 뜨는 날짜 시트는 같은 뒤 막 위에 쌓는다 (문서에 위치 없음, 디자인 반영 후 맞춤).
+- (2부) 연결 해제 실패·오프라인이면 다이얼로그를 닫고 안내만 한다 (로그아웃 실패와 같은 방식, D-86. SCREENS에 해제 실패 규칙이 없음). 연결은 그대로.
+- (2부) 연결 정보 · 혼자 사용 중의 두 버튼은 이미지 `SCR-SET-01--couple-solo.png`(반영됨)대로 카드·행 모양이다. 아이콘 `ic_ticket_plus`·`ic_keyboard`는 두 화면이 같이 쓰도록 `core:designsystem`으로 옮겼다.
+- (2부) 이름이 길면 말줄임, 글자 크기를 크게 하면 연결 정보 아래쪽 안내·버튼이 화면 밖으로 밀릴 수 있다(스크롤 없음, 보드도 고정 높이). 단위 8 접근성 점검 때 확인.
+- (2부) 점선 원("아직 없음")의 점 6·간격 4는 보드가 CSS `dashed`라 브라우저가 정하는 값이다. 이미지와 맞는지 확인 필요.
 
 ## 리뷰 기록
 
@@ -317,19 +384,22 @@ Preview: `ConnectScreen` 6종(`Member`·`Guest`·`NoBack`·`LogoutDialog`·`Logg
 
 단위 2 진행 기록 "남은 일"에서 단위 3 몫: **없음**(Room 스키마 JSON 커밋, FR-SET-02→8, 실기기 확인은 단위 2·8 몫). 단위 2가 단위 3으로 넘긴 것은 위 "하지 않는 것" 표와 A절의 FR-AUTH-02 AC1·FR-AUTH-03 AC4·FR-AUTH-04 AC2·FR-AUTH-05 AC3·`importPending`→SCR-COUPLE-04에 모두 넣었다. 단위 2 PR #9 Docs 후속 3건(design-system 여백, 게스트 ID 접근성 이름, 첫 `GET /me` 실패 상태)은 Docs 레포 몫이다.
 
-- Room 스키마: 이 단위는 `me` 테이블을 바꾸지 않으므로 스키마 JSON이 생기지 않는다 (확인 필요 2 A로 `linkedAt` 칸이 늘면 `me` 버전 2).
+- Room 스키마: `me` 버전 2(파괴적 재생성, 결정 15). 스키마 JSON은 단위 2 결정대로 아직 커밋하지 않는다.
+- 서버: `importCounts`·`linkedAt`은 Server 단위 3 PR에서 나온다. 그 전에는 가짜 응답으로만 확인했으므로 서버가 배포되면 실기기로 연결 직후 시트의 개수와 연결 정보의 연결한 날을 확인한다.
+- 이미지가 오면(디자인 반영 후 맞춤): 위 "이미지 대기" 5줄의 모양, 점선 원 간격, 연도·월 선택(새로 만듦).
+- 단위 8: [내 프로필 수정]·연필 배지 추가. 단위 2 계정 화면의 `Account(fromCouple)` 복귀(FR-AUTH-03 AC4).
 - 서버 단위 6(SYNC) → Android 단위 7: `LINKED`·`UNLINKED` 수신으로 5초 확인과 "다음 실행 때"를 보완한다. 알림 권한 요청 시점도 그때 정한다.
 - PR 전: `docs/MODULES.md`(`feature:couple` "있음", SCR-SET-03 단위 3 표기), `docs/PLAN.md` 단위 3 "PR 완료".
 
 ## 사람이 할 일
 
-1. 아래 위험을 읽고 **확인 필요 1~18**에 답한다 (막힘 1·2는 서버·Docs 변경이 따르므로 먼저). 답이 없는 것은 각 "추천"으로 진행해도 되는지 알려 준다.
+1. (완료) 확인 필요 1~18은 PRD v0.9로 정해졌다. 위 "확인 필요 해결" 표에서 문서가 추천안과 다른 8·16과, 이미지 대기 7개를 확인한다.
 2. 기기 2대 확인 준비 (두 기기에 서로 다른 Google·카카오 계정, 같은 개발 서버 주소). `local.properties` 새 키 없음.
 3. 맞으면 **start**.
 
 ## 위험
 
-1. **막힘 2건(확인 필요 1·2)이 서버 변경을 부른다.** 서버 단위 2는 이미 머지돼 있어 후속 PR이 필요하다. 그 전에 단위 3을 진행하면 개수·연결한 날 자리가 "—"/숨김으로 남는다.
+1. **서버 `importCounts`·`linkedAt`이 아직 배포 전이다** (Server 단위 3 PR). 그 전까지 서버 응답에 두 필드가 없으면 시트는 개수 없이 "가져올 기록이 없는 것"으로, 연결 정보는 "연결한 날" 행 없이 보인다 (둘 다 null 처리). 서버가 나오면 실기기로 확인한다.
 2. **연결·해제는 두 기기 흐름이라 JVM 테스트로 확인되지 않는 부분이 크다.** 5초 확인·`repeatOnLifecycle`·시트 뒤로 가기 차단·앱 초기화는 가짜 리포지토리 + 가상 시간으로 로직만 확인하고 맥 실기기 확인 목록을 PR에 적는다.
 3. **상대가 해제했을 때 켜져 있는 앱은 단위 7 전에는 모른다.** 그때 상대 쪽 화면이 낡은 커플 공간을 보여 주고, 쓰기는 `NOT_COUPLE`/404로 실패한다. 전체 메뉴·연결 정보 진입 때 `refreshMe()`가 초기화를 부르도록 해 둔다.
 4. **기기 시계 어긋남**: 코드 남은 시간과 재요청 대기는 기기 시계 기준이다 (결정 4). 심하게 어긋나면 표시가 서버와 다르지만 서버가 최종 판단(`INVITE_EXPIRED`·429)한다.

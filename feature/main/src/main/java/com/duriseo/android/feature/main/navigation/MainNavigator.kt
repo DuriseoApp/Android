@@ -18,6 +18,7 @@ import com.duriseo.android.feature.main.MainStart
 import com.duriseo.android.feature.main.component.MainTab
 import com.duriseo.android.feature.settings.navigation.navigateToAccount
 import com.duriseo.android.feature.settings.navigation.navigateToColors
+import com.duriseo.android.feature.settings.navigation.navigateToConnectionInfo
 import com.duriseo.android.feature.settings.navigation.navigateToSettings
 
 class MainNavigator(
@@ -70,6 +71,12 @@ class MainNavigator(
         navController.navigateToConnect(navOptions { clearBackStack() })
     }
 
+    /**
+     * 커플 연결(SCR-COUPLE-01)로 간다. 백스택을 그대로 둬서 뒤로 가기가 전체 메뉴로 돌아온다
+     * (전체 메뉴의 [상대와 연결하기], 게스트의 연결 정보 행. D-96)
+     */
+    fun navigateToConnect() = navController.navigateToConnect()
+
     fun navigateToInviteCreate() = navController.navigateToInviteCreate()
 
     fun navigateToInviteEnter() = navController.navigateToInviteEnter()
@@ -83,6 +90,8 @@ class MainNavigator(
     fun navigateToAccount() = navController.navigateToAccount()
 
     fun navigateToColors() = navController.navigateToColors()
+
+    fun navigateToConnectionInfo() = navController.navigateToConnectionInfo()
 
     fun navigateUp() {
         navController.popBackStack()

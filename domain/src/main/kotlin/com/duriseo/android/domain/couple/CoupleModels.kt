@@ -48,6 +48,8 @@ data class Space(
     val type: SpaceType,
     val togetherColor: String?,
     val startDate: LocalDate?,
+    /** 커플 공간이 연결된 시각 (D-94). 개인 공간이면 null */
+    val linkedAt: Instant?,
     val members: List<SpaceMember>,
 )
 

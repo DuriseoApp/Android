@@ -34,9 +34,11 @@
     <string name="pick_label_gray">회색</string>
     <string name="pick_label_ink">먹색</string>
 
-    <!-- 처음 만난 날 선택 시트 (SCREENS.md "처음 만난 날 선택 시트", 보드 StartDateSheet.dc.html). 연·월 제목을 눌러 고르는 동작은 v0.9 반영 대기 -->
+    <!-- 처음 만난 날 선택 시트 (SCREENS.md "처음 만난 날 선택 시트", 보드 StartDateSheet.dc.html). 연·월 제목을 눌러 고르는 연도·월 선택은 이미지 대기라 만들지 않았다 -->
     <string name="start_date_sheet_title">처음 만난 날</string>
     <string name="start_date_sheet_description">D-day와 기념일이 이 날을 1일로 계산돼요.</string>
+    <!-- 날짜 서식: 연·월·일, 요일 없음, 앞자리 0 없음 (SCREENS.md SCR-SET-01 "문구·형식") -->
+    <string name="date_year_month_day">%1$d년 %2$d월 %3$d일</string>
     <string name="start_date_sheet_month">%1$d년 %2$d월</string>
     <string name="start_date_sheet_previous_month">이전 달</string>
     <string name="start_date_sheet_next_month">다음 달</string>

@@ -22,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -155,10 +156,21 @@ private val NoteLineHeight = 20.8.sp
 fun ColorsRoute(
     padding: PaddingValues,
     onBack: () -> Unit,
+    onShowSnackBar: (Int) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ColorsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                ColorsSideEffect.Close -> onBack()
+                is ColorsSideEffect.ShowMessage -> onShowSnackBar(effect.messageRes)
+            }
+        }
+    }
+
     ColorsScreen(
         state = state,
         padding = padding,
@@ -182,7 +194,7 @@ fun ColorsScreen(
             .background(MaterialTheme.colorScheme.surface)
             .padding(padding),
     ) {
-        ColorsAppBar(onBack = onBack, onDone = { onAction(ColorsAction.DoneClicked) })
+        ColorsAppBar(onBack = onBack, onDone = { onAction(ColorsAction.DoneClicked) }, doneEnabled = !state.saving)
         if (state.loaded) {
             Column(
                 modifier = Modifier
@@ -230,7 +242,7 @@ fun ColorsScreen(
 
 /** 앱바: 왼쪽 뒤로, 가운데 "우리 색상" 17/700, 오른쪽 [완료] (`ColorSettings.dc.html` 18~21행) */
 @Composable
-private fun ColorsAppBar(onBack: () -> Unit, onDone: () -> Unit) {
+private fun ColorsAppBar(onBack: () -> Unit, onDone: () -> Unit, doneEnabled: Boolean) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -265,7 +277,7 @@ private fun ColorsAppBar(onBack: () -> Unit, onDone: () -> Unit) {
         Box(
             modifier = Modifier
                 .height(DoneHeight)
-                .clickable(role = Role.Button, onClick = onDone)
+                .clickable(enabled = doneEnabled, role = Role.Button, onClick = onDone)
                 .padding(horizontal = DonePaddingHorizontal),
             contentAlignment = Alignment.Center,
         ) {

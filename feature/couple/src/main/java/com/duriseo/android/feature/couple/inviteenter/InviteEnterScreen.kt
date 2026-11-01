@@ -198,9 +198,10 @@ fun InviteEnterScreen(
                         enabled = !state.requesting,
                         onCodeChange = { onAction(InviteEnterAction.CodeChanged(it)) },
                     )
-                    state.errorRes?.let { errorRes ->
+                    // 오류는 코드 칸 아래 한 줄, `danger-600` 글자 (D-95). 크기와 간격은 디자인 반영 후 맞춘다 (이미지 대기)
+                    state.error?.let { error ->
                         Text(
-                            text = stringResource(errorRes),
+                            text = error.message(),
                             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                             style = MaterialTheme.typography.labelMedium,
                             color = Danger600,
@@ -237,6 +238,17 @@ fun InviteEnterScreen(
             snackbarHost()
         }
     }
+}
+
+/** 오류 한 줄 문구 (SCREENS.md SCR-COUPLE-03 표) */
+@Composable
+private fun InviteEnterError.message(): String = when (this) {
+    InviteEnterError.NotFound -> stringResource(R.string.invite_enter_error_not_found)
+    InviteEnterError.Expired -> stringResource(R.string.invite_enter_error_expired)
+    InviteEnterError.Used -> stringResource(R.string.invite_enter_error_used)
+    InviteEnterError.Self -> stringResource(R.string.invite_enter_error_self)
+    InviteEnterError.Unavailable -> stringResource(R.string.invite_enter_error_unavailable)
+    is InviteEnterError.RateLimited -> stringResource(R.string.invite_enter_error_rate_limited, minutes)
 }
 
 /**
@@ -336,11 +348,26 @@ private fun InviteEnterScreenTypingPreview() = PreviewInviteEnter(InviteEnterUiS
 @Composable
 private fun InviteEnterScreenFilledPreview() = PreviewInviteEnter(InviteEnterUiState(code = "K7Q29X"))
 
-/** 만료된 코드: 문구가 문서에 있는 유일한 오류 (위치·모양은 v0.9 반영 대기) */
+/**
+ * 코드 오류 한 줄 (D-95). 이미지 `SCR-COUPLE-03--error.png`가 아직 없어 문구는 SCREENS.md 표, 모양은 기존 토큰만 썼다
+ * (디자인 반영 후 맞춤). 코드 칸 테두리는 바꾸지 않았다.
+ */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun InviteEnterScreenErrorPreview() =
+    PreviewInviteEnter(InviteEnterUiState(code = "K7Q29X", error = InviteEnterError.NotFound))
+
+/** 만료된 코드 */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun InviteEnterScreenExpiredPreview() =
-    PreviewInviteEnter(InviteEnterUiState(code = "K7Q29X", errorRes = R.string.invite_enter_error_expired))
+    PreviewInviteEnter(InviteEnterUiState(code = "K7Q29X", error = InviteEnterError.Expired))
+
+/** 입력 제한: 버튼 비활성, 문구는 풀릴 때까지 남는다. 이미지 `SCR-COUPLE-03--rate-limited.png` 대기 (디자인 반영 후 맞춤) */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun InviteEnterScreenRateLimitedPreview() =
+    PreviewInviteEnter(InviteEnterUiState(code = "K7Q29X", error = InviteEnterError.RateLimited(minutes = 12)))
 
 /** 요청 중: 연결 버튼 비활성 (SCREENS 공통 "요청 중") */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)

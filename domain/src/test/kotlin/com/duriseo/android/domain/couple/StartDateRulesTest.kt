@@ -48,4 +48,13 @@ class StartDateRulesTest {
         assertEquals(YearMonth.of(2026, 10), StartDateRules.nextMonth(YearMonth.of(2026, 9), today))
         assertNull(StartDateRules.nextMonth(YearMonth.of(2026, 10), today))
     }
+
+    @Test
+    fun `FR-CAL-01 AC3 처음 만난 날이 오늘이면 D+1이고 하루 지날 때마다 1씩 는다`() {
+        val today = LocalDate.of(2026, 10, 31)
+
+        assertEquals(1L, StartDateRules.dayNumber(today, today))
+        assertEquals(2L, StartDateRules.dayNumber(today.minusDays(1), today))
+        assertEquals(20L, StartDateRules.dayNumber(LocalDate.of(2026, 10, 12), today))
+    }
 }

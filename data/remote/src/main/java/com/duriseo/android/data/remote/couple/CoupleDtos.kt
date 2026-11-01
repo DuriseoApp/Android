@@ -44,6 +44,8 @@ data class SpaceDto(
     val type: SpaceTypeDto,
     val togetherColor: String? = null,
     @Contextual val startDate: LocalDate? = null,
+    /** 연결한 시각 (API.md 3.2 `Space.linkedAt`, D-94). 개인 공간이면 null */
+    @Contextual val linkedAt: Instant? = null,
     val members: List<SpaceMemberDto>,
 )
 
@@ -88,6 +90,7 @@ fun SpaceDto.toDomain(): Space = Space(
     },
     togetherColor = togetherColor,
     startDate = startDate,
+    linkedAt = linkedAt,
     members = members.map { SpaceMember(it.userId, it.nickname, it.color, it.hasProfileImage) },
 )
 

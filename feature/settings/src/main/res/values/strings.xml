@@ -50,6 +50,40 @@
     <string name="settings_colors">우리 색상</string>
     <string name="settings_colors_description">현재 색상: 나, 상대, 함께</string>
 
+    <!-- SCR-SET-01 프로필 카드와 연결 정보 행 (단위 3). 문구는 SCREENS.md "프로필 카드"와 보드 Menu.dc.html -->
+    <string name="settings_connection">연결 정보</string>
+    <string name="settings_connection_connected">연결됨</string>
+    <string name="settings_connection_alone">혼자 사용 중</string>
+    <string name="profile_label_couple">우리 프로필</string>
+    <string name="profile_label_alone">내 프로필</string>
+    <string name="profile_letter_me">나</string>
+    <string name="profile_letter_partner">너</string>
+    <string name="profile_tag_me">나</string>
+    <string name="profile_tag_partner">상대</string>
+    <string name="profile_days_together">D+%1$d</string>
+    <string name="profile_days_together_description">함께한 지 D+%1$d</string>
+    <string name="profile_together_since">%1$s부터 함께하고 있어요</string>
+    <string name="profile_edit_start_date">처음 만난 날 수정</string>
+    <string name="profile_connect_partner">상대와 연결하기</string>
+    <string name="profile_partner_empty">아직 없음</string>
+
+    <!-- SCR-SET-01 하위 화면 "연결 정보" (FR-SET-01, FR-COUPLE-05). 문구는 SCREENS.md와 보드 ConnectionInfo.dc.html 그대로 -->
+    <string name="connection_title">연결 정보</string>
+    <string name="connection_status_description">연결 상태</string>
+    <string name="connection_row_linked">연결한 날</string>
+    <string name="connection_row_start_date">처음 만난 날</string>
+    <string name="connection_row_days">함께한 지</string>
+    <string name="connection_row_shared">함께 쓰는 것</string>
+    <string name="connection_shared_value">캘린더 · 메모</string>
+    <string name="connection_unlink_note">연결을 해제하면 두 사람 모두 빈 화면에서 다시 시작해요. 함께 쓴 기록은 30일 동안 보관되고, 그 안에 둘이 다시 연결하면 그대로 돌아와요.</string>
+    <string name="connection_unlink">연결 해제</string>
+    <string name="connection_unlink_dialog_title">연결을 해제할까요?</string>
+    <string name="connection_unlink_dialog_body">%1$s님과 함께 쓴 캘린더와 메모가 두 사람 화면에서 모두 사라지고, 각자 처음부터 다시 시작해요. 30일 안에 둘이 다시 연결하면 그대로 복구돼요.</string>
+    <string name="connection_solo_intro">상대를 초대하면 캘린더와 메모를 함께 쓸 수 있어요.\n혼자 쓴 기록은 연결할 때 가져올지 고를 수 있어요.</string>
+    <string name="connection_make_code">초대코드 만들기</string>
+    <string name="connection_make_code_subtitle">코드를 만들어 상대에게 보내요</string>
+    <string name="connection_enter_code">받은 초대코드 입력하기</string>
+
     <!-- SCR-SET-03 우리 색상 (FR-CAL-04). 문구는 SCREENS.md "SCR-SET-03"과 보드 ColorSettings.dc.html 그대로 -->
     <string name="colors_title">우리 색상</string>
     <string name="colors_done">완료</string>
