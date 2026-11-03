@@ -15,11 +15,13 @@ import com.duriseo.android.feature.couple.testMe
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -465,13 +467,24 @@ class LinkedSheetViewModelTest {
     }
 
     @Test
-    fun `FR-COUPLE-05 AC3 D-103 앱 초기화가 일어나면 선택을 처음 상태로 되돌린다`() = runTest {
+    fun `FR-COUPLE-05 AC3 D-103 앱 초기화로 Room이 비워지면 선택을 처음 상태로 되돌린다`() = runTest {
         val me = FakeMeRepository(meWithRecords())
         val vm = viewModel(me)
         dirty(vm)
 
-        me.changes.tryEmit(SpaceChange.UNLINKED)
+        me.me.value = null
 
         assertPristine(vm)
+    }
+
+    @Test
+    fun `FR-COUPLE-05 AC3 spaceChanges 구독자는 메인 하나뿐이라 시트가 이벤트를 가로채지 않는다`() = runTest {
+        val me = FakeMeRepository(meWithRecords())
+        viewModel(me)
+
+        me.changes.trySend(SpaceChange.UNLINKED)
+
+        // 시트가 먼저 받았다면 한 번만 전달되는 이 Channel에서 메인이 받을 이벤트가 없다
+        assertEquals(SpaceChange.UNLINKED, withTimeout(1_000) { me.spaceChanges.first() })
     }
 }

@@ -1,6 +1,5 @@
 package com.duriseo.android.feature.settings.connection
 
-import com.duriseo.android.core.designsystem.theme.DuriseoSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -40,7 +39,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.component.DuriseoAvatar
 import com.duriseo.android.core.designsystem.component.DuriseoAvatarSize
 import com.duriseo.android.core.designsystem.component.DuriseoButtonStyle
@@ -71,6 +69,7 @@ import com.duriseo.android.feature.settings.menu.SettingsPerson
 import com.duriseo.android.feature.settings.menu.SettingsSpace
 import com.duriseo.android.feature.settings.menu.formatDate
 import java.time.LocalDate
+import com.duriseo.android.core.designsystem.R as DesignR
 
 // SCR-SET-01 하위 화면 "연결 정보" (FR-SET-01, FR-COUPLE-05). 이미지 `SCR-SET-01--couple.png`·`--couple-solo.png`·
 // `--unlink-dialog.png`, 보드 `ConnectionInfo.dc.html`. 수치는 보드 값을 이름 붙인 상수로 두고, 토큰이 있는 값은 토큰을 쓴다.
@@ -118,7 +117,7 @@ private val UnlinkGap = DuriseoSpacing.Space3
 private val MakeCodeMinHeight = 88.dp
 private val MakeCodePaddingVertical = 18.dp
 private val MakeCodePaddingHorizontal = DuriseoSpacing.Space5
-private val MakeCodeTileSize = DuriseoSize.Touch
+private val MakeCodeTileSize = 44.dp
 private val CardIconGap = 14.dp
 private val CardIconSize = 22.dp
 

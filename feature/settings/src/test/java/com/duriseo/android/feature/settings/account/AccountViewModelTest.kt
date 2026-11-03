@@ -2,6 +2,7 @@ package com.duriseo.android.feature.settings.account
 
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
+import com.duriseo.android.core.common.navigation.SettingsRouteModel
 import com.duriseo.android.core.common.social.SocialTokenResult
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.domain.auth.LoginResult
@@ -33,7 +34,12 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class AccountViewModelTest {
 
@@ -51,8 +57,15 @@ class AccountViewModelTest {
         Dispatchers.resetMain()
     }
 
+    /**
+     * 경로 `SettingsRouteModel.Account`가 타입 안전 내비게이션에서 `SavedStateHandle`에 넣는 모양 그대로 만든다.
+     * 키는 속성 이름에서 가져오므로 경로의 인자 이름이 바뀌면 이 테스트가 먼저 깨진다 (경로와 ViewModel의 연결 확인).
+     */
+    private fun routeHandle(fromCouple: Boolean) =
+        SavedStateHandle(mapOf(SettingsRouteModel.Account::fromCouple.name to fromCouple))
+
     private fun TestScope.viewModel(clock: Clock = seoul, fromCouple: Boolean = false): AccountViewModel {
-        val vm = AccountViewModel(auth, me, clock, SavedStateHandle(mapOf("fromCouple" to fromCouple)))
+        val vm = AccountViewModel(auth, me, clock, routeHandle(fromCouple))
         // stateIn(WhileSubscribed)라서 값을 읽는 동안 구독해 둔다
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect { } }
         return vm

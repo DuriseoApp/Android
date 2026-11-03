@@ -1,6 +1,5 @@
 package com.duriseo.android.feature.couple.inviteenter
 
-import com.duriseo.android.core.designsystem.theme.DuriseoSize
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.background
@@ -45,11 +44,11 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -58,6 +57,7 @@ import com.duriseo.android.core.designsystem.component.DuriseoSnackbar
 import com.duriseo.android.core.designsystem.component.DuriseoSnackbarHost
 import com.duriseo.android.core.designsystem.theme.Brand500
 import com.duriseo.android.core.designsystem.theme.Danger600
+import com.duriseo.android.core.designsystem.theme.DuriseoSize
 import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 import com.duriseo.android.core.designsystem.theme.Ink600

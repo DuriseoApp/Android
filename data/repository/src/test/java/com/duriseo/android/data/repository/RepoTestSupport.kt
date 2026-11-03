@@ -25,6 +25,7 @@ import com.duriseo.android.data.repository.auth.AuthRepositoryImpl
 import com.duriseo.android.data.repository.auth.SessionManager
 import com.duriseo.android.data.repository.couple.CoupleRepositoryImpl
 import com.duriseo.android.data.repository.me.MeRepositoryImpl
+import com.duriseo.android.data.repository.me.MeWriteLock
 import com.duriseo.android.data.repository.me.toEntity
 import com.duriseo.android.domain.auth.AuthTokens
 import com.duriseo.android.domain.auth.SocialSessionCleaner
@@ -245,10 +246,11 @@ class RepoHarness(
     )
     val clock: Clock = Clock.fixed(Instant.parse("2026-10-30T00:00:00Z"), ZoneId.of(zoneId))
     val acknowledgedSpace = AcknowledgedSpaceLocalDataSource(settings)
-    val meRepository = MeRepositoryImpl(meRemote, meLocal, monitor, acknowledgedSpace, session)
+    val writeLock = MeWriteLock()
+    val meRepository = MeRepositoryImpl(meRemote, meLocal, monitor, acknowledgedSpace, session, writeLock)
     val authRepository = AuthRepositoryImpl(authRemote, meRemote, tokens, session, meRepository, monitor, clock)
     val coupleRemote = CoupleRemoteDataSource(retrofit.create(CoupleApi::class.java), apiCaller)
-    val coupleRepository = CoupleRepositoryImpl(coupleRemote, meRepository, meLocal, monitor)
+    val coupleRepository = CoupleRepositoryImpl(coupleRemote, meRepository, meLocal, monitor, writeLock)
 
     /** Room에 내 정보를, 설정 DataStore에 값을 미리 넣어 둔다 (지워지는지 보려고) */
     suspend fun preload(me: Me = fixtureMe()) {

@@ -1,6 +1,5 @@
 package com.duriseo.android.feature.settings.menu
 
-import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,7 +27,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.component.DuriseoAvatar
 import com.duriseo.android.core.designsystem.component.DuriseoAvatarSize
 import com.duriseo.android.core.designsystem.component.DuriseoDashedLink
@@ -39,6 +37,7 @@ import com.duriseo.android.core.designsystem.theme.Brand700
 import com.duriseo.android.core.designsystem.theme.DuriseoPickPalette
 import com.duriseo.android.core.designsystem.theme.DuriseoShapes
 import com.duriseo.android.core.designsystem.theme.DuriseoSize
+import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
 import com.duriseo.android.core.designsystem.theme.Ink600
 import com.duriseo.android.core.designsystem.theme.Ink900
 import com.duriseo.android.core.designsystem.theme.Line200
@@ -49,6 +48,7 @@ import com.duriseo.android.core.designsystem.theme.Surface0
 import com.duriseo.android.core.designsystem.theme.Surface100
 import com.duriseo.android.feature.settings.R
 import java.time.LocalDate
+import com.duriseo.android.core.designsystem.R as DesignR
 
 // SCR-SET-01 우리 프로필 카드 (SCREENS.md "프로필 카드", 보드 `Menu.dc.html` 41~97행).
 // 수치는 보드 값을 이름 붙인 상수로 둔다. 토큰이 있는 값(모서리 24, 버튼 높이 44, 모서리 12)은 토큰을 쓴다.

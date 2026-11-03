@@ -1,6 +1,5 @@
 package com.duriseo.android.feature.couple
 
-import com.duriseo.android.domain.me.SpaceChange
 import com.duriseo.android.domain.auth.AuthRepository
 import com.duriseo.android.domain.auth.AuthState
 import com.duriseo.android.domain.auth.LoginResult
@@ -18,13 +17,16 @@ import com.duriseo.android.domain.me.MePartner
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.me.MeSpace
 import com.duriseo.android.domain.me.SocialProvider
+import com.duriseo.android.domain.me.SpaceChange
 import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.domain.result.DataResult
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.TestScope
@@ -139,8 +141,9 @@ class FakeMeRepository(initial: Me? = null) : MeRepository {
 
     override suspend fun syncTimeZone(zoneId: String): DataResult<Unit> = DataResult.Success(Unit)
 
-    val changes = MutableSharedFlow<SpaceChange>(extraBufferCapacity = 4)
-    override val spaceChanges: Flow<SpaceChange> = changes
+    /** 실제 구현처럼 이벤트가 한 번만, 구독자 한쪽에만 간다 (`Channel.receiveAsFlow()`) */
+    val changes = Channel<SpaceChange>(Channel.BUFFERED)
+    override val spaceChanges: Flow<SpaceChange> = changes.receiveAsFlow()
 
     val sheetNeeded = MutableStateFlow(false)
     override fun observeLinkedSheetNeeded(): Flow<Boolean> = sheetNeeded

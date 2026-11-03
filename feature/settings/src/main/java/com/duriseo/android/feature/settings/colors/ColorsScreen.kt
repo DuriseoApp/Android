@@ -76,9 +76,9 @@ import java.time.LocalDate
 // (unit-3.md 확인 필요 14).
 
 /** 앱바 [완료]: 높이 48, 좌우 14, 16/700 `brand-700` (21행) */
-private val DoneHeight = DuriseoSize.ButtonMd
+private val DoneHeight = 48.dp
 private val DonePaddingHorizontal = 14.dp
-private val BackButtonSize = DuriseoSize.ButtonMd
+private val BackButtonSize = 48.dp
 
 /** 본문: 위 4·좌우 20·아래 28, 덩어리 사이 22 (24행) */
 private val ContentTop = DuriseoSpacing.Space1
@@ -134,7 +134,7 @@ private val TargetCircleFont = 14.sp
 /** 팔레트: 위 제목과 사이 12, 6열, 행 사이 14, 색 원 44, 선택 링 안쪽 흰색 3 + 바깥 `ink-900` 2, 체크 20 (68·70·72행) */
 private val PaletteGap = DuriseoSpacing.Space3
 private val PaletteRowGap = 14.dp
-private val SwatchSize = DuriseoSize.Touch
+private val SwatchSize = 44.dp
 private val SwatchWhiteRing = 3.dp
 private val SwatchInkRing = 2.dp
 private val CheckSize = 20.dp

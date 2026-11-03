@@ -111,9 +111,12 @@ private val LogoutHeight = 52.dp
 /** 정보 행 높이 52 (65·66행) */
 private val InfoRowHeight = 52.dp
 
-/** 로그인 카드: 안쪽 20, 안쪽 요소 사이 14, 체크 원 지름 44(`size-avatar-lg`), 체크 아이콘 22, 제목 아래 2 (55~61행) */
+/** 로그인 카드: 안쪽 20, 안쪽 요소 사이 14, 체크 원 지름 44, 체크 아이콘 22, 제목 아래 2 (55~61행) */
 private val CardPadding = DuriseoSpacing.Space5
 private val CardGap = 14.dp
+
+/** 카드 왼쪽 아이콘 원 44 (보드 값. 사람 아바타가 아니라 아이콘 칸이라 `avatar-lg` 토큰을 쓰지 않는다) */
+private val CardIconTileSize = 44.dp
 private val CheckIconSize = 22.dp
 private val CardTitleGap = 2.dp
 
@@ -433,7 +436,7 @@ private fun LoginCard(provider: SocialProvider, nickname: String) {
     ) {
         Box(
             modifier = Modifier
-                .size(DuriseoSize.AvatarLg)
+                .size(CardIconTileSize)
                 .background(Surface0, DuriseoShapes.Full),
             contentAlignment = Alignment.Center,
         ) {

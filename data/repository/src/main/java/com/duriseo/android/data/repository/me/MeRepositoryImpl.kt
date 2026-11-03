@@ -18,8 +18,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -34,6 +32,7 @@ class MeRepositoryImpl @Inject constructor(
     private val networkMonitor: NetworkMonitor,
     private val acknowledged: AcknowledgedSpaceLocalDataSource,
     private val session: SessionManager,
+    private val writeLock: MeWriteLock,
 ) : MeRepository {
 
     private val changeChannel = Channel<SpaceChange>(Channel.BUFFERED)
@@ -61,10 +60,16 @@ class MeRepositoryImpl @Inject constructor(
         acknowledged.set(spaceId)
     }
 
-    override suspend fun resetAfterUnlink() {
+    override suspend fun resetAfterUnlink() = writeLock.withLock {
         session.clearUserData()
-        refreshMe() // 실패(오프라인)해도 지운 채로 끝낸다. 다음 실행 때 새 개인 공간을 받는다
+        // 실패(오프라인)해도 지운 채로 끝낸다. 다음 실행 때 새 개인 공간을 받는다.
+        // 락 안이라 락을 잡는 refreshMe·saveFresh 대신 락 없는 버전을 쓴다
+        if (networkMonitor.isOnlineNow()) {
+            val fresh = remote.getMe()
+            if (fresh is DataResult.Success) saveFreshLocked(fresh.value)
+        }
         changeChannel.trySend(SpaceChange.UNLINKED)
+        Unit
     }
 
     override suspend fun syncTimeZone(zoneId: String): DataResult<Unit> {
@@ -83,8 +88,8 @@ class MeRepositoryImpl @Inject constructor(
         is DataResult.Failure -> result
     }
 
-    /** `GET /me` 응답이 동시에 두 번 저장되면 감지·저장 순서가 섞이므로 한 번에 하나씩 처리한다 */
-    private val saveMutex = Mutex()
+    /** `GET /me` 응답이 동시에 두 번 저장되면 감지·저장 순서가 섞이므로 한 번에 하나씩 처리한다 ([MeWriteLock]) */
+    private suspend fun saveFresh(fresh: Me) = writeLock.withLock { saveFreshLocked(fresh) }
 
     /**
      * 받은 내 정보를 저장한다. **해제 감지가 저장보다 먼저**다 (API.md 4.5의 6단계, 리드 결정):
@@ -94,8 +99,10 @@ class MeRepositoryImpl @Inject constructor(
      * 해제면 로그인 정보를 뺀 로컬 데이터를 지운다. 새 공간이 개인 공간이면 `UNLINKED`를 내보내 앱이 SCR-COUPLE-01로 간다.
      * 새 공간이 다른 커플 공간이면 이동하지 않고, 확인한 공간 ID를 이전 공간으로 남겨 연결 완료 시트가 뜨게 한다
      * (4.4의 8단계 2번). Docs 후속: API 4.5 6단계에 "커플 X → 커플 Y" 경우를 명시해야 한다.
+     *
+     * [MeWriteLock] 안에서만 부른다.
      */
-    private suspend fun saveFresh(fresh: Me) = saveMutex.withLock {
+    private suspend fun saveFreshLocked(fresh: Me) {
         val previous = local.get()?.toDomainOrNull()
         val previousCoupleId = previous?.space?.takeIf { it.type == SpaceType.COUPLE }?.id
         val acknowledgedId = acknowledged.get()

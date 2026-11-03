@@ -3,6 +3,8 @@ package com.duriseo.android.feature.settings.account
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
+import com.duriseo.android.core.common.navigation.SettingsRouteModel
 import com.duriseo.android.core.common.social.SocialTokenResult
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.message.toMessageResOrNull
@@ -41,7 +43,7 @@ class AccountViewModel @Inject constructor(
 ) : ViewModel() {
 
     /** 커플 연결 화면에서 시작한 연동인가 (경로 인자 `fromCouple`, FR-AUTH-03 AC4). 이때는 연동 성공 안내가 없다 */
-    private val fromCouple: Boolean = savedStateHandle.get<Boolean>(FROM_COUPLE_KEY) ?: false
+    private val fromCouple: Boolean = savedStateHandle.toRoute<SettingsRouteModel.Account>().fromCouple
 
     /** 소셜 SDK가 돌려준 토큰을 어디에 쓰는가 */
     private enum class TokenPurpose {
@@ -272,8 +274,5 @@ class AccountViewModel @Inject constructor(
 
     private companion object {
         const val STOP_TIMEOUT_MILLIS = 5_000L
-
-        /** 타입 안전 내비게이션이 경로 인자를 `SavedStateHandle`에 넣는 키 = `SettingsRouteModel.Account.fromCouple` */
-        const val FROM_COUPLE_KEY = "fromCouple"
     }
 }

@@ -2,6 +2,7 @@ package com.duriseo.android.data.repository.couple
 
 import com.duriseo.android.data.local.me.MeLocalDataSource
 import com.duriseo.android.data.remote.couple.CoupleRemoteDataSource
+import com.duriseo.android.data.repository.me.MeWriteLock
 import com.duriseo.android.data.repository.online.runOnlineWrite
 import com.duriseo.android.domain.couple.ColorChange
 import com.duriseo.android.domain.couple.CoupleJoinResult
@@ -29,6 +30,7 @@ class CoupleRepositoryImpl @Inject constructor(
     private val meRepository: MeRepository,
     private val meLocal: MeLocalDataSource,
     private val networkMonitor: NetworkMonitor,
+    private val writeLock: MeWriteLock,
 ) : CoupleRepository {
 
     override suspend fun currentInviteCode(): DataResult<InviteCode?> {
@@ -69,11 +71,20 @@ class CoupleRepositoryImpl @Inject constructor(
         return DataResult.Success(Unit)
     }
 
-    /** 응답 `Space`로 Room의 내 정보를 바로 갱신한다. 다른 공간의 응답이면 건드리지 않는다 (`GET /me`가 채운다) */
+    /**
+     * 응답 `Space`로 Room의 내 정보를 바로 갱신한다. 다른 공간의 응답이면 건드리지 않는다 (`GET /me`가 채운다).
+     * 읽고 쓰는 사이에 `GET /me` 저장이나 앱 초기화가 끼어들지 못하게 [MeWriteLock] 아래에서 한다
+     * (이 안에서 `refreshMe`를 부르지 않는다. 락은 재진입이 안 된다).
+     */
     private suspend fun DataResult<Space>.thenApplySpace(): DataResult<Unit> {
         val failure = this as? DataResult.Failure
         if (failure != null) return failure
         val space = (this as DataResult.Success).value
+        writeLock.withLock { applySpaceLocked(space) }
+        return DataResult.Success(Unit)
+    }
+
+    private suspend fun applySpaceLocked(space: Space) {
         val entity = meLocal.get()
         if (entity != null && entity.spaceId == space.id) {
             val partnerId = entity.partnerId
@@ -89,7 +100,6 @@ class CoupleRepositoryImpl @Inject constructor(
                 ),
             )
         }
-        return DataResult.Success(Unit)
     }
 
     /** 쓰기가 성공했으면 `GET /me`로 Room을 채운다. 이 갱신이 실패해도 쓰기 결과는 바꾸지 않는다 */

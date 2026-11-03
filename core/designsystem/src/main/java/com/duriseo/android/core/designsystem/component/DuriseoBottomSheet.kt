@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.ZeroCornerSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,9 +38,6 @@ import com.duriseo.android.core.designsystem.theme.Surface0
 // 하단 시트의 면과 뒤 막 (design-system.md "바텀시트", 보드 `Calendar.dc.html` 128~131행, `StartDateSheet.dc.html` 19·20행).
 // 수치는 토큰에 없어 보드 값을 이름 붙인 상수로 둔다.
 
-/** 시트 위 모서리 24 (`radius-2xl`) */
-private val SheetTopRadius = DuriseoSpacing.Space6
-
 /** 시트 안쪽: 위 10·좌우 24·아래 28 */
 private val SheetPaddingTop = 10.dp
 private val SheetPaddingBottom = 28.dp
@@ -64,7 +62,11 @@ fun DuriseoSheetPanel(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Surface0, RoundedCornerShape(topStart = SheetTopRadius, topEnd = SheetTopRadius))
+            // 시트 위 모서리는 `radius-2xl`(= shapes.extraLarge), 아래 모서리는 화면 끝이라 0
+            .background(
+                Surface0,
+                MaterialTheme.shapes.extraLarge.copy(bottomStart = ZeroCornerSize, bottomEnd = ZeroCornerSize),
+            )
             .padding(
                 start = DuriseoSpacing.Space6,
                 end = DuriseoSpacing.Space6,

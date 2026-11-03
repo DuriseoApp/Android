@@ -27,7 +27,7 @@ import com.duriseo.android.core.designsystem.theme.Ink900
 // 토큰에 없는 것은 이름을 붙인 상수로 둔다 (unit-3.md 확인 필요 14).
 
 /** 뒤로 가기 버튼 한 변 48 (보드 `Connect.dc.html` 20행). `size-touch` 44 이상 */
-private val BackButtonSize = DuriseoSize.ButtonMd
+private val BackButtonSize = 48.dp
 
 /**
  * 맨 위 64 높이 줄. 왼쪽에 뒤로 가기 버튼. [showBack]이 false면 자리만 두고 버튼은 그리지 않는다

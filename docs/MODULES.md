@@ -63,7 +63,7 @@ PRD에 화면이 추가되면 이 표에 먼저 넣고 모듈을 정한다.
 | 토큰 암호화 | Tink (`tink-android` 1.18.0, Android Keystore) | 2 (추가됨, 버전은 CI로 확인) |
 | Google 로그인 | Credential Manager (`credentials`, `credentials-play-services-auth` 1.5.0) + Google ID (`googleid` 1.1.1) | 2 (추가됨, 버전은 CI로 확인) |
 | 카카오 로그인 | Kakao SDK (`v2-user` 2.21.0). `settings.gradle.kts`에 `devrepo.kakao.com` 저장소를 `com.kakao.*` 그룹만 받도록 추가 | 2 (추가됨, 버전은 CI로 확인) |
-| 테스트: 메모리 Room | Robolectric 4.15.1 + `androidx.test:core` 1.6.1 (`data:local`, `data:repository`의 `testImplementation`, unit-2 확인 필요 15) | 2 (추가됨) |
+| 테스트: 메모리 Room | Robolectric 4.15.1 + `androidx.test:core` 1.6.1 (`data:local`, `data:repository`의 `testImplementation`, unit-2 확인 필요 15. 단위 3부터 `feature:settings`도: `SavedStateHandle.toRoute` 테스트) | 2 (추가됨) |
 | 푸시 | Firebase Messaging (BOM) | 7 |
 | 프로필 이미지 | Coil | 8 |
 | 테스트 | kotlinx-coroutines-test, Turbine, OkHttp MockWebServer | 1 (추가됨) |

@@ -91,12 +91,10 @@ class LinkedSheetViewModel @Inject constructor(
     init {
         // 이 ViewModel은 NavHost 밖(`MainScreen`)에 있어 Activity 동안 남는다. 새 커플 공간(공간 ID가 바뀜)이 열리거나
         // 앱 초기화(D-103)가 일어나면 이전 연결의 선택(고른 날짜, 기록 선택, 날짜 시트)을 버리고
-        // 처음 상태([가져오기] 미리 선택, D-76)로 돌린다
+        // 처음 상태([가져오기] 미리 선택, D-76)로 돌린다. 앱 초기화는 Room이 비워져 공간 ID가 null이 되는 것으로 안다.
+        // `spaceChanges`는 한 번만 전달되는 Channel이라 구독자는 `MainViewModel` 하나뿐이어야 한다 (여기서 구독하지 않는다)
         viewModelScope.launch {
             meRepository.observeMe().map { it?.space?.id }.distinctUntilChanged().collect { local.value = Local() }
-        }
-        viewModelScope.launch {
-            meRepository.spaceChanges.collect { local.value = Local() }
         }
     }
 

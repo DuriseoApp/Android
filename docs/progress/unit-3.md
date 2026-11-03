@@ -1,6 +1,6 @@
 # 단위 3: 커플
 
-> 브랜치: `feat/3-couple` · PR: #10 https://github.com/DuriseoApp/Android/pull/10 (초안) · 상태: 구현 1부(커밋 a84ad1b)·2부(커밋 86bd0fb) 완료, CI 407개 통과. 리뷰 1회차 수정(Major 6, Minor 8) 반영, CI 재확인 대기
+> 브랜치: `feat/3-couple` · PR: #10 https://github.com/DuriseoApp/Android/pull/10 (초안) · 상태: 구현 1부(커밋 a84ad1b)·2부(커밋 86bd0fb) 완료, 리뷰 1회차 수정(커밋 1e9bba2) CI 419개 통과. 리뷰 2회차 수정(Major 2, Minor 6) 반영, CI 재확인 대기
 > 기준: PRD v0.9 (Docs main `728ea08`, Docs PR #10). 1부는 v0.8 (`afc3d1b`) 기준이었다. SCREENS.md(캔버스 버전 38, 2026-10-27 갱신), API.md(2026-10-27 갱신: 3.1 `Me`·`MeSpace`, 3.2, 4.4, 4.5, 5장, 6장), design-system.md(Android 매핑, 다이얼로그, 스낵바, 버튼), tokens.json
 > 서버: Server 단위 2(커플) 머지됨, 개발 서버 배포는 사용자 확인 (아래 "서버 연동")
 
@@ -24,7 +24,7 @@
 | 12 보드 문구·샘플 | SCREENS 화면별 "보드 문구" 항목(보드 파일·행 표시), SCR-SET-03 샘플 일정과 "미리보기의 한 주는 오늘이 든 주" | 그대로 사용 | 완료 (추천안과 같음) |
 | 13 공유·복사 | D-102 | 공유는 코드 6자리만, 복사는 "복사됨"으로 라벨 변경 | 완료 (1부에 이미 있음) |
 | 14 토큰에 없는 수치 | SCREENS·design-system: 보드 값을 쓰되 이름 붙인 상수 + 보드 행 주석. 이미지 대기 상태는 기존 컴포넌트·토큰만 | 새 컴포넌트 `DuriseoCoupleMarks`·`DuriseoAvatar`·`DuriseoBottomSheet`의 수치는 모두 보드 값 상수. 점선 원 테두리의 점·간격(6·4)만 보드가 CSS `dashed`라 비슷하게 그린 값 | 완료 (점선 원 간격은 이미지와 맞는지 확인 필요) |
-| 15 "재시작" | D-103, FR-COUPLE-05 AC3·AC5, API.md 4.5의 6단계·1단계 (import의 409는 `NO_IMPORT_PENDING`뿐이라 `NOT_COUPLE` 초기화는 PATCH space·colors·DELETE) | 토큰·소셜 SDK는 두고 Room·설정을 지운 뒤 백스택을 SCR-COUPLE-01 하나로. `PATCH /space`·`PATCH /space/colors`·`POST /couple/import`·`DELETE /couple`의 `NOT_COUPLE`도 같은 초기화 | 완료 (추천안과 같음) |
+| 15 "재시작" | D-103, FR-COUPLE-05 AC3·AC5, API.md 4.5의 6단계·1단계 (import의 409는 `NO_IMPORT_PENDING`뿐이라 `NOT_COUPLE` 초기화는 PATCH space·colors·DELETE) | 토큰·소셜 SDK는 두고 Room·설정을 지운 뒤 백스택을 SCR-COUPLE-01 하나로. `PATCH /space`·`PATCH /space/colors`·`DELETE /couple`의 `NOT_COUPLE`도 같은 초기화 (`POST /couple/import`는 409가 `NO_IMPORT_PENDING`뿐이라 초기화하지 않는다, 결정 17) | 완료 (추천안과 같음) |
 | 16 시트 조건·저장 시점 | API.md 4.4의 8단계: 확인한 공간 ID 저장 시점 **3가지** — ① 개인 공간을 주는 모든 `GET /me`에서 그 ID ② 시트를 닫거나 [시작하기]를 마칠 때 커플 공간 ID ③ 앱 초기화 때 새 개인 공간 ID. 해제 감지는 4.5의 6단계: ID가 다르거나 Room 공간 `type`이 COUPLE→PERSONAL, **저장보다 먼저** → **추천안(시트 닫을 때만 갱신)과 다름** | 문서대로. 시트가 필요한 조건은 Room이 COUPLE이고 (`importPending` 또는 저장된 ID가 있고 현재 ID와 다름). 처음 로그인한 기기(저장값 없음)는 `importPending`만 본다 | 완료 (결정 5를 아래에서 고침) |
 | 17 게스트 연결 정보 행 | SCREENS SCR-SET-01 "게스트의 연결 정보 행" → SCR-COUPLE-01(게스트 모양), FR-AUTH-04 AC2 | 게스트는 연결 정보 행과 [상대와 연결하기] 둘 다 SCR-COUPLE-01로 | 완료 |
 | 18 모르는 팔레트 키 | API.md 3.2 "앱 동작", SCREENS SCR-SET-03 "모르는 팔레트 키": 오류로 보지 않고 값은 두고 기본 사람 색으로 그림 | 매퍼는 키 그대로 저장, `DuriseoAvatar`·색 점·마크가 기본 색으로 대신 그림 | 완료 |
@@ -220,10 +220,10 @@ SCREENS가 "이미지 예정"으로 둔 7개 상태다 (COUPLE-02 코드 받는 
 Android 레포 안에서 정할 수 있는 것. 리드가 범위 확인 때 함께 승인한다 (문서에 있어야 할 결정은 아래 "확인 필요"에 따로 있다).
 
 1. **이름**: 모듈 `feature:couple`, 패키지 `com.duriseo.android.feature.couple` (`connect`, `invitecreate`, `inviteenter`, `linkedsheet`). `feature:settings`에 `colors`, `connection` 패키지 추가.
-2. **쓰기 순서 (시트 [시작하기])**: ① 처음 만난 날을 골랐으면 `PATCH /space` → ② 기록 선택이 있으면 `POST /couple/import` → ③ 시트 닫기 + `acknowledgedSpaceId` 갱신. 실패하면 거기서 멈추고 공통 오류, 시트 유지(다시 누르면 처음부터. 날짜 PATCH는 같은 값이라 무해). 기록 삭제는 되돌릴 수 없으니 가장 나중에 한다. `NO_IMPORT_PENDING`은 이미 정한 것으로 보고 ③으로. `NOT_COUPLE`은 해제와 겹친 것이라 앱 초기화.
+2. **쓰기 순서 (시트 [시작하기])**: ① 처음 만난 날을 골랐으면 `PATCH /space` → ② 기록 선택이 있으면 `POST /couple/import` → ③ 시트 닫기 + `acknowledgedSpaceId` 갱신. 실패하면 거기서 멈추고 공통 오류, 시트 유지(다시 누르면 처음부터. 날짜 PATCH는 같은 값이라 무해). 기록 삭제는 되돌릴 수 없으니 가장 나중에 한다. `NO_IMPORT_PENDING`은 이미 정한 것으로 보고 ③으로. 이 흐름의 409는 `NO_IMPORT_PENDING`뿐이다(R-18). `NOT_COUPLE`은 `PATCH /space` 쪽에서만 오며 앱 초기화(결정 17).
 3. **`GET /space`는 부르지 않는다**: API.md 3.2 설명은 "SCR-SET-01·SCR-SET-03용"이지만 `Me.space`에 `myColor`, `partner{id,nickname,color}`, `togetherColor`, `startDate`가 모두 있어 두 번 읽을 이유가 없다. `PATCH` 응답의 `Space`를 `me` 행에 합친다. (문서와 다르게 하는 점이 아니라 쓰지 않는 것이다. PR 본문에 적는다.)
 4. **코드 남은 시간·재요청 시각 기준**: 응답의 `expiresAt`·`reissueAvailableAt`을 기기 `Clock`과 비교한다 (서버 시각을 따로 받지 않음). 기기 시계가 어긋나 "만료"로 보여도 `current`를 먼저 불러 200이면 그 코드를 그대로 유지하고 몇 초 뒤 다시 본다(함부로 `POST`하지 않음). 429 `INVITE_REISSUE_TOO_SOON`이면 `retryAfterSeconds`를 따른다.
-5. **`acknowledgedSpaceId`**: DataStore에 둔다. **저장 시점은 API.md 4.4의 8단계 3가지**다 (v0.9, 이 기록의 1부 추천안 "시트 닫을 때만"을 고침): ① 개인 공간을 주는 모든 `GET /me`에서 그 ID, ② 시트를 닫거나 [시작하기]를 마칠 때 커플 공간 ID, ③ 앱 초기화 때 새 개인 공간 ID(①이 초기화 뒤 `GET /me`에서 같이 한다). 그래서 시트를 닫기 전에 앱을 끄면 저장값은 개인 공간 ID 그대로라 다음 실행 때 다시 뜬다. 처음 로그인한 기기(저장값 없음)는 변화로 보지 않고 `importPending`만 본다. 해제 감지(ID 다름 또는 Room `COUPLE`→`PERSONAL`)는 항상 ①보다 먼저다.
+5. **`acknowledgedSpaceId`**: DataStore에 둔다. **저장 시점은 API.md 4.4의 8단계 3가지**다 (v0.9, 이 기록의 1부 추천안 "시트 닫을 때만"을 고침): ① 개인 공간을 주는 모든 `GET /me`에서 그 ID, ② 시트를 닫거나 [시작하기]를 마칠 때 커플 공간 ID, ③ 앱 초기화 때 새 개인 공간 ID(①이 초기화 뒤 `GET /me`에서 같이 한다). 그래서 시트를 닫기 전에 앱을 끄면 저장값은 개인 공간 ID 그대로라 다음 실행 때 다시 뜬다. 처음 로그인한 기기(저장값 없음)는 변화로 보지 않고 `importPending`만 본다. 해제 감지는 항상 저장보다 먼저이고 ①보다도 먼저다: 저장 전 Room이 `COUPLE`이고 받은 공간 ID가 다르면(새 공간이 개인이든 다른 커플이든, 결정 22), 또는 받은 공간이 `PERSONAL`인데 확인한 공간 ID와 다르면(①) 해제다.
 6. **계정 화면 출처 인자 (구현됨, 리뷰 수정 3)**: `SettingsRouteModel.Account(fromCouple: Boolean = false)`. SCR-COUPLE-01(게스트)의 [로그인하고 연결하기]만 `fromCouple = true`로 들어간다. `AccountViewModel`이 `SavedStateHandle`의 `fromCouple`을 읽고, 연동(`POST /auth/link`) 성공 시 성공 안내(`justLinked`) 없이 `NavigateToCoupleConnect`를 내보내 `feature:main`이 `navigateUp()`으로 아래에 있는 SCR-COUPLE-01로 돌아간다(그 화면은 Room이 회원으로 바뀌어 회원 모양). 뒤로 가기는 그대로 SCR-COUPLE-01(게스트). switch(기존 계정 로그인)는 단위 2 그대로 캘린더로.
 7. **시트 호스트**: `feature:couple`이 `CoupleLinkedSheetRoute`를 공개하고 `feature:main`의 `MainScreen`이 `MainViewModel.linkedSheetRequested`가 true인 동안 캘린더 위에 그린다 (뒤로 가기는 시트가 가로챔). 새 내비게이션 경로가 아니다.
 8. **앱 초기화**: 토큰·소셜 SDK 상태는 두고 Room·설정을 지운 뒤 내비게이션 백스택을 SCR-COUPLE-01 하나로 다시 만든다 (프로세스 재시작은 하지 않는다. "재시작"은 앱 상태를 처음부터 다시 만드는 뜻으로 읽는다 — 확인 필요 15 A). 그 뒤 `refreshMe()`가 새 개인 공간을 채운다.
@@ -239,11 +239,15 @@ Android 레포 안에서 정할 수 있는 것. 리드가 범위 확인 때 함�
 18. **입력 제한 문구**: [N]은 `ceil(retryAfterSeconds/60)` (최소 1), 오류가 난 시점에 고정. 코드를 고쳐도 제한 문구는 유지하고(다른 코드 오류는 고치면 지움) 버튼은 `retryAfterSeconds`가 지나면 켜진다. 화면을 나가면 ViewModel과 함께 사라진다.
 19. **연결 완료 시트의 상태 모양**: 서버 값(`observeMe()`)과 화면 안 선택(고른 날짜, 기록 선택)을 합치고, 요청 중에는 그 시점의 값을 얼려서 보여 준다(요청 중 서버가 바뀌어도 시트가 흔들리지 않게). 시트를 마치면 화면 안 선택을 모두 지운다.
 20. **날짜 시트 호스트 공용화**: 처음 만난 날 시트 면은 `StartDatePickerSheet`(designsystem), 뒤 막·위치는 `DuriseoBottomSheetLayer`가 맡아 SET-01·COUPLE-04가 같이 쓴다. 저장 요청 중에는 뒤 막·뒤로 가기로 닫히지 않는다.
-21. **시트 ViewModel 초기화 (리뷰 수정 1)**: `LinkedSheetViewModel`은 NavHost 밖(`MainScreen`)이라 Activity 동안 남는다. 공간 ID가 바뀔 때(새 커플 공간), `NOT_COUPLE`로 시작하기가 끝날 때, 앱 초기화(`UNLINKED`) 때 `pickedDate`·`choice`·`datePicker` 등 `Local`을 모두 처음 상태([가져오기] 미리 선택, D-76)로 되돌린다.
+21. **시트 ViewModel 초기화 (리뷰 수정 1)**: `LinkedSheetViewModel`은 NavHost 밖(`MainScreen`)이라 Activity 동안 남는다. 공간 ID가 바뀔 때(새 커플 공간), `NOT_COUPLE`로 시작하기가 끝날 때, 앱 초기화(Room이 비워져 공간 ID가 null, 결정 26) 때 `pickedDate`·`choice`·`datePicker` 등 `Local`을 모두 처음 상태([가져오기] 미리 선택, D-76)로 되돌린다.
 22. **커플 X → 커플 Y (리뷰 수정 2, 리드 결정)**: 위 "공간이 바뀐 것을 아는 규칙" 표. 이동은 하지 않고(`UNLINKED` 없음) 로컬 데이터를 지운 뒤 확인한 공간 ID를 이전 커플 공간 ID로 남겨 시트를 띄운다. Docs 후속: API 4.5 6단계에 커플 X→Y 경우 명시.
 23. **PATCH 응답으로 Room 즉시 갱신 (리뷰 수정 5)**: 결정 3의 "`Space`를 `me` 행에 합친다"를 실제로 구현. 그 뒤 `GET /me`는 그대로 하되 실패해도 화면은 새 값이다.
 24. **토큰과 같은 값의 하드코딩 정리 (리뷰 수정 6)**: 이름 붙인 `X.dp` 상수 중 44는 `DuriseoSize.Touch`, 뒤로·완료·닫기 버튼 48은 `DuriseoSize.ButtonMd`, 이름에 Padding·Gap·Top·Bottom·Margin이 든 4·8·12·16·20·24·32는 `DuriseoSpacing`으로 바꿨다 (`feature:*`·`core:designsystem` 컴포넌트). 이름 붙인 보드 값 중 토큰과 값이 같아도 뜻이 다른 것(예: 점 지름 8, 행 높이 52)은 그대로 둔다.
-25. **연도·월 선택 임시안 (확인 필요 6)**: `StartDatePickerSheet`가 `onMonthSelected`를 받으면 연·월 제목이 눌리고(⌄), 연도 목록(올해→1950, 4열) → 월 목록(4열 3줄)로 달을 고른다. 범위 판단은 `StartDateRules.isMonthSelectable`·`years`, 호스트 ViewModel도 범위 밖 달은 받지 않는다. 이미지가 오면 모양만 맞춘다.
+25. **연도·월 선택 임시안 (확인 필요 6)**: `StartDatePickerSheet`가 `onMonthSelected`를 받으면 연·월 제목이 눌리고(⌄), 연도 목록(올해→1950, 4열) → 월 목록(4열 3줄)로 달을 고른다. 범위 판단은 `StartDateRules.isMonthSelectable`·`years`, 호스트 ViewModel도 범위 밖 달은 받지 않는다. 이미지가 오면 모양만 맞춘다. 월 목록 위쪽의 연도 표시(⌄)를 누르면 연도 목록으로 돌아가고, 연도 목록은 지금 보이는 연도 줄로 스크롤해 열린다 (리뷰 2회차). 연도·월 칸 높이는 `size-touch`.
+26. **`spaceChanges` 구독자는 `MainViewModel` 하나 (리뷰 2회차 M-1)**: `Channel.receiveAsFlow()`는 이벤트를 한 구독자에게만 준다. 시트 ViewModel이 같이 구독하면 `UNLINKED`를 가로채 앱이 SCR-COUPLE-01로 가지 못한다. 시트는 `observeMe()`의 공간 ID(앱 초기화로 Room이 비워지면 null)가 바뀔 때만 선택을 되돌린다. 테스트 Fake도 `Channel`로 바꿨다.
+27. **내 정보 쓰기 자물쇠 `MeWriteLock` (m-1)**: `GET /me` 저장(`saveFresh`), 앱 초기화(`resetAfterUnlink`), PATCH 응답 반영(`thenApplySpace`)이 모두 이 자물쇠 아래에서 돈다. 코루틴 `Mutex`는 재진입이 안 되므로 락 안에서는 락 없는 `saveFreshLocked`·`applySpaceLocked`만 부른다(`resetAfterUnlink`는 `refreshMe` 대신 `remote.getMe()` + `saveFreshLocked`). 락은 싱글톤 `MeWriteLock`을 두 저장소가 나눠 쓴다.
+28. **토큰과 값만 같은 다른 뜻 되돌림 (m-2)**: 시트 위 모서리는 `MaterialTheme.shapes.extraLarge`(`radius-2xl`)를 아래 모서리만 0으로 쓴다. 뒤로 가기 버튼 48(`BackButtonSize` 둘, `DoneHeight`), 색 원 44(`SwatchSize`), 아이콘 칸 44(`MakeCodeTileSize`, 로그인 카드 `CardIconTileSize`)는 보드 값 이름 붙은 상수로 두고 출처 주석을 달았다 (확인 필요 14 방식). `RingGap` 4는 점선의 빈 간격(그리기 값)이라 간격 토큰이 아니다. 간격 토큰은 이름에 Padding·Gap·Top·Bottom이 들어간 것만 썼다.
+29. **`AccountViewModel`은 경로 타입에서 읽는다 (m-4)**: `savedStateHandle.toRoute<SettingsRouteModel.Account>().fromCouple`. `toRoute`가 Bundle을 쓰므로 `feature:settings` 테스트에 `testImplementation(libs.robolectric)`(이미 `data:repository`가 쓰는 같은 버전)를 더하고 `AccountViewModelTest`를 Robolectric 러너로 돌린다. 핸들은 `SettingsRouteModel.Account::fromCouple.name`을 키로 만들어 경로의 인자 이름이 바뀌면 테스트가 깨진다. 컴파일·테스트가 안 되면 이 항목부터 본다.
 
 ## 확인 필요
 
@@ -311,7 +315,7 @@ Android 레포 안에서 정할 수 있는 것. 리드가 범위 확인 때 함�
     - A) 단위 2처럼 보드 값을 이름 붙인 상수로 쓰고 코드 주석에 보드 파일·행을 적은 뒤 design-system 보충을 Docs 후속으로 (**추천**, 단위 2 결정 "캔버스 값으로 보충")
     - B) Docs 보충 PR(`/design-sync`)을 먼저 받고 시작 (단위 3 시작이 미뤄짐)
 15. **"재시작해 자동 로그인"의 뜻** (FR-COUPLE-05 AC3, D-37, API 4.5의 6단계): 프로세스를 죽였다가 다시 띄우는 것인지, 앱 상태만 처음부터 다시 만드는 것인지 분명하지 않다. 또 `PATCH /space`·`PATCH /space/colors`·`POST /couple/import`가 `NOT_COUPLE`을 줄 때(상대가 먼저 해제) 문서가 정한 것은 `DELETE /couple`뿐이다.
-    - A) 토큰·소셜 SDK 상태는 두고 Room·설정만 지운 뒤 내비게이션을 SCR-COUPLE-01 하나로 다시 만듦(프로세스 유지). `DELETE /couple`외의 `NOT_COUPLE`도 같은 초기화로 처리 (**추천**, 결정 8)
+    - A) 토큰·소셜 SDK 상태는 두고 Room·설정만 지운 뒤 내비게이션을 SCR-COUPLE-01 하나로 다시 만듦(프로세스 유지). `DELETE /couple` 외에 `PATCH /space`·`PATCH /space/colors`의 `NOT_COUPLE`도 같은 초기화로 처리 (**추천**, 결정 8)
     - B) 프로세스 재시작(`Activity` 재생성 + `exitProcess` 등). Android에서 권장되지 않고 테스트하기 어려움
 16. **"다음 실행 때 시트" 조건의 정의** (SCREENS 233·FR-COUPLE-02 AC5): "기기에 저장된 값과 다르면"의 저장값을 언제 갱신하는지 문서에 없다 (이 단위의 결정 5가 해석). 서버는 시트를 봤는지 저장하지 않는다 (4.4의 8단계).
     - A) 결정 5대로 시트를 닫을 때 갱신 (**추천**) / B) `GET /me`를 저장하는 즉시 갱신 (시트를 닫기 전에 앱을 끄면 기록 없는 쪽은 다시 안 뜸)
@@ -349,7 +353,7 @@ Preview: `ConnectScreen` 6종(`Member`·`Guest`·`NoBack`·`LogoutDialog`·`Logg
 | `domain` | `ImportCounts`, `MeSpace.importCounts`·`linkedAt`, `Space.linkedAt`, `SpaceChange.UNLINKED`, `MeRepository`에 `spaceChanges`·`observeLinkedSheetNeeded()`·`acknowledgeSpace()`·`resetAfterUnlink()`, `InviteRateLimit.minutesFor`(올림, 최소 1), `StartDateRules.dayNumber`, `DataError.hasCode` | `StartDateRulesTest`(dayNumber) |
 | `data:remote` | `MeSpaceDto`·`SpaceDto`에 `linkedAt`·`importCounts` (없거나 null이면 null) | `MeRemoteDataSourceTest` +2 |
 | `data:local` | `me` 행에 `linked_at`·`import_*` 4칸, **DB 버전 2(파괴적 재생성, 결정 15)**, `AcknowledgedSpaceLocalDataSource`(DataStore `acknowledged_space_id`) | |
-| `data:repository` | `MeRepositoryImpl`: 해제 감지(저장 전 Room이 COUPLE이고 새 공간 ID가 다름, 또는 새 공간이 PERSONAL인데 확인한 공간 ID와 다름. **저장보다 먼저**, `Mutex` 직렬화) → 사용자 데이터 삭제(토큰 유지) → 새 내 정보 저장 → ID 저장 → `UNLINKED`; 확인한 공간 ID 저장 3곳; `CoupleRepositoryImpl`: PATCH 응답 `Space`로 Room 즉시 갱신, PATCH space·colors의 `NOT_COUPLE`은 초기화 + 실패 반환, `unlink`는 `NOT_COUPLE`도 초기화 후 성공, `ALREADY_COUPLED`·`GUEST_NOT_ALLOWED`는 `GET /me` 재읽기 | `SpaceChangeTest`(importCounts 왕복, 저장 3곳, 시트 필요 조건, 해제 감지 ①②, NOT_COUPLE 3경로, 직접 해제는 한 번만, 재읽기) |
+| `data:repository` | `MeRepositoryImpl`: 해제 감지(저장 전 Room이 COUPLE이고 새 공간 ID가 다름, 또는 새 공간이 PERSONAL인데 확인한 공간 ID와 다름. **저장보다 먼저**, `MeWriteLock`으로 직렬화) → 사용자 데이터 삭제(토큰 유지) → 새 내 정보 저장 → ID 저장 → `UNLINKED`; 확인한 공간 ID 저장 3곳; `CoupleRepositoryImpl`: PATCH 응답 `Space`로 Room 즉시 갱신, PATCH space·colors의 `NOT_COUPLE`은 초기화 + 실패 반환, `unlink`는 `NOT_COUPLE`도 초기화 후 성공, `ALREADY_COUPLED`·`GUEST_NOT_ALLOWED`는 `GET /me` 재읽기 | `SpaceChangeTest`(importCounts 왕복, 저장 3곳, 시트 필요 조건, 해제 감지 ①②, NOT_COUPLE 3경로, 직접 해제는 한 번만, 재읽기) |
 | `core:designsystem` | `DuriseoBottomSheet`(`DuriseoSheetPanel`·`DuriseoBottomSheetLayer`), `DuriseoAvatar`, `DuriseoCoupleMarks`(`DuriseoTogetherMark`·`DuriseoDashedLink`·`DuriseoEmptyPartnerSlot`), 아이콘 `ic_link`·`ic_calendar`(couple)·`ic_plus`, `ic_ticket_plus`·`ic_keyboard`(couple에서 옮김) | Preview: 각 컴포넌트 |
 | `feature:couple` | 입력 오류 6종 문구와 입력 제한(올림 분, 풀리면 지우고 버튼 켬), 코드 받는 중(빈 칸), **SCR-COUPLE-04 연결 완료 시트**(`linkedsheet/`: 개수 문구·0개도 표시, 처음 만난 날 칸과 한 겹 위 날짜 시트, 가져오기·가져오지 않기·삭제 확인 다이얼로그, [시작하기] 순서 ①PATCH ②import ③저장, 기록 고르기 전에는 닫히지 않음) | `InviteEnterViewModelTest`(오류 6종, 제한 타이밍), `LinkedSheetViewModelTest`(FR-COUPLE-03 AC1·AC2·AC4·AC6, FR-COUPLE-04 AC4, D-93, D-98, Q-13 …) · Preview: `InviteEnterScreenErrorPreview`·`...ExpiredPreview`·`...RateLimitedPreview`, `InviteCreateScreenLoadingPreview`, `LinkedSheetWithRecordsPreview`·`NoRecordsPreview`·`DropDialogPreview`·`DatePickedPreview`·`DateSetPreview`·`DatePickerPreview`·`RequestingPreview` |
 | `feature:main` | `MainViewModel`: `linkedSheetNeeded`, `spaceChanges` → `MainEffect.SpaceUnlinked` → SCR-COUPLE-01(백스택 비움). `MainScreen`이 캘린더 탭 위에 시트를 띄움. `navigateToConnect()`(백스택 유지), `navigateToConnectionInfo()` | `MainViewModelTest` +3 |
@@ -385,7 +389,8 @@ Preview: `ConnectScreen` 6종(`Member`·`Guest`·`NoBack`·`LogoutDialog`·`Logg
 
 | 회차 | Critical | Major | 비고 |
 | --- | --- | --- | --- |
-| 1 | 0 | 6 | Minor 8. 모두 이 커밋 뒤 수정으로 처리 (아래) |
+| 1 | 0 | 6 | Minor 8. 커밋 1e9bba2로 처리 (아래), CI 419개 통과 |
+| 2 | 0 | 2 | Minor 6. 이 커밋 뒤 수정으로 처리 (아래) |
 
 **1회차 처리**
 
@@ -403,6 +408,19 @@ Preview: `ConnectScreen` 6종(`Member`·`Guest`·`NoBack`·`LogoutDialog`·`Logg
 | Minor | `InviteCreateViewModelTest` 이름에 FR-COUPLE-01 AC6 | 완료 |
 | Minor | `LinkedSheetScreen` 선택 묶음 `selectableGroup()` | 완료 |
 | Minor | 진행 기록 머리 상태·D절·위험 1·리뷰 기록 | 완료 (스낵바 위쪽 40은 "임시" 그대로) |
+
+**2회차 처리**
+
+| # | 내용 | 처리 |
+| --- | --- | --- |
+| Major M-1 | 시트가 `spaceChanges`를 같이 구독해 `UNLINKED`를 가로챌 수 있음 (`Channel.receiveAsFlow()`는 한 구독자에게만 전달) | 결정 26. 시트는 `observeMe`의 공간 ID로만 초기화. Fake를 `Channel`로 바꾸고 "구독자는 메인 하나" 테스트 추가 |
+| Major M-2 | 연도·월 칸 높이가 날짜 줄(40)을 씀 | `PickerCell` 높이를 `DuriseoSize.Touch`로 |
+| Minor m-1 | `resetAfterUnlink`·`thenApplySpace`가 락 밖 | 결정 27. `MeWriteLock`. 테스트 +3 |
+| Minor m-2 | 값만 같은 다른 뜻의 토큰 | 결정 28 |
+| Minor m-3 | 월 목록에서 연도 목록으로 돌아가기, 연도 목록은 고른 연도로 스크롤 | 결정 25 갱신 |
+| Minor m-4 | `FROM_COUPLE_KEY` 문자열 | 결정 29. `toRoute<SettingsRouteModel.Account>()`, 테스트는 속성 이름으로 핸들을 만듦 |
+| Minor m-5 | 진행 기록 정리 | 결정 표 15행·결정 2·5, 머리말 CI, 이 표 |
+| Minor m-6 | import 순서 | 새 import를 기존 순서로 정리 |
 
 ## 남은 일
 

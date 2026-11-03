@@ -295,6 +295,34 @@ class SpaceChangeTest {
     }
 
     @Test
+    fun `FR-COUPLE-05 AC3 앱 초기화는 쓰기 자물쇠 안에서 돌고 끝나면 자물쇠를 놓아 다음 저장이 막히지 않는다`() =
+        runTestWithTimeout {
+            val h = harness()
+            h.preload(fixtureCoupleMe())
+            server.enqueue(jsonResponse(200, personalJson(newPersonalId)))
+            server.enqueue(jsonResponse(200, personalJson(newPersonalId)))
+
+            h.meRepository.resetAfterUnlink() // 안에서 refreshMe를 다시 부르면 여기서 멈춘다 (재진입 불가)
+            val after = h.meRepository.refreshMe()
+
+            assertEquals(DataResult.Success(Unit), after)
+            assertEquals(SpaceChange.UNLINKED, h.nextChange())
+            assertEquals(newPersonalId, h.roomMe()!!.space.id)
+        }
+
+    @Test
+    fun `FR-COUPLE-05 AC3 앱 초기화 중 오프라인이면 지운 채로 끝나고 알림은 나간다`() = runTestWithTimeout {
+        val h = harness(online = false)
+        h.preload(fixtureCoupleMe())
+
+        h.meRepository.resetAfterUnlink()
+
+        assertEquals(SpaceChange.UNLINKED, h.nextChange())
+        assertNull(h.roomMe())
+        assertNull(h.settingValue())
+    }
+
+    @Test
     fun `FR-COUPLE-05 AC3 내가 해제하면 초기화 알림이 한 번 나가고 새 개인 공간이 확인한 공간으로 저장된다`() =
         runTestWithTimeout {
             val h = harness()

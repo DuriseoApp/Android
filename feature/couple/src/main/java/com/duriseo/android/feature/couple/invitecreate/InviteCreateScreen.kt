@@ -1,6 +1,5 @@
 package com.duriseo.android.feature.couple.invitecreate
 
-import com.duriseo.android.core.designsystem.theme.DuriseoSize
 import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -62,6 +61,7 @@ import com.duriseo.android.core.designsystem.component.DuriseoSnackbarHost
 import com.duriseo.android.core.designsystem.theme.Brand100
 import com.duriseo.android.core.designsystem.theme.Brand500
 import com.duriseo.android.core.designsystem.theme.DuriseoShapes
+import com.duriseo.android.core.designsystem.theme.DuriseoSize
 import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 import com.duriseo.android.core.designsystem.theme.Ink300
@@ -76,8 +76,8 @@ import com.duriseo.android.feature.couple.R
 import com.duriseo.android.feature.couple.component.CoupleHeader
 import com.duriseo.android.feature.couple.component.CoupleTitle
 import com.duriseo.android.feature.couple.component.InviteCodeDisplay
-import com.duriseo.android.core.designsystem.R as DesignR
 import kotlinx.coroutines.launch
+import com.duriseo.android.core.designsystem.R as DesignR
 
 // SCR-COUPLE-02 초대코드 만들기 (FR-COUPLE-01, FR-COUPLE-02 AC5). 수치는 보드 `InviteCreate.dc.html`.
 // 토큰에 없는 값이라 이름을 붙인 상수로 둔다 (unit-3.md 확인 필요 14).

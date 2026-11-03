@@ -17,6 +17,11 @@ import com.duriseo.android.domain.error.ErrorCode
 import com.duriseo.android.domain.me.AccountType
 import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.domain.result.DataResult
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -207,6 +212,28 @@ class CoupleRepositoryTest {
         assertEquals("pick-rose", space.myColor)
         assertEquals("pick-teal", space.partner!!.color)
         assertEquals("pick-green", space.togetherColor)
+    }
+
+    @Test
+    fun `FR-COUPLE-04 AC1 PATCH 응답 반영은 쓰기 자물쇠 아래라 다른 저장이 끝나기 전에는 Room을 바꾸지 않는다`() = runTestWithTimeout {
+        val h = harness()
+        h.preload(fixtureCoupleMe())
+        server.enqueue(jsonResponse(200, fullSpaceJson))
+        server.enqueue(jsonResponse(500, errorJson("INTERNAL_ERROR")))
+        val locked = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val holder = launch(Dispatchers.IO) { h.writeLock.withLock { locked.complete(Unit); release.await() } }
+        locked.await()
+
+        val update = async(Dispatchers.IO) { h.coupleRepository.updateStartDate(LocalDate.of(2025, 5, 20)) }
+        delay(500) // PATCH 응답은 왔지만 반영은 자물쇠를 기다린다
+        assertNull(h.roomMe()!!.space.startDate)
+        assertTrue(update.isActive)
+
+        release.complete(Unit)
+        assertEquals(DataResult.Success(Unit), update.await())
+        holder.join()
+        assertEquals(LocalDate.of(2025, 5, 20), h.roomMe()!!.space.startDate)
     }
 
     @Test

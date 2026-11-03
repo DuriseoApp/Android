@@ -1,7 +1,5 @@
 package com.duriseo.android.core.designsystem.component
 
-import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
-import com.duriseo.android.core.designsystem.theme.DuriseoSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -45,6 +44,8 @@ import com.duriseo.android.core.designsystem.R
 import com.duriseo.android.core.designsystem.theme.Brand500
 import com.duriseo.android.core.designsystem.theme.Danger600
 import com.duriseo.android.core.designsystem.theme.DuriseoShapes
+import com.duriseo.android.core.designsystem.theme.DuriseoSize
+import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 import com.duriseo.android.core.designsystem.theme.Ink300
 import com.duriseo.android.core.designsystem.theme.Ink500
@@ -167,6 +168,7 @@ fun StartDatePickerSheet(
                     today = today,
                     year = pickerYear,
                     onYearSelected = { pickerYear = it },
+                    onBackToYears = { pickerYear = null },
                     onMonthSelected = {
                         onMonthSelected(it)
                         pickerOpen = false
@@ -354,16 +356,23 @@ private fun YearMonthPicker(
     today: LocalDate,
     year: Int?,
     onYearSelected: (Int) -> Unit,
+    onBackToYears: () -> Unit,
     onMonthSelected: (YearMonth) -> Unit,
 ) {
     val height = WeekdayHeight + DayRowHeight * 6 + DayRowGap * 5
     if (year == null) {
+        val years = StartDateRules.years(today)
+        // 열면 지금 고른 연도가 보이는 줄로 스크롤해 둔다
+        val gridState = rememberLazyGridState(
+            initialFirstVisibleItemIndex = years.indexOf(visibleMonth.year).coerceAtLeast(0),
+        )
         LazyVerticalGrid(
             columns = GridCells.Fixed(PICKER_COLUMNS),
             modifier = Modifier.fillMaxWidth().height(height),
+            state = gridState,
             verticalArrangement = Arrangement.spacedBy(DayRowGap),
         ) {
-            items(StartDateRules.years(today)) { y ->
+            items(years) { y ->
                 val text = stringResource(R.string.start_date_sheet_year, y)
                 PickerCell(
                     text = text,
@@ -378,6 +387,28 @@ private fun YearMonthPicker(
             modifier = Modifier.fillMaxWidth().height(height),
             verticalArrangement = Arrangement.spacedBy(DayRowGap),
         ) {
+            // 연도 표시를 누르면 연도 목록으로 돌아간다
+            val yearText = stringResource(R.string.start_date_sheet_year, year)
+            Row(
+                modifier = Modifier
+                    .height(DuriseoSize.Touch)
+                    .clickable(role = Role.Button, onClick = onBackToYears)
+                    .semantics { contentDescription = yearText },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = yearText,
+                    modifier = Modifier.clearAndSetSemantics { },
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Ink900,
+                )
+                Icon(
+                    painter = painterResource(R.drawable.ic_chevron_right),
+                    contentDescription = null,
+                    modifier = Modifier.size(MonthIconSize).rotate(CHEVRON_DOWN_ROTATION),
+                    tint = Ink600,
+                )
+            }
             (1..MONTHS_PER_YEAR).chunked(PICKER_COLUMNS).forEach { months ->
                 Row(modifier = Modifier.fillMaxWidth()) {
                     months.forEach { m ->
@@ -403,7 +434,7 @@ private fun PickerCell(text: String, selected: Boolean, enabled: Boolean, onClic
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(DayRowHeight)
+            .height(DuriseoSize.Touch)
             .clip(MaterialTheme.shapes.small)
             .background(if (selected) Brand500 else Color.Transparent)
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
@@ -523,7 +554,7 @@ private fun StartDatePickerSheetEarliestMonthPreview() = PreviewSheet(YearMonth.
 @Composable
 private fun YearMonthPickerYearsPreview() {
     DuriseoTheme {
-        YearMonthPicker(YearMonth.of(2026, 4), LocalDate.of(2026, 4, 30), null, {}, {})
+        YearMonthPicker(YearMonth.of(2026, 4), LocalDate.of(2026, 4, 30), null, {}, {}, {})
     }
 }
 
@@ -532,6 +563,6 @@ private fun YearMonthPickerYearsPreview() {
 @Composable
 private fun YearMonthPickerMonthsPreview() {
     DuriseoTheme {
-        YearMonthPicker(YearMonth.of(2026, 4), LocalDate.of(2026, 4, 30), 2026, {}, {})
+        YearMonthPicker(YearMonth.of(2026, 4), LocalDate.of(2026, 4, 30), 2026, {}, {}, {})
     }
 }
