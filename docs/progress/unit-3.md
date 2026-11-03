@@ -1,6 +1,6 @@
 # 단위 3: 커플
 
-> 브랜치: `feat/3-couple` · PR: #10 https://github.com/DuriseoApp/Android/pull/10 (초안) · 상태: 구현 1부(커밋 a84ad1b)·2부(커밋 86bd0fb) 완료, 리뷰 1회차 수정(커밋 1e9bba2) CI 419개 통과. 리뷰 2회차 수정(Major 2, Minor 6) 반영, CI 재확인 대기
+> 브랜치: `feat/3-couple` · PR: #10 https://github.com/DuriseoApp/Android/pull/10 · 상태: **PR 완료** (구현 1부·2부, 리뷰 3회차 머지 가능, CI 423개 통과)
 > 기준: PRD v0.9 (Docs main `728ea08`, Docs PR #10). 1부는 v0.8 (`afc3d1b`) 기준이었다. SCREENS.md(캔버스 버전 38, 2026-10-27 갱신), API.md(2026-10-27 갱신: 3.1 `Me`·`MeSpace`, 3.2, 4.4, 4.5, 5장, 6장), design-system.md(Android 매핑, 다이얼로그, 스낵바, 버튼), tokens.json
 > 서버: Server 단위 2(커플) 머지됨, 개발 서버 배포는 사용자 확인 (아래 "서버 연동")
 
@@ -391,6 +391,7 @@ Preview: `ConnectScreen` 6종(`Member`·`Guest`·`NoBack`·`LogoutDialog`·`Logg
 | --- | --- | --- | --- |
 | 1 | 0 | 6 | Minor 8. 커밋 1e9bba2로 처리 (아래), CI 419개 통과 |
 | 2 | 0 | 2 | Minor 6. 이 커밋 뒤 수정으로 처리 (아래) |
+| 3 | 0 | 0 | 머지 가능. Minor 3(m-7~m-9)은 "남은 일"로 |
 
 **1회차 처리**
 
@@ -423,6 +424,11 @@ Preview: `ConnectScreen` 6종(`Member`·`Guest`·`NoBack`·`LogoutDialog`·`Logg
 | Minor m-6 | import 순서 | 새 import를 기존 순서로 정리 |
 
 ## 남은 일
+
+- (리뷰 3회차 m-7) `MeRepositoryImpl.acknowledgeSpace`의 Room 읽기·확인한 공간 ID 저장을 `MeWriteLock` 아래로. 시트를 닫는 순간 해제 초기화와 겹치면 이전 커플 ID가 저장돼 다음 `GET /me`에서 초기화가 한 번 더 일어날 수 있다
+- (리뷰 3회차 m-8) 초기화 전에 받은 오래된 `GET /me` 응답이 락을 기다렸다 저장되는 경쟁. 요청 번호로 오래된 응답 버리기 검토 (창이 좁음)
+- (리뷰 3회차 m-9) 연도·월 선택의 연도 줄 접근성 문구와 화살표 중복: 이미지(`SCR-SET-01--start-date-sheet-year-month`)가 오면 함께 맞춘다
+- 서버 단위 3의 일시 형식: 일정 API는 `YYYY-MM-DDTHH:MM:SSZ`만 받는다(밀리초·오프셋이면 400). 단위 4에서 `Instant`를 초 단위로 잘라 보낸다
 
 단위 2 진행 기록 "남은 일"에서 단위 3 몫: **없음**(Room 스키마 JSON 커밋, FR-SET-02→8, 실기기 확인은 단위 2·8 몫). 단위 2가 단위 3으로 넘긴 것은 위 "하지 않는 것" 표와 A절의 FR-AUTH-02 AC1·FR-AUTH-03 AC4·FR-AUTH-04 AC2·FR-AUTH-05 AC3·`importPending`→SCR-COUPLE-04에 모두 넣었다. 단위 2 PR #9 Docs 후속 3건(design-system 여백, 게스트 ID 접근성 이름, 첫 `GET /me` 실패 상태)은 Docs 레포 몫이다.
 
