@@ -8,7 +8,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.duriseo.android.core.common.navigation.MainRouteModel
 import com.duriseo.android.feature.auth.navigation.authNavGraph
+import com.duriseo.android.feature.auth.start.AfterLogin
 import com.duriseo.android.feature.calendar.navigation.calendarNavGraph
+import com.duriseo.android.feature.couple.navigation.coupleNavGraph
 import com.duriseo.android.feature.main.component.MemoTabPlaceholder
 import com.duriseo.android.feature.settings.navigation.settingsNavGraph
 
@@ -35,9 +37,27 @@ fun MainNavHost(
     ) {
         authNavGraph(
             padding = padding,
-            // 신규 회원은 SCR-COUPLE-01, 가져올 기록이 남은 기존 회원은 SCR-COUPLE-04로 가야 하지만
-            // 두 화면은 단위 3에서 만든다. 그때까지는 모두 캘린더로 보낸다 (unit-2.md 확인 필요 2)
-            onLoggedIn = { navigator.navigateToHome() },
+            onLoggedIn = { destination ->
+                when (destination) {
+                    AfterLogin.Home -> navigator.navigateToHome()
+                    // 신규 회원은 SCR-COUPLE-01 (FR-AUTH-02 AC1, D-31). 앞 화면이 없어 뒤로 가기 버튼이 없다
+                    AfterLogin.CoupleConnect -> navigator.navigateToCoupleConnect()
+                    // 가져올 기록이 남은 기존 회원은 캘린더로 간다. 그 위의 연결 완료 시트(SCR-COUPLE-04)는
+                    // `MainScreen`이 `importPending`을 보고 띄운다 (FR-COUPLE-03 AC4, FR-AUTH-02 AC1)
+                    AfterLogin.ImportPending -> navigator.navigateToHome()
+                }
+            },
+        )
+        coupleNavGraph(
+            padding = padding,
+            canGoBackFromConnect = navigator::hasPreviousScreen,
+            onBack = navigator::navigateUp,
+            onInviteCreate = navigator::navigateToInviteCreate,
+            onInviteEnter = navigator::navigateToInviteEnter,
+            // 연결됨, 혼자 시작하기: 캘린더로 가고 백스택을 비운다
+            onHome = { navigator.navigateToHome() },
+            onLoginAndConnect = { navigator.navigateToAccount(fromCouple = true) },
+            onLoggedOut = { navigator.navigateToStart() },
         )
         calendarNavGraph(
             padding = padding,
@@ -52,10 +72,19 @@ fun MainNavHost(
         settingsNavGraph(
             padding = padding,
             onClose = navigator::navigateUp,
-            onOpenAccount = navigator::navigateToAccount,
+            onOpenAccount = { navigator.navigateToAccount() },
             onBackFromAccount = navigator::navigateUp,
+            onOpenColors = navigator::navigateToColors,
+            onBackFromColors = navigator::navigateUp,
+            onOpenConnect = navigator::navigateToConnect,
+            onOpenConnectionInfo = navigator::navigateToConnectionInfo,
+            onBackFromConnectionInfo = navigator::navigateUp,
+            onOpenInviteCreate = navigator::navigateToInviteCreate,
+            onOpenInviteEnter = navigator::navigateToInviteEnter,
             onLoggedOut = { navigator.navigateToStart() },
             onSwitched = { navigator.navigateToHome() },
+            // 커플 연결에서 시작한 연동이 끝남: 아래에 있는 SCR-COUPLE-01(이제 회원 모양)로 돌아간다
+            onLinkedFromCouple = navigator::navigateUp,
             onShowSnackBar = onShowSnackBar,
         )
     }

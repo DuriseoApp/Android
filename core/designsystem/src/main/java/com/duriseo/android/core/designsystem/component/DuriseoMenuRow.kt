@@ -54,6 +54,7 @@ private val SectionTitleBottom = 2.dp
  * 오른쪽에 값(13, 사이 8)과 화살표 18(`ink-400`). 행 전체가 눌려요.
  *
  * @param value 오른쪽 값. 평소 `ink-500` 400, [highlightValue]면 `brand-700` 600(게스트의 "게스트 · 로그인하기")
+ * @param trailing 글자 값 대신 오른쪽에 둘 것(우리 색상의 색 점 3개). 있으면 [value]는 쓰지 않는다
  */
 @Composable
 fun DuriseoMenuRow(
@@ -63,6 +64,7 @@ fun DuriseoMenuRow(
     @DrawableRes iconRes: Int? = null,
     value: String? = null,
     highlightValue: Boolean = false,
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     Row(
         modifier = modifier
@@ -95,7 +97,9 @@ fun DuriseoMenuRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space2),
         ) {
-            if (value != null) {
+            if (trailing != null) {
+                trailing()
+            } else if (value != null) {
                 Text(
                     text = value,
                     style = if (highlightValue) {

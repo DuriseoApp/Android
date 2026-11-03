@@ -78,7 +78,7 @@ import kotlinx.coroutines.launch
 // 보드 `Account.dc.html`. 토큰에 없는 수치는 이름 붙인 상수로 둔다.
 
 /** 앱바 아래 위 여백 8, 아래 28 (26행) */
-private val ContentTop = 8.dp
+private val ContentTop = DuriseoSpacing.Space2
 private val ContentBottom = 28.dp
 
 /** 덩어리 사이 간격 24 (26행, `space-6`) */
@@ -91,7 +91,7 @@ private val LoginGroupGap = DuriseoSpacing.Space3
  * 안내 문구 위로 4 더. 출처: 캔버스 원본 `../Docs/design/source/Account.dc.html` 41행(`margin: 4px 0 0`).
  * design-system 명세에는 아직 없다 (Docs 후속, unit-2.md).
  */
-private val NoteTopGap = 4.dp
+private val NoteTopGap = DuriseoSpacing.Space1
 
 /**
  * 작은 글 12 / 400, 행간 1.6 = 19.2. 출처: `../Docs/design/source/Account.dc.html` 41행(`font-size: 12px; line-height: 1.6`).
@@ -111,14 +111,17 @@ private val LogoutHeight = 52.dp
 /** 정보 행 높이 52 (65·66행) */
 private val InfoRowHeight = 52.dp
 
-/** 로그인 카드: 안쪽 20, 안쪽 요소 사이 14, 체크 원 지름 44(`size-avatar-lg`), 체크 아이콘 22, 제목 아래 2 (55~61행) */
-private val CardPadding = 20.dp
+/** 로그인 카드: 안쪽 20, 안쪽 요소 사이 14, 체크 원 지름 44, 체크 아이콘 22, 제목 아래 2 (55~61행) */
+private val CardPadding = DuriseoSpacing.Space5
 private val CardGap = 14.dp
+
+/** 카드 왼쪽 아이콘 원 44 (보드 값. 사람 아바타가 아니라 아이콘 칸이라 `avatar-lg` 토큰을 쓰지 않는다) */
+private val CardIconTileSize = 44.dp
 private val CheckIconSize = 22.dp
 private val CardTitleGap = 2.dp
 
 /** 연동 직후 상태 문구: 안쪽 위아래 12·좌우 14, 13 행간 1.6 = 20.8 (53행) */
-private val StatusVerticalPadding = 12.dp
+private val StatusVerticalPadding = DuriseoSpacing.Space3
 private val StatusHorizontalPadding = 14.dp
 private val StatusLineHeight = 20.8.sp
 
@@ -128,6 +131,7 @@ fun AccountRoute(
     onBack: () -> Unit,
     onLoggedOut: () -> Unit,
     onSwitched: () -> Unit,
+    onLinkedFromCouple: () -> Unit,
     onShowSnackBar: (Int) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AccountViewModel = hiltViewModel(),
@@ -159,6 +163,7 @@ fun AccountRoute(
                 is AccountSideEffect.ShowMessage -> onShowSnackBar(effect.messageRes)
                 AccountSideEffect.NavigateToStart -> onLoggedOut()
                 AccountSideEffect.NavigateToHome -> onSwitched()
+                AccountSideEffect.NavigateToCoupleConnect -> onLinkedFromCouple()
             }
         }
     }
@@ -431,7 +436,7 @@ private fun LoginCard(provider: SocialProvider, nickname: String) {
     ) {
         Box(
             modifier = Modifier
-                .size(DuriseoSize.AvatarLg)
+                .size(CardIconTileSize)
                 .background(Surface0, DuriseoShapes.Full),
             contentAlignment = Alignment.Center,
         ) {

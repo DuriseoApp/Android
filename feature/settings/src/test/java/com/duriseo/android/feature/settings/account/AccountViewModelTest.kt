@@ -1,6 +1,8 @@
 package com.duriseo.android.feature.settings.account
 
+import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
+import com.duriseo.android.core.common.navigation.SettingsRouteModel
 import com.duriseo.android.core.common.social.SocialTokenResult
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.domain.auth.LoginResult
@@ -32,7 +34,12 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class AccountViewModelTest {
 
@@ -50,8 +57,15 @@ class AccountViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun TestScope.viewModel(clock: Clock = seoul): AccountViewModel {
-        val vm = AccountViewModel(auth, me, clock)
+    /**
+     * 경로 `SettingsRouteModel.Account`가 타입 안전 내비게이션에서 `SavedStateHandle`에 넣는 모양 그대로 만든다.
+     * 키는 속성 이름에서 가져오므로 경로의 인자 이름이 바뀌면 이 테스트가 먼저 깨진다 (경로와 ViewModel의 연결 확인).
+     */
+    private fun routeHandle(fromCouple: Boolean) =
+        SavedStateHandle(mapOf(SettingsRouteModel.Account::fromCouple.name to fromCouple))
+
+    private fun TestScope.viewModel(clock: Clock = seoul, fromCouple: Boolean = false): AccountViewModel {
+        val vm = AccountViewModel(auth, me, clock, routeHandle(fromCouple))
         // stateIn(WhileSubscribed)라서 값을 읽는 동안 구독해 둔다
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect { } }
         return vm
@@ -98,6 +112,43 @@ class AccountViewModelTest {
             )
             assertTrue(state.justLinked)
             assertFalse(state.requesting)
+        }
+    }
+
+    @Test
+    fun `FR-AUTH-03 AC4 D-79 커플 연결에서 시작한 연동이 끝나면 성공 안내 없이 SCR-COUPLE-01로 돌아간다`() = runTest {
+        val vm = viewModel(fromCouple = true)
+        vm.effects.test {
+            linkWith(vm, SocialProvider.GOOGLE)
+
+            assertEquals(AccountSideEffect.NavigateToCoupleConnect, awaitItem())
+            val state = vm.uiState.value
+            assertFalse(state.justLinked)
+            assertFalse(state.requesting)
+            assertTrue(state.content is AccountContent.Member)
+        }
+    }
+
+    @Test
+    fun `FR-AUTH-03 AC4 D-79 커플 연결에서 시작하지 않은 연동은 이동하지 않고 성공 안내를 보여 준다`() = runTest {
+        val vm = viewModel(fromCouple = false)
+        vm.effects.test {
+            linkWith(vm, SocialProvider.GOOGLE)
+
+            expectNoEvents()
+            assertTrue(vm.uiState.value.justLinked)
+        }
+    }
+
+    @Test
+    fun `FR-AUTH-03 AC4 커플 연결에서 시작한 연동이 실패하면 돌아가지 않는다`() = runTest {
+        auth.linkResult = apiError("INTERNAL_ERROR")
+        val vm = viewModel(fromCouple = true)
+        vm.effects.test {
+            linkWith(vm, SocialProvider.GOOGLE)
+
+            assertEquals(AccountSideEffect.ShowMessage(DesignR.string.error_common), awaitItem())
+            expectNoEvents()
         }
     }
 

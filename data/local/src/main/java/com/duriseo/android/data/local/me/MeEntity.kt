@@ -30,4 +30,10 @@ data class MeEntity(
     @ColumnInfo(name = "together_color") val togetherColor: String?,
     @ColumnInfo(name = "start_date") val startDate: String?,
     @ColumnInfo(name = "import_pending") val importPending: Boolean,
+    /** 연결한 시각 epoch 밀리초 (D-94). 개인 공간이면 null. 스키마 버전 2에서 더함 */
+    @ColumnInfo(name = "linked_at") val linkedAt: Long? = null,
+    /** 가져오기 대기 공간의 기록 개수 (D-93). 세 칸은 함께 null이거나 함께 값이 있다. 스키마 버전 2에서 더함 */
+    @ColumnInfo(name = "import_events") val importEvents: Int? = null,
+    @ColumnInfo(name = "import_anniversaries") val importAnniversaries: Int? = null,
+    @ColumnInfo(name = "import_memos") val importMemos: Int? = null,
 )

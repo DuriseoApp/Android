@@ -11,9 +11,14 @@ import androidx.navigation.NavOptionsBuilder
 import com.duriseo.android.core.common.navigation.AuthRouteModel
 import com.duriseo.android.core.common.navigation.MainRouteModel
 import com.duriseo.android.feature.calendar.navigation.navigateToCalendar
+import com.duriseo.android.feature.couple.navigation.navigateToConnect
+import com.duriseo.android.feature.couple.navigation.navigateToInviteCreate
+import com.duriseo.android.feature.couple.navigation.navigateToInviteEnter
 import com.duriseo.android.feature.main.MainStart
 import com.duriseo.android.feature.main.component.MainTab
 import com.duriseo.android.feature.settings.navigation.navigateToAccount
+import com.duriseo.android.feature.settings.navigation.navigateToColors
+import com.duriseo.android.feature.settings.navigation.navigateToConnectionInfo
 import com.duriseo.android.feature.settings.navigation.navigateToSettings
 
 class MainNavigator(
@@ -61,10 +66,33 @@ class MainNavigator(
         navController.navigate(MainTab.START.route) { clearBackStack() }
     }
 
+    /** 커플 연결(SCR-COUPLE-01)로 간다. 백스택을 비운다 (신규 회원 로그인 직후, 연결 해제 뒤 앱 초기화) */
+    fun navigateToCoupleConnect() {
+        navController.navigateToConnect(navOptions { clearBackStack() })
+    }
+
+    /**
+     * 커플 연결(SCR-COUPLE-01)로 간다. 백스택을 그대로 둬서 뒤로 가기가 전체 메뉴로 돌아온다
+     * (전체 메뉴의 [상대와 연결하기], 게스트의 연결 정보 행. D-96)
+     */
+    fun navigateToConnect() = navController.navigateToConnect()
+
+    fun navigateToInviteCreate() = navController.navigateToInviteCreate()
+
+    fun navigateToInviteEnter() = navController.navigateToInviteEnter()
+
+    /** 지금 화면 아래에 돌아갈 화면이 있는지 (없으면 뒤로 가기 버튼을 그리지 않는 화면이 쓴다) */
+    fun hasPreviousScreen(): Boolean = navController.previousBackStackEntry != null
+
     /** 전체 메뉴(SCR-SET-01). 진입은 캘린더 앱바 (단위 4 전까지는 임시 버튼) */
     fun navigateToSettings() = navController.navigateToSettings()
 
-    fun navigateToAccount() = navController.navigateToAccount()
+    /** [fromCouple]이면 연동을 마친 뒤 SCR-COUPLE-01로 돌아온다 (게스트의 [로그인하고 연결하기], FR-AUTH-03 AC4) */
+    fun navigateToAccount(fromCouple: Boolean = false) = navController.navigateToAccount(fromCouple)
+
+    fun navigateToColors() = navController.navigateToColors()
+
+    fun navigateToConnectionInfo() = navController.navigateToConnectionInfo()
 
     fun navigateUp() {
         navController.popBackStack()

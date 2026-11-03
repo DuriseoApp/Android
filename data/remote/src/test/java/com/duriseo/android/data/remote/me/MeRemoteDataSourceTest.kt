@@ -13,6 +13,7 @@ import com.duriseo.android.data.remote.testTokens
 import com.duriseo.android.domain.error.DataError
 import com.duriseo.android.domain.error.ErrorCode
 import com.duriseo.android.domain.me.AccountType
+import com.duriseo.android.domain.me.ImportCounts
 import com.duriseo.android.domain.me.Me
 import com.duriseo.android.domain.me.SocialProvider
 import com.duriseo.android.domain.me.SpaceType
@@ -89,6 +90,39 @@ class MeRemoteDataSourceTest {
         assertEquals("둘", partner.nickname)
         assertEquals("pick-blue", partner.color)
         assertFalse(partner.hasProfileImage)
+    }
+
+    @Test
+    fun `API GET me는 linkedAt과 importCounts를 읽는다`() = runTest {
+        server.enqueue(
+            jsonResponse(
+                200,
+                coupleMeJson.replace(
+                    "\"importPending\":true}}",
+                    "\"linkedAt\":\"2026-10-12T03:00:00Z\",\"importPending\":true," +
+                        "\"importCounts\":{\"events\":3,\"anniversaries\":0,\"memos\":2}}}",
+                ),
+            ),
+        )
+
+        val space = remote.getMe().value().space
+
+        assertEquals(Instant.parse("2026-10-12T03:00:00Z"), space.linkedAt)
+        assertEquals(ImportCounts(events = 3, anniversaries = 0, memos = 2), space.importCounts)
+    }
+
+    @Test
+    fun `API GET me에 linkedAt과 importCounts가 없거나 null이면 없는 값으로 읽는다`() = runTest {
+        server.enqueue(jsonResponse(200, coupleMeJson))
+        server.enqueue(jsonResponse(200, meJson()))
+
+        val withoutFields = remote.getMe().value().space
+        val personal = remote.getMe().value().space
+
+        assertNull(withoutFields.linkedAt)
+        assertNull(withoutFields.importCounts)
+        assertNull(personal.linkedAt)
+        assertNull(personal.importCounts)
     }
 
     @Test

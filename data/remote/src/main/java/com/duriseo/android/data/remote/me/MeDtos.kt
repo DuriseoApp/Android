@@ -3,6 +3,7 @@ package com.duriseo.android.data.remote.me
 import com.duriseo.android.data.remote.auth.SocialProviderDto
 import com.duriseo.android.data.remote.auth.toDomain
 import com.duriseo.android.domain.me.AccountType
+import com.duriseo.android.domain.me.ImportCounts
 import com.duriseo.android.domain.me.Me
 import com.duriseo.android.domain.me.MePartner
 import com.duriseo.android.domain.me.MeSpace
@@ -29,6 +30,14 @@ data class MePartnerDto(
     val hasProfileImage: Boolean,
 )
 
+/** API.md 3.1 `ImportCounts`. 각각 0 이상이고 합은 1 이상이다 */
+@Serializable
+data class ImportCountsDto(
+    val events: Int,
+    val anniversaries: Int,
+    val memos: Int,
+)
+
 @Serializable
 data class MeSpaceDto(
     val id: String,
@@ -38,6 +47,10 @@ data class MeSpaceDto(
     val togetherColor: String? = null,
     @Contextual val startDate: LocalDate? = null,
     val importPending: Boolean,
+    /** 연결한 시각 (D-94). 개인 공간이면 null */
+    @Contextual val linkedAt: Instant? = null,
+    /** 가져오기 대기 공간의 기록 개수 (D-93). `importPending`이 false면 null */
+    val importCounts: ImportCountsDto? = null,
 )
 
 @Serializable
@@ -96,4 +109,6 @@ private fun MeSpaceDto.toDomain(): MeSpace = MeSpace(
     togetherColor = togetherColor,
     startDate = startDate,
     importPending = importPending,
+    linkedAt = linkedAt,
+    importCounts = importCounts?.let { ImportCounts(it.events, it.anniversaries, it.memos) },
 )

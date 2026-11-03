@@ -9,15 +9,15 @@
 | `app` | application, compose, hilt | 있음 | `local.properties` 설정값 -> `BuildConfig` -> `AppConfig` 제공 |
 | `feature:main` | feature | 있음 | 하단 탭 2개(캘린더·메모, D-30). 메모 탭은 `feature:memo`(단위 6) 전까지 빈 자리표시. 단위 2에서 앱 시작 분기(토큰 있으면 캘린더, 없으면 시작 화면)와 세션 끊김 구독(`MainViewModel`) |
 | `feature:calendar` | feature | 있음 | 템플릿 `feature:home`에서 이름 변경 (단위 1). 화면은 단위 4 |
-| `feature:settings` | feature | 있음 | 템플릿 `feature:menu`에서 이름 변경 (단위 1). 하단 탭이 아님, 진입은 캘린더 앱바(단위 4 전까지 임시 버튼). 단위 2에서 SCR-SET-01 전체 메뉴의 계정 부분과 계정 화면(게스트·회원)·다이얼로그 4종 |
-| `core:designsystem` | library, compose | 있음 | 단위 1에서 토큰 반영 (`/sync-tokens`), 하단 탭·스낵바 컴포넌트, 오류 -> 문구 도우미. 단위 2에서 `DuriseoButton`·`DuriseoDialog`·`DuriseoDialogLayer`(뒤 화면을 접근성에서 가림)·`LogoutConfirmDialog`·`DuriseoTopAppBar`·`DuriseoGuestBanner`·`DuriseoMenuRow`, 아이콘·로고 VectorDrawable, 세션 종료 코드는 문구 없음(`toMessageResOrNull`) |
+| `feature:settings` | feature | 있음 | 템플릿 `feature:menu`에서 이름 변경 (단위 1). 하단 탭이 아님, 진입은 캘린더 앱바(단위 4 전까지 임시 버튼). 단위 2에서 SCR-SET-01 전체 메뉴의 계정 부분과 계정 화면(게스트·회원)·다이얼로그 4종. 단위 3에서 우리 프로필 카드·연결 정보 행·처음 만난 날 시트 호스트, 연결 정보 화면(`connection/`), 우리 색상(SCR-SET-03) 저장 |
+| `core:designsystem` | library, compose | 있음 | 단위 1에서 토큰 반영 (`/sync-tokens`), 하단 탭·스낵바 컴포넌트, 오류 -> 문구 도우미. 단위 2에서 `DuriseoButton`·`DuriseoDialog`·`DuriseoDialogLayer`(뒤 화면을 접근성에서 가림)·`LogoutConfirmDialog`·`DuriseoTopAppBar`·`DuriseoGuestBanner`·`DuriseoMenuRow`, 아이콘·로고 VectorDrawable, 세션 종료 코드는 문구 없음(`toMessageResOrNull`). 단위 3에서 `DuriseoLargeButton`(높이 56, 모서리 16)·`StartDatePickerSheet`(처음 만난 날 달력 면, 1950-01-01 ~ 오늘)·`DuriseoMenuRow`의 `trailing` 자리·`ic_palette`. 단위 3 2부에서 `DuriseoSheetPanel`·`DuriseoBottomSheetLayer`(아래쪽 시트 면과 뒤 막)·`DuriseoAvatar`(사람 색 글자 원)·`DuriseoTogetherMark`·`DuriseoDashedLink`·`DuriseoEmptyPartnerSlot`(커플 표시)·아이콘 `ic_link`·`ic_plus`·`ic_ticket_plus`·`ic_keyboard` |
 | `core:common` | library, hilt | 있음 | 로거, `AppConfig`, `Clock`·`@IoDispatcher`·`@ApplicationScope` 제공, 내비게이션 경로. 단위 2부터 `social` 패키지: Google(Credential Manager)·카카오 로그인 래퍼 `SocialTokenProvider`(Route가 `Context.socialTokenProvider()`로 얻고 `Context.findActivity()`로 Activity를 찾음), 소셜 SDK 정리, 카카오 SDK 초기화 (`feature:auth`·`feature:settings`가 함께 씀, unit-2 확인 필요 16) |
-| `domain` | Kotlin JVM (`duriseo.kotlin.jvm`) | 있음 | 순수 Kotlin. Android 의존 없음. `DataError`·`DataResult`(결과·오류 타입), `ErrorCode`, `NetworkMonitor`. 단위 2부터 인증·내 정보 모델과 `AuthRepository`·`MeRepository`·`TokenStorage` 인터페이스 |
-| `data:remote` | library, hilt | 있음 | 단위 1에서 응답 형식 1.1·오류 변환(`ApiCaller`), `AndroidNetworkMonitor`. 단위 2에서 인증 없음(`@NoAuth`)·인증(`@Authed`) 클라이언트, `AuthApi`·`AuthSessionApi`·`MeApi`, 인증 헤더 인터셉터, 토큰 갱신 `Authenticator` |
+| `domain` | Kotlin JVM (`duriseo.kotlin.jvm`) | 있음 | 순수 Kotlin. Android 의존 없음. `DataError`·`DataResult`(결과·오류 타입), `ErrorCode`, `NetworkMonitor`. 단위 2부터 인증·내 정보 모델과 `AuthRepository`·`MeRepository`·`TokenStorage` 인터페이스. 단위 3에서 `couple` 패키지: `CoupleRepository`, `InviteCodeInput`, `StartDateRules` |
+| `data:remote` | library, hilt | 있음 | 단위 3에서 `CoupleApi`(API.md 3.2의 7개 경로)·`CoupleRemoteDataSource`. 단위 1에서 응답 형식 1.1·오류 변환(`ApiCaller`), `AndroidNetworkMonitor`. 단위 2에서 인증 없음(`@NoAuth`)·인증(`@Authed`) 클라이언트, `AuthApi`·`AuthSessionApi`·`MeApi`, 인증 헤더 인터셉터, 토큰 갱신 `Authenticator` |
 | `data:local` | library, hilt | 있음 | 단위 1은 DataStore 제공과 Room 의존성까지. 단위 2에서 첫 `@Database`(`MeEntity`), Tink로 암호화한 토큰 저장소, 로그아웃·세션 끊김 때 지우기(`LocalDataCleaner`) |
-| `data:repository` | library, hilt | 있음 | 단위 1은 `runOnlineWrite`와 바인딩 모듈 자리. 단위 2에서 `AuthRepository`·`MeRepository` 구현, `SessionManager`(세션 끊김·정리), `SessionStartup`(앱 시작 때 로그인 상태·내 정보·시간대) |
+| `data:repository` | library, hilt | 있음 | 단위 1은 `runOnlineWrite`와 바인딩 모듈 자리. 단위 2에서 `AuthRepository`·`MeRepository` 구현, `SessionManager`(세션 끊김·정리), `SessionStartup`(앱 시작 때 로그인 상태·내 정보·시간대). 단위 3에서 `CoupleRepository` 구현(쓰기는 `runOnlineWrite`, 성공 뒤 `GET /me`로 Room 갱신, 해제는 `clearUserData()`) |
 | `feature:auth` | feature | 있음 | 단위 2. SCR-START-01 시작 화면(게스트 시작, Google·카카오 로그인). `feature:main`이 의존해 NavHost에 연결 |
-| `feature:couple` | feature | 3 | |
+| `feature:couple` | feature | 있음 | 단위 3. SCR-COUPLE-01 커플 연결(회원·게스트), SCR-COUPLE-02 초대코드 만들기(남은 시간·재요청 대기·5초 확인), SCR-COUPLE-03 초대코드 입력. `feature:main`이 의존해 NavHost에 연결. SCR-COUPLE-04 시트는 v0.9 반영 뒤 (unit-3.md "v0.9 반영 대기") |
 | `feature:anniversary` | feature | 5 | |
 | `feature:memo` | feature | 6 | |
 | `push` | library, hilt | 7 | FCM, 동기화 신호 |
@@ -63,7 +63,7 @@ PRD에 화면이 추가되면 이 표에 먼저 넣고 모듈을 정한다.
 | 토큰 암호화 | Tink (`tink-android` 1.18.0, Android Keystore) | 2 (추가됨, 버전은 CI로 확인) |
 | Google 로그인 | Credential Manager (`credentials`, `credentials-play-services-auth` 1.5.0) + Google ID (`googleid` 1.1.1) | 2 (추가됨, 버전은 CI로 확인) |
 | 카카오 로그인 | Kakao SDK (`v2-user` 2.21.0). `settings.gradle.kts`에 `devrepo.kakao.com` 저장소를 `com.kakao.*` 그룹만 받도록 추가 | 2 (추가됨, 버전은 CI로 확인) |
-| 테스트: 메모리 Room | Robolectric 4.15.1 + `androidx.test:core` 1.6.1 (`data:local`, `data:repository`의 `testImplementation`, unit-2 확인 필요 15) | 2 (추가됨) |
+| 테스트: 메모리 Room | Robolectric 4.15.1 + `androidx.test:core` 1.6.1 (`data:local`, `data:repository`의 `testImplementation`, unit-2 확인 필요 15. 단위 3부터 `feature:settings`도: `SavedStateHandle.toRoute` 테스트) | 2 (추가됨) |
 | 푸시 | Firebase Messaging (BOM) | 7 |
 | 프로필 이미지 | Coil | 8 |
 | 테스트 | kotlinx-coroutines-test, Turbine, OkHttp MockWebServer | 1 (추가됨) |

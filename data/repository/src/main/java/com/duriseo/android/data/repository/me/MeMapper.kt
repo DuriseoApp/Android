@@ -2,6 +2,7 @@ package com.duriseo.android.data.repository.me
 
 import com.duriseo.android.data.local.me.MeEntity
 import com.duriseo.android.domain.me.AccountType
+import com.duriseo.android.domain.me.ImportCounts
 import com.duriseo.android.domain.me.Me
 import com.duriseo.android.domain.me.MePartner
 import com.duriseo.android.domain.me.MeSpace
@@ -31,6 +32,10 @@ internal fun Me.toEntity(): MeEntity = MeEntity(
     togetherColor = space.togetherColor,
     startDate = space.startDate?.toString(),
     importPending = space.importPending,
+    linkedAt = space.linkedAt?.toEpochMilli(),
+    importEvents = space.importCounts?.events,
+    importAnniversaries = space.importCounts?.anniversaries,
+    importMemos = space.importCounts?.memos,
 )
 
 /**
@@ -64,6 +69,15 @@ internal fun MeEntity.toDomainOrNull(): Me? {
     } catch (e: DateTimeParseException) {
         return null
     }
+    // 세 칸이 모두 있을 때만 개수가 있는 것으로 본다 (일부만 있으면 깨진 행이므로 개수 없음)
+    val eventCount = importEvents
+    val anniversaryCount = importAnniversaries
+    val memoCount = importMemos
+    val counts = if (eventCount != null && anniversaryCount != null && memoCount != null) {
+        ImportCounts(eventCount, anniversaryCount, memoCount)
+    } else {
+        null
+    }
     return Me(
         id = id,
         accountType = account,
@@ -80,6 +94,8 @@ internal fun MeEntity.toDomainOrNull(): Me? {
             togetherColor = togetherColor,
             startDate = start,
             importPending = importPending,
+            linkedAt = linkedAt?.let { Instant.ofEpochMilli(it) },
+            importCounts = counts,
         ),
     )
 }

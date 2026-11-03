@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 코드 복사 버튼 아이콘 (InviteCreate.dc.html 57행) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M10.5,8h7a2.5,2.5 0,0 1,2.5 2.5v7a2.5,2.5 0,0 1,-2.5 2.5h-7a2.5,2.5 0,0 1,-2.5 -2.5v-7A2.5,2.5 0,0 1,10.5 8z"
+        android:strokeWidth="1.8"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M16,8V5.5A1.5,1.5 0,0 0,14.5 4h-9A1.5,1.5 0,0 0,4 5.5v9A1.5,1.5 0,0 0,5.5 16H8"
+        android:strokeWidth="1.8"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

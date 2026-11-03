@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.auth.start
 
+import com.duriseo.android.domain.me.SpaceChange
 import com.duriseo.android.domain.auth.AuthRepository
 import com.duriseo.android.domain.auth.AuthState
 import com.duriseo.android.domain.auth.LoginResult
@@ -63,6 +64,23 @@ class FakeMeRepository(initial: Me? = null) : MeRepository {
     override suspend fun refreshMe(): DataResult<Unit> = DataResult.Success(Unit)
 
     override suspend fun syncTimeZone(zoneId: String): DataResult<Unit> = DataResult.Success(Unit)
+
+    val changes = MutableSharedFlow<SpaceChange>(extraBufferCapacity = 4)
+    override val spaceChanges: Flow<SpaceChange> = changes
+
+    val sheetNeeded = MutableStateFlow(false)
+    override fun observeLinkedSheetNeeded(): Flow<Boolean> = sheetNeeded
+
+    var acknowledgeCalls = 0
+    override suspend fun acknowledgeSpace() {
+        acknowledgeCalls++
+        sheetNeeded.value = false
+    }
+
+    var resetCalls = 0
+    override suspend fun resetAfterUnlink() {
+        resetCalls++
+    }
 }
 
 fun apiError(code: String) = DataResult.Failure(DataError.ApiError(code = code, details = null, traceId = null))
