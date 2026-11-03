@@ -63,6 +63,9 @@ sealed interface LinkedSheetAction {
 
     data object NextMonth : LinkedSheetAction
 
+    /** 연·월 제목에서 고른 달 (연도·월 선택) */
+    data class MonthSelected(val month: YearMonth) : LinkedSheetAction
+
     data class DateSelected(val date: LocalDate) : LinkedSheetAction
 
     /** 선택 시트의 [저장]: 칸에 날짜를 채우기만 한다 (서버를 부르지 않음) */

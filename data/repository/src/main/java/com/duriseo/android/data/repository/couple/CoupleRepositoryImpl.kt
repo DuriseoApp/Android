@@ -1,30 +1,33 @@
 package com.duriseo.android.data.repository.couple
 
+import com.duriseo.android.data.local.me.MeLocalDataSource
 import com.duriseo.android.data.remote.couple.CoupleRemoteDataSource
 import com.duriseo.android.data.repository.online.runOnlineWrite
 import com.duriseo.android.domain.couple.ColorChange
 import com.duriseo.android.domain.couple.CoupleJoinResult
 import com.duriseo.android.domain.couple.CoupleRepository
 import com.duriseo.android.domain.couple.InviteCode
+import com.duriseo.android.domain.couple.Space
 import com.duriseo.android.domain.error.DataError
 import com.duriseo.android.domain.error.ErrorCode
 import com.duriseo.android.domain.error.hasCode
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.network.NetworkMonitor
 import com.duriseo.android.domain.result.DataResult
-import com.duriseo.android.domain.result.map
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * 커플 연결·해제와 공간 설정. 쓰기는 [runOnlineWrite]로 감싸 오프라인이면 요청하지 않고,
- * 성공하면 `GET /me`로 Room을 새로 채운다 (낙관적 갱신 없음, ARCHITECTURE.md 2장).
+ * 성공하면 Room을 새로 채운다 (낙관적 갱신 없음, ARCHITECTURE.md 2장). `PATCH /space`·`PATCH /space/colors`는
+ * 응답 `Space`로 Room을 바로 갱신하고, 그 뒤 `GET /me`가 실패해도 화면은 새 값이다.
  */
 @Singleton
 class CoupleRepositoryImpl @Inject constructor(
     private val remote: CoupleRemoteDataSource,
     private val meRepository: MeRepository,
+    private val meLocal: MeLocalDataSource,
     private val networkMonitor: NetworkMonitor,
 ) : CoupleRepository {
 
@@ -41,14 +44,16 @@ class CoupleRepositoryImpl @Inject constructor(
         networkMonitor.runOnlineWrite { remote.join(code) }.thenRefreshMe().thenRereadMeIfStale()
 
     override suspend fun decideImport(import: Boolean): DataResult<Unit> =
-        networkMonitor.runOnlineWrite { remote.decideImport(import) }.thenRefreshMe().thenResetIfNotCouple()
+        // 가져오기의 409는 `NO_IMPORT_PENDING`뿐이다 (API.md R-18, 3.2). `NOT_COUPLE`은 오지 않아 초기화하지 않는다
+        networkMonitor.runOnlineWrite { remote.decideImport(import) }.thenRefreshMe()
 
     override suspend fun updateStartDate(date: LocalDate): DataResult<Unit> =
-        networkMonitor.runOnlineWrite { remote.updateStartDate(date).map { } }.thenRefreshMe().thenResetIfNotCouple()
+        networkMonitor.runOnlineWrite { remote.updateStartDate(date) }.thenApplySpace().thenRefreshMe().thenResetIfNotCouple()
 
     override suspend fun updateColors(change: ColorChange): DataResult<Unit> {
         if (change.isEmpty) return DataResult.Success(Unit)
-        return networkMonitor.runOnlineWrite { remote.updateColors(change).map { } }
+        return networkMonitor.runOnlineWrite { remote.updateColors(change) }
+            .thenApplySpace()
             .thenRefreshMe()
             .thenResetIfNotCouple()
     }
@@ -61,6 +66,29 @@ class CoupleRepositoryImpl @Inject constructor(
 
         // 앱 초기화 (D-37, D-103): 토큰은 두고 Room·설정을 지운 뒤 새 개인 공간을 받아 온다
         meRepository.resetAfterUnlink()
+        return DataResult.Success(Unit)
+    }
+
+    /** 응답 `Space`로 Room의 내 정보를 바로 갱신한다. 다른 공간의 응답이면 건드리지 않는다 (`GET /me`가 채운다) */
+    private suspend fun DataResult<Space>.thenApplySpace(): DataResult<Unit> {
+        val failure = this as? DataResult.Failure
+        if (failure != null) return failure
+        val space = (this as DataResult.Success).value
+        val entity = meLocal.get()
+        if (entity != null && entity.spaceId == space.id) {
+            val partnerId = entity.partnerId
+            meLocal.replace(
+                entity.copy(
+                    myColor = space.members.firstOrNull { it.userId == entity.id }?.color ?: entity.myColor,
+                    partnerColor = if (partnerId == null) null else {
+                        space.members.firstOrNull { it.userId == partnerId }?.color ?: entity.partnerColor
+                    },
+                    togetherColor = space.togetherColor,
+                    startDate = space.startDate?.toString(),
+                    linkedAt = space.linkedAt?.toEpochMilli(),
+                ),
+            )
+        }
         return DataResult.Success(Unit)
     }
 

@@ -50,6 +50,23 @@ class StartDateRulesTest {
     }
 
     @Test
+    fun `FR-COUPLE-04 AC3 연도 월 선택은 1950년 1월부터 오늘이 든 달까지만 고를 수 있다`() {
+        assertTrue(StartDateRules.isMonthSelectable(YearMonth.of(1950, 1), today))
+        assertTrue(StartDateRules.isMonthSelectable(YearMonth.of(2026, 10), today))
+        assertFalse(StartDateRules.isMonthSelectable(YearMonth.of(1949, 12), today))
+        assertFalse(StartDateRules.isMonthSelectable(YearMonth.of(2026, 11), today))
+    }
+
+    @Test
+    fun `FR-COUPLE-04 AC3 연도 목록은 올해부터 1950년까지다`() {
+        val years = StartDateRules.years(today)
+
+        assertEquals(2026, years.first())
+        assertEquals(1950, years.last())
+        assertEquals(77, years.size)
+    }
+
+    @Test
     fun `FR-CAL-01 AC3 처음 만난 날이 오늘이면 D+1이고 하루 지날 때마다 1씩 는다`() {
         val today = LocalDate.of(2026, 10, 31)
 

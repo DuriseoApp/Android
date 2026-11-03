@@ -56,7 +56,7 @@ fun MainNavHost(
             onInviteEnter = navigator::navigateToInviteEnter,
             // 연결됨, 혼자 시작하기: 캘린더로 가고 백스택을 비운다
             onHome = { navigator.navigateToHome() },
-            onLoginAndConnect = navigator::navigateToAccount,
+            onLoginAndConnect = { navigator.navigateToAccount(fromCouple = true) },
             onLoggedOut = { navigator.navigateToStart() },
         )
         calendarNavGraph(
@@ -72,7 +72,7 @@ fun MainNavHost(
         settingsNavGraph(
             padding = padding,
             onClose = navigator::navigateUp,
-            onOpenAccount = navigator::navigateToAccount,
+            onOpenAccount = { navigator.navigateToAccount() },
             onBackFromAccount = navigator::navigateUp,
             onOpenColors = navigator::navigateToColors,
             onBackFromColors = navigator::navigateUp,
@@ -83,6 +83,8 @@ fun MainNavHost(
             onOpenInviteEnter = navigator::navigateToInviteEnter,
             onLoggedOut = { navigator.navigateToStart() },
             onSwitched = { navigator.navigateToHome() },
+            // 커플 연결에서 시작한 연동이 끝남: 아래에 있는 SCR-COUPLE-01(이제 회원 모양)로 돌아간다
+            onLinkedFromCouple = navigator::navigateUp,
             onShowSnackBar = onShowSnackBar,
         )
     }

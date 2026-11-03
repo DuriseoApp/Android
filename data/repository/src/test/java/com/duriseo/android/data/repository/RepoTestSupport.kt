@@ -248,7 +248,7 @@ class RepoHarness(
     val meRepository = MeRepositoryImpl(meRemote, meLocal, monitor, acknowledgedSpace, session)
     val authRepository = AuthRepositoryImpl(authRemote, meRemote, tokens, session, meRepository, monitor, clock)
     val coupleRemote = CoupleRemoteDataSource(retrofit.create(CoupleApi::class.java), apiCaller)
-    val coupleRepository = CoupleRepositoryImpl(coupleRemote, meRepository, monitor)
+    val coupleRepository = CoupleRepositoryImpl(coupleRemote, meRepository, meLocal, monitor)
 
     /** Room에 내 정보를, 설정 DataStore에 값을 미리 넣어 둔다 (지워지는지 보려고) */
     suspend fun preload(me: Me = fixtureMe()) {

@@ -16,8 +16,8 @@ fun NavController.navigateToSettings(navOptions: NavOptions? = null) {
     navigate(MainRouteModel.Settings, navOptions)
 }
 
-fun NavController.navigateToAccount(navOptions: NavOptions? = null) {
-    navigate(SettingsRouteModel.Account, navOptions)
+fun NavController.navigateToAccount(fromCouple: Boolean = false, navOptions: NavOptions? = null) {
+    navigate(SettingsRouteModel.Account(fromCouple), navOptions)
 }
 
 fun NavController.navigateToColors(navOptions: NavOptions? = null) {
@@ -42,6 +42,7 @@ fun NavController.navigateToConnectionInfo(navOptions: NavOptions? = null) {
  * @param onOpenInviteCreate 연결 정보(혼자)의 [초대코드 만들기] → SCR-COUPLE-02 (D-97)
  * @param onOpenInviteEnter 연결 정보(혼자)의 [받은 초대코드 입력하기] → SCR-COUPLE-03 (D-97)
  * @param onLoggedOut 로그아웃·탈퇴가 끝났다. SCR-START-01로 가고 백스택을 비운다
+ * @param onLinkedFromCouple 커플 연결 화면에서 시작한 연동이 끝났다. SCR-COUPLE-01로 돌아간다 (FR-AUTH-03 AC4)
  * @param onSwitched 이미 가입된 계정으로 로그인(switch)이 끝났다. 캘린더로 가고 백스택을 비운다
  * @param onShowSnackBar 스낵바 문구(`@StringRes`)를 띄운다
  */
@@ -59,6 +60,7 @@ fun NavGraphBuilder.settingsNavGraph(
     onOpenInviteEnter: () -> Unit,
     onLoggedOut: () -> Unit,
     onSwitched: () -> Unit,
+    onLinkedFromCouple: () -> Unit,
     onShowSnackBar: (Int) -> Unit,
 ) {
     composable<MainRouteModel.Settings> {
@@ -95,6 +97,7 @@ fun NavGraphBuilder.settingsNavGraph(
             onBack = onBackFromAccount,
             onLoggedOut = onLoggedOut,
             onSwitched = onSwitched,
+            onLinkedFromCouple = onLinkedFromCouple,
             onShowSnackBar = onShowSnackBar,
         )
     }

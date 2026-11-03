@@ -88,6 +88,9 @@ sealed interface AccountSideEffect {
     /** 로그아웃·탈퇴가 끝났다 → SCR-START-01 */
     data object NavigateToStart : AccountSideEffect
 
+    /** 커플 연결 화면에서 시작한 연동이 끝났다 → SCR-COUPLE-01(회원 화면)로 돌아간다. 성공 안내는 없다 (FR-AUTH-03 AC4, D-79) */
+    data object NavigateToCoupleConnect : AccountSideEffect
+
     /** 그 계정으로 로그인(switch)이 끝났다 → 그 계정의 현재 상태(캘린더) */
     data object NavigateToHome : AccountSideEffect
 }

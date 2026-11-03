@@ -17,12 +17,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.LocalDate
+import java.time.YearMonth
 import javax.inject.Inject
 
 /**
@@ -85,11 +88,24 @@ class LinkedSheetViewModel @Inject constructor(
 
     private fun today(): LocalDate = LocalDate.now(clock)
 
+    init {
+        // 이 ViewModel은 NavHost 밖(`MainScreen`)에 있어 Activity 동안 남는다. 새 커플 공간(공간 ID가 바뀜)이 열리거나
+        // 앱 초기화(D-103)가 일어나면 이전 연결의 선택(고른 날짜, 기록 선택, 날짜 시트)을 버리고
+        // 처음 상태([가져오기] 미리 선택, D-76)로 돌린다
+        viewModelScope.launch {
+            meRepository.observeMe().map { it?.space?.id }.distinctUntilChanged().collect { local.value = Local() }
+        }
+        viewModelScope.launch {
+            meRepository.spaceChanges.collect { local.value = Local() }
+        }
+    }
+
     fun onAction(action: LinkedSheetAction) {
         when (action) {
             LinkedSheetAction.DateFieldClicked -> openDatePicker()
             LinkedSheetAction.PreviousMonth -> moveMonth(forward = false)
             LinkedSheetAction.NextMonth -> moveMonth(forward = true)
+            is LinkedSheetAction.MonthSelected -> selectMonth(action.month)
             is LinkedSheetAction.DateSelected -> selectDate(action.date)
             LinkedSheetAction.DateSaved -> saveDate()
             LinkedSheetAction.DatePickerDismissed -> local.update { it.copy(datePicker = null) }
@@ -130,6 +146,14 @@ class LinkedSheetViewModel @Inject constructor(
                 StartDateRules.previousMonth(picker.visibleMonth)
             }
             if (next == null) current else current.copy(datePicker = picker.copy(visibleMonth = next))
+        }
+    }
+
+    private fun selectMonth(month: YearMonth) {
+        if (!StartDateRules.isMonthSelectable(month, today())) return
+        local.update { current ->
+            val picker = current.datePicker ?: return@update current
+            current.copy(datePicker = picker.copy(visibleMonth = month))
         }
     }
 
@@ -214,7 +238,10 @@ class LinkedSheetViewModel @Inject constructor(
     private fun fail(error: DataError) {
         local.update { it.copy(requesting = false, frozen = null) }
         // 상대가 먼저 해제했으면(NOT_COUPLE) 리포지토리가 앱을 초기화했고 이동은 `feature:main`이 한다. 화면은 아무것도 하지 않는다
-        if (error.hasCode(ErrorCode.NOT_COUPLE)) return
+        if (error.hasCode(ErrorCode.NOT_COUPLE)) {
+            local.value = Local()
+            return
+        }
         effectChannel.trySend(LinkedSheetSideEffect.ShowMessage(error.toMessageRes()))
     }
 }

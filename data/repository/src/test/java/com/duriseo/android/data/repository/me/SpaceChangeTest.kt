@@ -237,15 +237,47 @@ class SpaceChangeTest {
     }
 
     @Test
-    fun `FR-COUPLE-05 AC5 couple import가 NOT_COUPLE이면 해제로 보고 초기화한다`() = runTestWithTimeout {
+    fun `FR-COUPLE-03 couple import의 409는 NO_IMPORT_PENDING뿐이라 NOT_COUPLE로도 초기화하지 않는다`() = runTestWithTimeout {
         val h = harness()
         h.preload(fixtureCoupleMe(importPending = true))
         server.enqueue(jsonResponse(409, errorJson("NOT_COUPLE")))
-        server.enqueue(jsonResponse(200, personalJson(newPersonalId)))
 
-        h.coupleRepository.decideImport(true)
+        val result = h.coupleRepository.decideImport(true)
 
-        assertEquals(SpaceChange.UNLINKED, h.nextChange())
+        assertTrue(result is DataResult.Failure)
+        assertNull(h.nextChange())
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun `FR-COUPLE-05 AC3 리드 결정 커플 X에서 다른 커플 Y로 바뀌면 지우고 연결 완료 시트가 필요하다`() = runTestWithTimeout {
+        val h = harness()
+        h.preload(fixtureCoupleMe())
+        h.acknowledgedSpace.set(coupleId)
+        val otherCouple = "66666666-6666-6666-6666-666666666666"
+        server.enqueue(jsonResponse(200, coupleMeJson(spaceId = otherCouple)))
+
+        h.meRepository.refreshMe()
+
+        // 설정은 지워졌고(저장보다 먼저), 새 커플 공간이 저장되며, 이동 없이 시트가 필요하다
+        assertNull(h.settingValue())
+        assertEquals(otherCouple, h.roomMe()!!.space.id)
+        assertNull(h.nextChange())
+        assertEquals(true, h.meRepository.observeLinkedSheetNeeded().first())
+        assertTrue(h.tokens.state.value is TokenState.Present)
+    }
+
+    @Test
+    fun `FR-COUPLE-05 AC3 같은 커플 공간이면 지우지 않는다`() = runTestWithTimeout {
+        val h = harness()
+        h.preload(fixtureCoupleMe())
+        h.acknowledgedSpace.set(coupleId)
+        server.enqueue(jsonResponse(200, coupleMeJson(spaceId = coupleId)))
+
+        h.meRepository.refreshMe()
+
+        assertEquals("저장된 설정", h.settingValue())
+        assertNull(h.nextChange())
     }
 
     @Test

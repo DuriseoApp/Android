@@ -306,6 +306,19 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `FR-COUPLE-04 AC3 연도 월 선택으로 고른 달로 시트가 바뀌고 미래 달은 받지 않는다`() = runTest {
+        me.me.value = coupleMe(startDate = null)
+        val vm = viewModel()
+        vm.onAction(SettingsAction.StartDateEditClicked)
+
+        vm.onAction(SettingsAction.StartDateMonthSelected(YearMonth.of(1999, 7)))
+        assertEquals(YearMonth.of(1999, 7), vm.uiState.value.startDateSheet!!.visibleMonth)
+
+        vm.onAction(SettingsAction.StartDateMonthSelected(YearMonth.of(2026, 11)))
+        assertEquals(YearMonth.of(1999, 7), vm.uiState.value.startDateSheet!!.visibleMonth)
+    }
+
+    @Test
     fun `FR-COUPLE-04 AC3 오늘보다 뒤 날짜는 고를 수 없다`() = runTest {
         me.me.value = coupleMe(startDate = null)
         val vm = viewModel()

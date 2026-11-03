@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.settings.account
 
+import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.duriseo.android.core.common.social.SocialTokenResult
 import com.duriseo.android.core.designsystem.R as DesignR
@@ -50,8 +51,8 @@ class AccountViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun TestScope.viewModel(clock: Clock = seoul): AccountViewModel {
-        val vm = AccountViewModel(auth, me, clock)
+    private fun TestScope.viewModel(clock: Clock = seoul, fromCouple: Boolean = false): AccountViewModel {
+        val vm = AccountViewModel(auth, me, clock, SavedStateHandle(mapOf("fromCouple" to fromCouple)))
         // stateIn(WhileSubscribed)라서 값을 읽는 동안 구독해 둔다
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect { } }
         return vm
@@ -98,6 +99,43 @@ class AccountViewModelTest {
             )
             assertTrue(state.justLinked)
             assertFalse(state.requesting)
+        }
+    }
+
+    @Test
+    fun `FR-AUTH-03 AC4 D-79 커플 연결에서 시작한 연동이 끝나면 성공 안내 없이 SCR-COUPLE-01로 돌아간다`() = runTest {
+        val vm = viewModel(fromCouple = true)
+        vm.effects.test {
+            linkWith(vm, SocialProvider.GOOGLE)
+
+            assertEquals(AccountSideEffect.NavigateToCoupleConnect, awaitItem())
+            val state = vm.uiState.value
+            assertFalse(state.justLinked)
+            assertFalse(state.requesting)
+            assertTrue(state.content is AccountContent.Member)
+        }
+    }
+
+    @Test
+    fun `FR-AUTH-03 AC4 D-79 커플 연결에서 시작하지 않은 연동은 이동하지 않고 성공 안내를 보여 준다`() = runTest {
+        val vm = viewModel(fromCouple = false)
+        vm.effects.test {
+            linkWith(vm, SocialProvider.GOOGLE)
+
+            expectNoEvents()
+            assertTrue(vm.uiState.value.justLinked)
+        }
+    }
+
+    @Test
+    fun `FR-AUTH-03 AC4 커플 연결에서 시작한 연동이 실패하면 돌아가지 않는다`() = runTest {
+        auth.linkResult = apiError("INTERNAL_ERROR")
+        val vm = viewModel(fromCouple = true)
+        vm.effects.test {
+            linkWith(vm, SocialProvider.GOOGLE)
+
+            assertEquals(AccountSideEffect.ShowMessage(DesignR.string.error_common), awaitItem())
+            expectNoEvents()
         }
     }
 

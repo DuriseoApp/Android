@@ -32,9 +32,14 @@ sealed interface AuthRouteModel : RouteModel {
 
 /** 전체 메뉴(설정)에서 들어가는 하위 화면 (`feature:settings`) */
 sealed interface SettingsRouteModel : RouteModel {
-    /** 계정 화면 (SCR-SET-01 하위 화면 "계정": 게스트·회원) */
+    /**
+     * 계정 화면 (SCR-SET-01 하위 화면 "계정": 게스트·회원)
+     *
+     * @property fromCouple 게스트가 SCR-COUPLE-01의 [로그인하고 연결하기]로 들어왔다. 연동을 마치면 연동 성공 안내 없이
+     *   SCR-COUPLE-01(회원 화면)로 돌아간다 (FR-AUTH-03 AC4, D-79, SCREENS.md "연동 성공 안내")
+     */
     @Serializable
-    data object Account : SettingsRouteModel
+    data class Account(val fromCouple: Boolean = false) : SettingsRouteModel
 
     /** 우리 색상 (SCR-SET-03) */
     @Serializable

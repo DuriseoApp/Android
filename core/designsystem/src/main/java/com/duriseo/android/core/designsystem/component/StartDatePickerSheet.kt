@@ -1,5 +1,7 @@
 package com.duriseo.android.core.designsystem.component
 
+import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
+import com.duriseo.android.core.designsystem.theme.DuriseoSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -10,6 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,6 +25,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
@@ -52,16 +59,16 @@ import java.time.YearMonth
 // 수치는 보드 `StartDateSheet.dc.html`. 토큰에 없는 값이라 이름을 붙인 상수로 둔다 (unit-3.md 확인 필요 14).
 
 /** 덩어리 사이 16 (19행). 면(위 모서리 24, 손잡이, 안쪽 여백)은 [DuriseoSheetPanel] */
-private val SheetGap = 16.dp
+private val SheetGap = DuriseoSpacing.Space4
 
 /** 제목 위 4, 제목과 설명 사이 6 (21~22행). 설명 13/400 행간 1.6 */
-private val TitleTop = 4.dp
+private val TitleTop = DuriseoSpacing.Space1
 private val TitleGap = 6.dp
 private val DescriptionLineHeight = 20.8.sp
 
 /** 달 이동 줄: 높이 44, 이전·다음 버튼 44x44, 아이콘 20 (26·28행) */
-private val MonthRowHeight = 44.dp
-private val MonthButtonSize = 44.dp
+private val MonthRowHeight = DuriseoSize.Touch
+private val MonthButtonSize = DuriseoSize.Touch
 private val MonthIconSize = 20.dp
 
 /** 요일 줄 높이 28 (12/600), 날짜 줄 높이 40, 줄 사이 2, 날짜 원 36 (33·34행) */
@@ -83,14 +90,22 @@ private val NoteLineHeight = 16.sp
 
 private const val DAYS_PER_WEEK = 7
 
+/** 연도·월 선택의 격자: 연도는 4열, 월은 4열 3줄. 칸 높이는 날짜 줄과 같고 칸 사이는 날짜 줄 사이와 같다 */
+private const val PICKER_COLUMNS = 4
+private const val MONTHS_PER_YEAR = 12
+
+/** 제목 옆 ⌄: 오른쪽 화살표 아이콘을 아래쪽으로 돌린 것 (보드 `StartDateSheet.dc.html` 27행의 ⌄ 버튼 자리) */
+private const val CHEVRON_DOWN_ROTATION = 90f
+
 /**
  * 처음 만난 날 선택 시트의 **면**(손잡이·제목·월 달력·안내·[저장])이다. 뒤 막과 위치는 부르는 쪽이 정한다
  * (SCR-SET-01의 [처음 만난 날 수정], SCR-COUPLE-04의 필드가 같은 시트를 쓴다).
  *
  * - 고를 수 있는 날은 1950-01-01 ~ [today]다 (`StartDateRules`). 범위 밖 날짜는 비활성이고, 이전·다음 달 버튼도
  *   그 범위 끝에서 꺼진다. 지우기는 없다 (D-84).
- * - **연·월 제목을 눌러 연도·월을 고르는 동작은 디자인이 없어 만들지 않았다** (SCREENS.md "연도·월 선택": 이미지 예정 `SCR-SET-01--start-date-sheet-year-month.png`, 그때까지 구현은 문서 밖. unit-3.md 확인 필요 6).
- *   제목은 글자만 보인다.
+ * - 연·월 제목을 누르면 연도 목록 → 월 목록으로 달을 고른다 (1950-01 ~ 오늘이 든 달, 미래 월은 비활성).
+ *   **디자인 반영 후 맞춤(이미지 대기)**: SCREENS.md "연도·월 선택"은 이미지 예정(`SCR-SET-01--start-date-sheet-year-month.png`)이고
+ *   그때까지는 Android가 정한다. 지금 모양은 기존 컴포넌트·토큰만 쓴 단순한 격자다 (unit-3.md 확인 필요 6).
  * - 상태는 호출하는 쪽이 들고 있다: 보이는 달 [visibleMonth], 고른 날 [selectedDate].
  *
  * @param saveEnabled [저장]을 누를 수 있는지. 보드는 항상 켜져 있다
@@ -106,7 +121,11 @@ fun StartDatePickerSheet(
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
     saveEnabled: Boolean = true,
+    onMonthSelected: ((YearMonth) -> Unit)? = null,
 ) {
+    // 연도·월 선택이 열려 있는지, 열려 있다면 어느 해의 월을 고르는 중인지(null이면 연도 목록)
+    var pickerOpen by remember { mutableStateOf(false) }
+    var pickerYear by remember { mutableStateOf<Int?>(null) }
     DuriseoSheetPanel(modifier = modifier, gap = SheetGap) {
         Column(
             modifier = Modifier.padding(top = TitleTop),
@@ -133,14 +152,35 @@ fun StartDatePickerSheet(
             canGoNext = StartDateRules.nextMonth(visibleMonth, today) != null,
             onPreviousMonth = onPreviousMonth,
             onNextMonth = onNextMonth,
+            pickerOpen = pickerOpen,
+            onTitleClick = onMonthSelected?.let {
+                {
+                    pickerYear = null
+                    pickerOpen = !pickerOpen
+                }
+            },
         )
         Column(verticalArrangement = Arrangement.spacedBy(CalendarToNoteGap)) {
-            MonthGrid(
-                visibleMonth = visibleMonth,
-                selectedDate = selectedDate,
-                today = today,
-                onDateSelected = onDateSelected,
-            )
+            if (pickerOpen && onMonthSelected != null) {
+                YearMonthPicker(
+                    visibleMonth = visibleMonth,
+                    today = today,
+                    year = pickerYear,
+                    onYearSelected = { pickerYear = it },
+                    onMonthSelected = {
+                        onMonthSelected(it)
+                        pickerOpen = false
+                        pickerYear = null
+                    },
+                )
+            } else {
+                MonthGrid(
+                    visibleMonth = visibleMonth,
+                    selectedDate = selectedDate,
+                    today = today,
+                    onDateSelected = onDateSelected,
+                )
+            }
             Text(
                 text = stringResource(R.string.start_date_sheet_range_note),
                 style = MaterialTheme.typography.labelMedium.copy(
@@ -168,6 +208,8 @@ private fun MonthHeader(
     canGoNext: Boolean,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
+    pickerOpen: Boolean,
+    onTitleClick: (() -> Unit)?,
 ) {
     Row(
         modifier = Modifier
@@ -176,12 +218,40 @@ private fun MonthHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = stringResource(R.string.start_date_sheet_month, visibleMonth.year, visibleMonth.monthValue),
-            style = MaterialTheme.typography.titleMedium,
-            color = Ink900,
-        )
-        Row {
+        val pickLabel = stringResource(R.string.start_date_sheet_pick_year_month)
+        Row(
+            modifier = Modifier
+                .height(MonthRowHeight)
+                .then(
+                    if (onTitleClick != null) {
+                        Modifier
+                            .clickable(role = Role.Button, onClick = onTitleClick)
+                            .semantics { contentDescription = pickLabel }
+                    } else {
+                        Modifier
+                    },
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.start_date_sheet_month, visibleMonth.year, visibleMonth.monthValue),
+                modifier = if (onTitleClick != null) Modifier.clearAndSetSemantics { } else Modifier,
+                style = MaterialTheme.typography.titleMedium,
+                color = Ink900,
+            )
+            if (onTitleClick != null) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_chevron_right),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(MonthIconSize)
+                        .rotate(if (pickerOpen) -CHEVRON_DOWN_ROTATION else CHEVRON_DOWN_ROTATION),
+                    tint = Ink600,
+                )
+            }
+        }
+        // 연도·월 선택이 열려 있는 동안은 달 이동 버튼을 숨긴다
+        if (!pickerOpen) Row {
             MonthButton(
                 iconRes = R.drawable.ic_back,
                 description = stringResource(R.string.start_date_sheet_previous_month),
@@ -274,6 +344,89 @@ private fun MonthGrid(
     }
 }
 
+/**
+ * 연도·월 선택 (이미지 대기). [year]가 null이면 연도 목록(최근 순), 있으면 그 해의 12개 월.
+ * 높이는 월 달력(요일 줄 + 6줄)과 같게 해서 열고 닫을 때 시트가 출렁이지 않게 한다.
+ */
+@Composable
+private fun YearMonthPicker(
+    visibleMonth: YearMonth,
+    today: LocalDate,
+    year: Int?,
+    onYearSelected: (Int) -> Unit,
+    onMonthSelected: (YearMonth) -> Unit,
+) {
+    val height = WeekdayHeight + DayRowHeight * 6 + DayRowGap * 5
+    if (year == null) {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(PICKER_COLUMNS),
+            modifier = Modifier.fillMaxWidth().height(height),
+            verticalArrangement = Arrangement.spacedBy(DayRowGap),
+        ) {
+            items(StartDateRules.years(today)) { y ->
+                val text = stringResource(R.string.start_date_sheet_year, y)
+                PickerCell(
+                    text = text,
+                    selected = y == visibleMonth.year,
+                    enabled = true,
+                    onClick = { onYearSelected(y) },
+                )
+            }
+        }
+    } else {
+        Column(
+            modifier = Modifier.fillMaxWidth().height(height),
+            verticalArrangement = Arrangement.spacedBy(DayRowGap),
+        ) {
+            (1..MONTHS_PER_YEAR).chunked(PICKER_COLUMNS).forEach { months ->
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    months.forEach { m ->
+                        val month = YearMonth.of(year, m)
+                        Box(modifier = Modifier.weight(1f)) {
+                            PickerCell(
+                                text = stringResource(R.string.start_date_sheet_month_name, m),
+                                selected = month == visibleMonth,
+                                enabled = StartDateRules.isMonthSelectable(month, today),
+                                onClick = { onMonthSelected(month) },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PickerCell(text: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    val label = if (selected) stringResource(R.string.start_date_sheet_selected, text) else text
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(DayRowHeight)
+            .clip(MaterialTheme.shapes.small)
+            .background(if (selected) Brand500 else Color.Transparent)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.clearAndSetSemantics { },
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = DayFontSize,
+                lineHeight = DayLineHeight,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            ),
+            color = when {
+                selected -> OnBrand
+                !enabled -> Ink300
+                else -> Ink900
+            },
+        )
+    }
+}
+
 @Composable
 private fun DayCell(
     date: LocalDate,
@@ -339,6 +492,7 @@ private fun PreviewSheet(
                 onNextMonth = { StartDateRules.nextMonth(visibleMonth, today)?.let { visibleMonth = it } },
                 onDateSelected = { selectedDate = it },
                 onSave = {},
+                onMonthSelected = { visibleMonth = it },
             )
         }
     }
@@ -363,3 +517,21 @@ private fun StartDatePickerSheetFutureDisabledPreview() = PreviewSheet(YearMonth
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun StartDatePickerSheetEarliestMonthPreview() = PreviewSheet(YearMonth.of(1950, 1), null)
+
+/** 디자인 반영 후 맞춤(이미지 대기): 연도·월 선택의 연도 목록 */
+@Preview(showBackground = true, widthDp = 390)
+@Composable
+private fun YearMonthPickerYearsPreview() {
+    DuriseoTheme {
+        YearMonthPicker(YearMonth.of(2026, 4), LocalDate.of(2026, 4, 30), null, {}, {})
+    }
+}
+
+/** 디자인 반영 후 맞춤(이미지 대기): 연도·월 선택의 월 목록 (오늘이 든 해라 5월 이후는 비활성) */
+@Preview(showBackground = true, widthDp = 390)
+@Composable
+private fun YearMonthPickerMonthsPreview() {
+    DuriseoTheme {
+        YearMonthPicker(YearMonth.of(2026, 4), LocalDate.of(2026, 4, 30), 2026, {}, {})
+    }
+}

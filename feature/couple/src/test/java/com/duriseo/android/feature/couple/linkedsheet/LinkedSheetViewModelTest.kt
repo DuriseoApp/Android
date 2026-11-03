@@ -2,6 +2,7 @@ package com.duriseo.android.feature.couple.linkedsheet
 
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.domain.me.ImportCounts
+import com.duriseo.android.domain.me.SpaceChange
 import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.domain.result.DataResult
 import com.duriseo.android.feature.couple.FakeCoupleRepository
@@ -191,6 +192,19 @@ class LinkedSheetViewModelTest {
         vm.onAction(LinkedSheetAction.DateSelected(LocalDate.of(1950, 1, 1)))
 
         assertEquals(LocalDate.of(1950, 1, 1), vm.uiState.value.datePicker!!.selected)
+    }
+
+    @Test
+    fun `FR-COUPLE-04 AC3 연도 월 선택으로 고른 달로 달력이 바뀌고 미래 달과 1950년 전 달은 받지 않는다`() = runTest {
+        val vm = viewModel(FakeMeRepository(meWithoutRecords()))
+        vm.onAction(LinkedSheetAction.DateFieldClicked)
+
+        vm.onAction(LinkedSheetAction.MonthSelected(YearMonth.of(2019, 3)))
+        assertEquals(YearMonth.of(2019, 3), vm.uiState.value.datePicker!!.visibleMonth)
+
+        vm.onAction(LinkedSheetAction.MonthSelected(YearMonth.of(2026, 11)))
+        vm.onAction(LinkedSheetAction.MonthSelected(YearMonth.of(1949, 12)))
+        assertEquals(YearMonth.of(2019, 3), vm.uiState.value.datePicker!!.visibleMonth)
     }
 
     @Test
@@ -404,5 +418,60 @@ class LinkedSheetViewModelTest {
         assertTrue(vm.uiState.value.hasRecords)
         assertEquals(counts, vm.uiState.value.counts)
         gate.complete(Unit)
+    }
+
+    /** 이전 연결에서 고른 것들(날짜, 가져오지 않기, 날짜 시트)을 남긴 상태를 만든다 */
+    private fun dirty(vm: LinkedSheetViewModel) {
+        vm.onAction(LinkedSheetAction.ChoiceSelected(ImportChoice.Drop))
+        vm.onAction(LinkedSheetAction.DateFieldClicked)
+        vm.onAction(LinkedSheetAction.DateSelected(LocalDate.of(2026, 3, 14)))
+        vm.onAction(LinkedSheetAction.DateSaved)
+        vm.onAction(LinkedSheetAction.DateFieldClicked)
+    }
+
+    private fun assertPristine(vm: LinkedSheetViewModel) {
+        val state = vm.uiState.value
+        assertEquals(ImportChoice.Keep, state.choice)
+        assertNull(state.datePicker)
+        assertNull(state.startDate)
+    }
+
+    @Test
+    fun `FR-COUPLE-03 AC5 D-76 새 커플 공간이 열리면 이전 선택을 버리고 가져오기를 미리 선택한다`() = runTest {
+        val me = FakeMeRepository(meWithRecords())
+        val vm = viewModel(me)
+        dirty(vm)
+
+        me.me.value = meWithRecords().let { it.copy(space = it.space.copy(id = "44444444-4444-4444-4444-444444444444")) }
+
+        assertPristine(vm)
+    }
+
+    @Test
+    fun `FR-COUPLE-05 AC5 D-103 시작하기가 NOT_COUPLE로 끝나면 선택을 처음 상태로 되돌린다`() = runTest {
+        couple.importResult = failure("NOT_COUPLE")
+        val me = FakeMeRepository(meWithRecords())
+        val vm = viewModel(me)
+        vm.onAction(LinkedSheetAction.ChoiceSelected(ImportChoice.Drop))
+        vm.onAction(LinkedSheetAction.DateFieldClicked)
+        vm.onAction(LinkedSheetAction.DateSelected(LocalDate.of(2026, 3, 14)))
+        vm.onAction(LinkedSheetAction.DateSaved)
+
+        vm.onAction(LinkedSheetAction.StartClicked)
+        vm.onAction(LinkedSheetAction.DropConfirmed)
+
+        assertPristine(vm)
+        assertFalse(vm.uiState.value.requesting)
+    }
+
+    @Test
+    fun `FR-COUPLE-05 AC3 D-103 앱 초기화가 일어나면 선택을 처음 상태로 되돌린다`() = runTest {
+        val me = FakeMeRepository(meWithRecords())
+        val vm = viewModel(me)
+        dirty(vm)
+
+        me.changes.tryEmit(SpaceChange.UNLINKED)
+
+        assertPristine(vm)
     }
 }

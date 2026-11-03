@@ -38,7 +38,7 @@ import com.duriseo.android.core.designsystem.theme.Surface0
 // 수치는 토큰에 없어 보드 값을 이름 붙인 상수로 둔다.
 
 /** 시트 위 모서리 24 (`radius-2xl`) */
-private val SheetTopRadius = 24.dp
+private val SheetTopRadius = DuriseoSpacing.Space6
 
 /** 시트 안쪽: 위 10·좌우 24·아래 28 */
 private val SheetPaddingTop = 10.dp

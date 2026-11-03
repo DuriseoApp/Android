@@ -25,6 +25,13 @@ object StartDateRules {
     fun nextMonth(month: YearMonth, today: LocalDate): YearMonth? =
         month.plusMonths(1).takeIf { !it.isAfter(YearMonth.from(today)) }
 
+    /** [month]가 고를 수 있는 달인지: 1950년 1월 ~ 오늘이 든 달 (연도·월 선택에서 미래 월은 비활성, FR-COUPLE-04 AC3) */
+    fun isMonthSelectable(month: YearMonth, today: LocalDate): Boolean =
+        !month.isBefore(YearMonth.from(MIN_DATE)) && !month.isAfter(YearMonth.from(today))
+
+    /** 연도·월 선택에 보일 연도: 오늘이 든 해부터 1950년까지 (최근 순) */
+    fun years(today: LocalDate): List<Int> = (today.year downTo MIN_DATE.year).toList()
+
     /**
      * 함께한 지 D+N의 N: 처음 만난 날이 1일이다 (`오늘 − 처음 만난 날 + 1`, FR-CAL-01 AC3, NFR-TIME-01).
      * [today]는 기기 시계의 오늘이다. 시간대가 서로 달라 처음 만난 날이 오늘보다 뒤로 보이면 0 이하가 될 수 있고

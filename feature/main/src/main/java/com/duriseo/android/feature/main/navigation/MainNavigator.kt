@@ -87,7 +87,8 @@ class MainNavigator(
     /** 전체 메뉴(SCR-SET-01). 진입은 캘린더 앱바 (단위 4 전까지는 임시 버튼) */
     fun navigateToSettings() = navController.navigateToSettings()
 
-    fun navigateToAccount() = navController.navigateToAccount()
+    /** [fromCouple]이면 연동을 마친 뒤 SCR-COUPLE-01로 돌아온다 (게스트의 [로그인하고 연결하기], FR-AUTH-03 AC4) */
+    fun navigateToAccount(fromCouple: Boolean = false) = navController.navigateToAccount(fromCouple)
 
     fun navigateToColors() = navController.navigateToColors()
 

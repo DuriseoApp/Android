@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.settings.connection
 
+import com.duriseo.android.core.designsystem.theme.DuriseoSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -79,20 +80,20 @@ import java.time.LocalDate
 // 처음 만난 날·함께한 지 행을 모두 숨긴다.
 
 /** 본문 여백: 위 8, 좌우 20, 아래 28. 덩어리 사이 20 (보드 `padding: 8px 20px 28px`, `gap: 20px`) */
-private val ContentTop = 8.dp
+private val ContentTop = DuriseoSpacing.Space2
 private val ContentBottom = 28.dp
-private val BlockGap = 20.dp
+private val BlockGap = DuriseoSpacing.Space5
 
 /** 연결 상태 카드: 안쪽 위 24·좌우 16·아래 20, 덩어리 사이 16 */
-private val StatusPaddingTop = 24.dp
-private val StatusPaddingHorizontal = 16.dp
-private val StatusPaddingBottom = 20.dp
-private val StatusGap = 16.dp
+private val StatusPaddingTop = DuriseoSpacing.Space6
+private val StatusPaddingHorizontal = DuriseoSpacing.Space4
+private val StatusPaddingBottom = DuriseoSpacing.Space5
+private val StatusGap = DuriseoSpacing.Space4
 
 /** 카드 안 세 칸: 가운데 칸 폭 72, 높이 56. 이름과 아바타 사이 8 */
 private val StatusMiddleWidth = 72.dp
 private val StatusMiddleHeight = 56.dp
-private val PersonGap = 8.dp
+private val PersonGap = DuriseoSpacing.Space2
 
 /** "함께" 마크 40 x 28, 혼자 점선 56 */
 private val MarkWidth = 40.dp
@@ -100,8 +101,8 @@ private val MarkHeight = 28.dp
 private val DashedLinkWidth = 56.dp
 
 /** 상태 칩: 안쪽 위아래 4·좌우 12, 체크 14, 체크와 글자 사이 5 */
-private val ChipPaddingVertical = 4.dp
-private val ChipPaddingHorizontal = 12.dp
+private val ChipPaddingVertical = DuriseoSpacing.Space1
+private val ChipPaddingHorizontal = DuriseoSpacing.Space3
 private val ChipIconSize = 14.dp
 private val ChipGap = 5.dp
 
@@ -111,13 +112,13 @@ private val InfoRowHeight = 52.dp
 /** [연결 해제] 높이 52, 테두리 1. 안내와 사이 12 */
 private val UnlinkButtonHeight = 52.dp
 private val OutlineWidth = 1.dp
-private val UnlinkGap = 12.dp
+private val UnlinkGap = DuriseoSpacing.Space3
 
 /** 혼자 사용 중: 초대코드 만들기 카드 최소 높이 88, 안쪽 위아래 18·좌우 20, 아이콘 칸 44, 사이 14 */
 private val MakeCodeMinHeight = 88.dp
 private val MakeCodePaddingVertical = 18.dp
-private val MakeCodePaddingHorizontal = 20.dp
-private val MakeCodeTileSize = 44.dp
+private val MakeCodePaddingHorizontal = DuriseoSpacing.Space5
+private val MakeCodeTileSize = DuriseoSize.Touch
 private val CardIconGap = 14.dp
 private val CardIconSize = 22.dp
 

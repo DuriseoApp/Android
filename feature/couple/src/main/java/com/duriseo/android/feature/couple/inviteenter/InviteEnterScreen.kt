@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.couple.inviteenter
 
+import com.duriseo.android.core.designsystem.theme.DuriseoSize
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.background
@@ -75,15 +76,15 @@ import kotlinx.coroutines.launch
 // 토큰에 없는 값이라 이름을 붙인 상수로 둔다 (unit-3.md 확인 필요 14).
 
 /** 본문 위 여백 12, 사이 간격 28 (23행) */
-private val ContentTop = 12.dp
+private val ContentTop = DuriseoSpacing.Space3
 private val SectionGap = 28.dp
 
 /** 칸 묶음: 라벨·칸·붙여넣기 사이 12 (29행), 입력 칸 높이 58 (InviteCodeInputBoxes) */
-private val FieldGap = 12.dp
+private val FieldGap = DuriseoSpacing.Space3
 private val InputHeight = 58.dp
 
 /** [붙여넣기]: 높이 44, 안쪽 왼쪽 10·오른쪽 14, 모서리 12, 테두리 1, 아이콘 18, 사이 6 (36행) */
-private val PasteHeight = 44.dp
+private val PasteHeight = DuriseoSize.Touch
 private val PastePaddingStart = 10.dp
 private val PastePaddingEnd = 14.dp
 private val PasteBorderWidth = 1.dp
@@ -91,8 +92,8 @@ private val PasteIconSize = 18.dp
 private val PasteGap = 6.dp
 
 /** 맨 아래 버튼 영역: 위 16·좌우 24·아래 32 (47행) */
-private val BottomAreaTop = 16.dp
-private val BottomAreaBottom = 32.dp
+private val BottomAreaTop = DuriseoSpacing.Space4
+private val BottomAreaBottom = DuriseoSpacing.Space8
 
 /** 스낵바는 위에서 40 (SCREENS.md에 이 화면의 위치가 없어 시작 화면과 같게 둔다) */
 private val SnackbarTop = 40.dp

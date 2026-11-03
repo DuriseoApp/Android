@@ -76,18 +76,18 @@ import java.time.LocalDate
 // (unit-3.md 확인 필요 14).
 
 /** 앱바 [완료]: 높이 48, 좌우 14, 16/700 `brand-700` (21행) */
-private val DoneHeight = 48.dp
+private val DoneHeight = DuriseoSize.ButtonMd
 private val DonePaddingHorizontal = 14.dp
-private val BackButtonSize = 48.dp
+private val BackButtonSize = DuriseoSize.ButtonMd
 
 /** 본문: 위 4·좌우 20·아래 28, 덩어리 사이 22 (24행) */
-private val ContentTop = 4.dp
+private val ContentTop = DuriseoSpacing.Space1
 private val ContentBottom = 28.dp
 private val BlockGap = 22.dp
 
 /** 미리보기 패널: 안쪽 16, 모서리 20, 사이 12 (26행) */
-private val PreviewPadding = 16.dp
-private val PreviewGap = 12.dp
+private val PreviewPadding = DuriseoSpacing.Space4
+private val PreviewGap = DuriseoSpacing.Space3
 
 /** 미리보기 아바타 28, 서로 6 겹침, 바깥 링 2 (91행). 링까지 한 칸으로 그려서 칸 사이는 -(6 + 링 2개) = -10 */
 private val PreviewAvatarSize = 28.dp
@@ -96,8 +96,8 @@ private val PreviewAvatarRing = 2.dp
 private val PreviewAvatarFont = 12.sp
 
 /** 한 주 달력: 안쪽 위아래 8, 모서리 14, 칸 안 사이 4 (32·34행). 요일 11, 숫자 14, 점 5(사이 3, 줄 높이 5) */
-private val WeekPaddingVertical = 8.dp
-private val WeekCellGap = 4.dp
+private val WeekPaddingVertical = DuriseoSpacing.Space2
+private val WeekCellGap = DuriseoSpacing.Space1
 private val WeekdayFont = 11.sp
 private val WeekdayLineHeight = 14.sp
 private val DayDotSize = 5.dp
@@ -105,7 +105,7 @@ private val DayDotGap = 3.dp
 
 /** 일정 한 줄: 높이 40, 좌우 12, 모서리 12, 사이 10, 시간 칸 38 (39행) */
 private val EventHeight = 40.dp
-private val EventPaddingHorizontal = 12.dp
+private val EventPaddingHorizontal = DuriseoSpacing.Space3
 private val EventGap = 10.dp
 private val EventTimeWidth = 38.dp
 private val EventListGap = 6.dp
@@ -113,7 +113,7 @@ private val EventListGap = 6.dp
 /** 일정 칩: 안쪽 위아래 2·왼쪽 6·오른쪽 8, 테두리 1, 점 8, 사이 5 (43행) */
 private val ChipPaddingVertical = 2.dp
 private val ChipPaddingStart = 6.dp
-private val ChipPaddingEnd = 8.dp
+private val ChipPaddingEnd = DuriseoSpacing.Space2
 private val ChipBorderWidth = 1.dp
 private val ChipDotSize = 8.dp
 private val ChipGap = 5.dp
@@ -122,32 +122,32 @@ private val ChipGap = 5.dp
 private val TargetTitleGap = 10.dp
 private val TargetHeightCouple = 112.dp
 private val TargetHeightSolo = 64.dp
-private val TargetGap = 8.dp
-private val TargetInnerGap = 4.dp
-private val TargetSoloGap = 12.dp
-private val TargetSoloPadding = 16.dp
+private val TargetGap = DuriseoSpacing.Space2
+private val TargetInnerGap = DuriseoSpacing.Space1
+private val TargetSoloGap = DuriseoSpacing.Space3
+private val TargetSoloPadding = DuriseoSpacing.Space4
 private val TargetBorderWidth = 1.dp
 private val TargetSelectedBorderWidth = 2.dp
 private val TargetCircleSize = 36.dp
 private val TargetCircleFont = 14.sp
 
 /** 팔레트: 위 제목과 사이 12, 6열, 행 사이 14, 색 원 44, 선택 링 안쪽 흰색 3 + 바깥 `ink-900` 2, 체크 20 (68·70·72행) */
-private val PaletteGap = 12.dp
+private val PaletteGap = DuriseoSpacing.Space3
 private val PaletteRowGap = 14.dp
-private val SwatchSize = 44.dp
+private val SwatchSize = DuriseoSize.Touch
 private val SwatchWhiteRing = 3.dp
 private val SwatchInkRing = 2.dp
 private val CheckSize = 20.dp
 private const val PALETTE_COLUMNS = 6
 
 /** 경고 배너: 안쪽 위아래 12·좌우 14, 모서리 12, 13/400 행간 1.6 (74행) */
-private val WarningPaddingVertical = 12.dp
+private val WarningPaddingVertical = DuriseoSpacing.Space3
 private val WarningPaddingHorizontal = 14.dp
 private val WarningLineHeight = 20.8.sp
 
 /** 아래 안내와 되돌리기: 사이 6, 버튼 높이 44 (77~79행) */
 private val FooterGap = 6.dp
-private val ResetHeight = 44.dp
+private val ResetHeight = DuriseoSize.Touch
 
 /** 안내 문구 13/400 행간 1.6 = 20.8 (78행) */
 private val NoteLineHeight = 20.8.sp

@@ -90,10 +90,10 @@ private val IntroLineHeight = 26.35.sp
 
 /** 기능 칩 안쪽 위아래 6·좌우 12 (30~33행) */
 private val ChipVerticalPadding = 6.dp
-private val ChipHorizontalPadding = 12.dp
+private val ChipHorizontalPadding = DuriseoSpacing.Space3
 
 /** "간편하게 시작하기" 아래로 4 더, "또는" 구분선 위로 4 더 (37·42행) */
-private val ExtraGap = 4.dp
+private val ExtraGap = DuriseoSpacing.Space1
 
 /** 게스트 설명 아래 동의 문구를 6 더 띄운다 (48행) */
 private val ConsentTopGap = 6.dp

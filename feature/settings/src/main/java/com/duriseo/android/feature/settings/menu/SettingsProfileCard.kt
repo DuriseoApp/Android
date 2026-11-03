@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.settings.menu
 
+import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -57,12 +58,12 @@ import java.time.LocalDate
 
 /** 카드 안쪽 여백: 위 22, 좌우 16, 아래 16. 덩어리 사이 18 */
 private val CardPaddingTop = 22.dp
-private val CardPaddingHorizontal = 16.dp
-private val CardPaddingBottom = 16.dp
+private val CardPaddingHorizontal = DuriseoSpacing.Space4
+private val CardPaddingBottom = DuriseoSpacing.Space4
 private val CardGap = 18.dp
 
 /** 아바타 아래 이름 줄: 사이 8, 이름 최대 폭 120 */
-private val PersonGap = 8.dp
+private val PersonGap = DuriseoSpacing.Space2
 private val NameMaxWidth = 120.dp
 
 /** 이름 아래 "나"·"상대" 표지: 점 지름 8, 점과 글자 사이 5 */

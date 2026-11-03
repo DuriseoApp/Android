@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -77,19 +78,19 @@ import java.time.YearMonth
 private val SheetGap = 22.dp
 
 /** 제목: 위 4, 오른쪽 닫기 버튼 44x44, 위 -4·오른쪽 -10 (133~135행) */
-private val TitleTop = 4.dp
-private val CloseButtonSize = 44.dp
+private val TitleTop = DuriseoSpacing.Space1
+private val CloseButtonSize = DuriseoSize.Touch
 private val CloseButtonTop = (-4).dp
 private val CloseButtonEnd = (-10).dp
 private val CloseIconSize = 22.dp
 
 /** 섹션 안 간격 8, 개수 줄 사이 2 (139·159행) */
-private val SectionGap = 8.dp
+private val SectionGap = DuriseoSpacing.Space2
 private val LabelGap = 2.dp
 
 /** [나중에 하기]: 높이 32, 좌우 4 (143행) */
 private val LaterHeight = 32.dp
-private val LaterPaddingHorizontal = 4.dp
+private val LaterPaddingHorizontal = DuriseoSpacing.Space1
 
 /** 처음 만난 날 칸: 높이 `size-input` 52, 안쪽 좌우 16, 모서리 `radius-md` 14, 테두리 1, 아이콘 20 (146행) */
 private val FieldBorderWidth = 1.dp
@@ -98,7 +99,7 @@ private val FieldIconSize = 20.dp
 /** 선택 카드: 최소 높이 60, 안쪽 10/16, 모서리 `radius-lg` 16, 테두리 1(선택 2), 줄 사이 2 (318행) */
 private val CardMinHeight = 60.dp
 private val CardPaddingVertical = 10.dp
-private val CardPaddingHorizontal = 16.dp
+private val CardPaddingHorizontal = DuriseoSpacing.Space4
 private val CardBorderWidth = 1.dp
 private val CardSelectedBorderWidth = 2.dp
 
@@ -176,6 +177,7 @@ fun LinkedSheetScreen(
                     today = state.today,
                     onPreviousMonth = { onAction(LinkedSheetAction.PreviousMonth) },
                     onNextMonth = { onAction(LinkedSheetAction.NextMonth) },
+                    onMonthSelected = { onAction(LinkedSheetAction.MonthSelected(it)) },
                     onDateSelected = { onAction(LinkedSheetAction.DateSelected(it)) },
                     // [저장]은 칸을 채우기만 한다. 날짜를 하나도 안 골랐으면 채울 것이 없다
                     onSave = { onAction(LinkedSheetAction.DateSaved) },
@@ -366,7 +368,9 @@ private fun RecordsSection(state: LinkedSheetUiState, onAction: (LinkedSheetActi
         }
         val groupLabel = stringResource(R.string.linked_sheet_records_group)
         Column(
-            modifier = Modifier.semantics { contentDescription = groupLabel },
+            modifier = Modifier
+                .selectableGroup()
+                .semantics { contentDescription = groupLabel },
             verticalArrangement = Arrangement.spacedBy(SectionGap),
         ) {
             ChoiceCard(

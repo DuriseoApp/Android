@@ -346,7 +346,7 @@ class InviteCreateViewModelTest {
     }
 
     @Test
-    fun `NFR-OFF-02 오프라인이면 코드를 받지 못하고 인터넷 연결 안내를 한 번만 보여 준다`() = runTest {
+    fun `FR-COUPLE-01 AC6 NFR-OFF-02 오프라인이면 코드를 받지 못하고 인터넷 연결 안내를 한 번만 보여 준다`() = runTest {
         couple.defaultCurrent = offline()
         val vm = viewModel()
         val effects = collectInto(vm.effects)

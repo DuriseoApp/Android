@@ -53,7 +53,7 @@ private val DashOff = 8.dp
 /** 점선 원 테두리 두께 2. 보드는 CSS `dashed`(브라우저가 정하는 간격)라 점 6 · 간격 4로 비슷하게 그린다 (이미지와 맞는지는 확인 필요) */
 private val RingStrokeWidth = 2.dp
 private val RingDash = 6.dp
-private val RingGap = 4.dp
+private val RingGap = DuriseoSpacing.Space1
 
 /** "아직 없음" 원 안의 더하기 아이콘: 지름 72에서 26, 56에서 22 */
 private val PlusIconInLarge = 26.dp

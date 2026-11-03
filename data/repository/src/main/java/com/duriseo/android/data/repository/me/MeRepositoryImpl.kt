@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -81,22 +83,34 @@ class MeRepositoryImpl @Inject constructor(
         is DataResult.Failure -> result
     }
 
+    /** `GET /me` 응답이 동시에 두 번 저장되면 감지·저장 순서가 섞이므로 한 번에 하나씩 처리한다 */
+    private val saveMutex = Mutex()
+
     /**
-     * 받은 내 정보를 저장한다. **해제 감지가 저장보다 먼저**다 (API.md 4.5의 6단계):
-     * 받은 공간이 개인 공간인데 ① 확인한 공간 ID와 다르거나 ② Room의 공간이 커플이었으면 해제다.
-     * ②가 필요한 이유: 연결 완료 시트를 닫기 전에 상대가 해제하면 같은 개인 공간이 되살아나 ID가 같아진다.
+     * 받은 내 정보를 저장한다. **해제 감지가 저장보다 먼저**다 (API.md 4.5의 6단계, 리드 결정):
+     * - 저장 전 Room의 공간이 커플이었고 받은 공간 ID가 다르면 해제다. 새 공간이 개인 공간이든 다른 커플 공간이든 같다.
+     * - 받은 공간이 개인 공간이면, 확인한 공간 ID와 다를 때도 해제다 (①).
+     *
+     * 해제면 로그인 정보를 뺀 로컬 데이터를 지운다. 새 공간이 개인 공간이면 `UNLINKED`를 내보내 앱이 SCR-COUPLE-01로 간다.
+     * 새 공간이 다른 커플 공간이면 이동하지 않고, 확인한 공간 ID를 이전 공간으로 남겨 연결 완료 시트가 뜨게 한다
+     * (4.4의 8단계 2번). Docs 후속: API 4.5 6단계에 "커플 X → 커플 Y" 경우를 명시해야 한다.
      */
-    private suspend fun saveFresh(fresh: Me) {
+    private suspend fun saveFresh(fresh: Me) = saveMutex.withLock {
         val previous = local.get()?.toDomainOrNull()
+        val previousCoupleId = previous?.space?.takeIf { it.type == SpaceType.COUPLE }?.id
         val acknowledgedId = acknowledged.get()
         val isPersonal = fresh.space.type == SpaceType.PERSONAL
-        val unlinked = isPersonal &&
-            (previous?.space?.type == SpaceType.COUPLE || (acknowledgedId != null && acknowledgedId != fresh.space.id))
+        val leftCouple = previousCoupleId != null && previousCoupleId != fresh.space.id
+        val unlinked = leftCouple || (isPersonal && acknowledgedId != null && acknowledgedId != fresh.space.id)
 
         if (unlinked) session.clearUserData()
         local.replace(fresh.toEntity())
-        // 저장 시점 1: 개인 공간을 받을 때마다 (처음 설치·로그인, 초기화 포함. 3번 "초기화 때"도 이것으로 채워진다)
-        if (isPersonal) acknowledged.set(fresh.space.id)
-        if (unlinked) changeChannel.trySend(SpaceChange.UNLINKED)
+        when {
+            // 저장 시점 1: 개인 공간을 받을 때마다 (처음 설치·로그인, 초기화 포함. 3번 "초기화 때"도 이것으로 채워진다)
+            isPersonal -> acknowledged.set(fresh.space.id)
+            // 다른 커플 공간으로 바뀜: 지운 설정에서 이전 공간 ID를 되살려 새 연결의 시트가 뜨게 한다
+            leftCouple && previousCoupleId != null -> acknowledged.set(previousCoupleId)
+        }
+        if (unlinked && isPersonal) changeChannel.trySend(SpaceChange.UNLINKED)
     }
 }

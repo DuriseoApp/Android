@@ -2,6 +2,7 @@ package com.duriseo.android.data.repository.couple
 
 import com.duriseo.android.data.repository.RepoHarness
 import com.duriseo.android.data.repository.errorJson
+import com.duriseo.android.data.repository.fixtureCoupleMe
 import com.duriseo.android.data.repository.fixtureMe
 import com.duriseo.android.data.repository.jsonResponse
 import com.duriseo.android.data.repository.me.toEntity
@@ -171,6 +172,40 @@ class CoupleRepositoryTest {
         assertEquals(listOf("PATCH /api/v1/space/colors", "GET /api/v1/me"), requestPaths())
         val space = h.roomMe()!!.space
         assertEquals("pick-rose", space.myColor)
+        assertEquals("pick-green", space.togetherColor)
+    }
+
+    private val fullSpaceJson = """{"id":"33333333-3333-3333-3333-333333333333","type":"COUPLE","togetherColor":"pick-green",
+        "startDate":"2025-05-20","linkedAt":"2026-10-12T03:00:00Z","members":[
+        {"userId":"11111111-1111-1111-1111-111111111111","nickname":"하나","color":"pick-rose","hasProfileImage":false},
+        {"userId":"44444444-4444-4444-4444-444444444444","nickname":"지우","color":"pick-teal","hasProfileImage":false}]}"""
+
+    @Test
+    fun `FR-COUPLE-04 AC1 PATCH space 응답으로 Room을 바로 갱신해 GET me가 실패해도 새 날짜다`() = runTestWithTimeout {
+        val h = harness()
+        h.preload(fixtureCoupleMe())
+        server.enqueue(jsonResponse(200, fullSpaceJson))
+        server.enqueue(jsonResponse(500, errorJson("INTERNAL_ERROR")))
+
+        val result = h.coupleRepository.updateStartDate(LocalDate.of(2025, 5, 20))
+
+        assertEquals(DataResult.Success(Unit), result)
+        assertEquals(LocalDate.of(2025, 5, 20), h.roomMe()!!.space.startDate)
+    }
+
+    @Test
+    fun `FR-CAL-04 AC2 PATCH space colors 응답으로 Room을 바로 갱신해 GET me가 실패해도 새 색이다`() = runTestWithTimeout {
+        val h = harness()
+        h.preload(fixtureCoupleMe())
+        server.enqueue(jsonResponse(200, fullSpaceJson))
+        server.enqueue(jsonResponse(500, errorJson("INTERNAL_ERROR")))
+
+        val result = h.coupleRepository.updateColors(ColorChange(together = "pick-green"))
+
+        assertEquals(DataResult.Success(Unit), result)
+        val space = h.roomMe()!!.space
+        assertEquals("pick-rose", space.myColor)
+        assertEquals("pick-teal", space.partner!!.color)
         assertEquals("pick-green", space.togetherColor)
     }
 

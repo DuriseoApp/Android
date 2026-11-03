@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.settings.account
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.duriseo.android.core.common.social.SocialTokenResult
@@ -36,7 +37,11 @@ class AccountViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val meRepository: MeRepository,
     private val clock: Clock,
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
+
+    /** 커플 연결 화면에서 시작한 연동인가 (경로 인자 `fromCouple`, FR-AUTH-03 AC4). 이때는 연동 성공 안내가 없다 */
+    private val fromCouple: Boolean = savedStateHandle.get<Boolean>(FROM_COUPLE_KEY) ?: false
 
     /** 소셜 SDK가 돌려준 토큰을 어디에 쓰는가 */
     private enum class TokenPurpose {
@@ -137,7 +142,13 @@ class AccountViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = authRepository.link(provider, token)) {
                 // 토큰은 그대로, 내 정보가 Room에서 바뀌면 같은 화면이 회원으로 바뀐다
-                is DataResult.Success -> local.update { it.copy(requesting = false, justLinked = true) }
+                is DataResult.Success -> if (fromCouple) {
+                    // 연동을 마치면 SCR-COUPLE-01로 돌아간다. 성공 안내는 보여 주지 않는다 (SCREENS.md, D-79)
+                    local.update { it.copy(requesting = false) }
+                    effectChannel.trySend(AccountSideEffect.NavigateToCoupleConnect)
+                } else {
+                    local.update { it.copy(requesting = false, justLinked = true) }
+                }
                 is DataResult.Failure -> {
                     if (result.error.isCode(ErrorCode.SOCIAL_ALREADY_USED)) {
                         // 연동은 하지 않는다. 취소하면 게스트로 계속 쓴다 (D-67)
@@ -261,5 +272,8 @@ class AccountViewModel @Inject constructor(
 
     private companion object {
         const val STOP_TIMEOUT_MILLIS = 5_000L
+
+        /** 타입 안전 내비게이션이 경로 인자를 `SavedStateHandle`에 넣는 키 = `SettingsRouteModel.Account.fromCouple` */
+        const val FROM_COUPLE_KEY = "fromCouple"
     }
 }

@@ -80,9 +80,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 // 수치는 보드 `Connect.dc.html`. 토큰에 없는 값이라 이름을 붙인 상수로 둔다 (unit-3.md 확인 필요 14).
 
 /** 본문 위 여백 8, 사이 간격 28, 위쪽 묶음 간격 20 (23·24·26행) */
-private val ContentTop = 8.dp
+private val ContentTop = DuriseoSpacing.Space2
 private val SectionGap = 28.dp
-private val IntroGap = 20.dp
+private val IntroGap = DuriseoSpacing.Space5
 
 /** 떨어진 두 원 그림 164x56, 원 지름 52, 점선 (27~31행) */
 private val GraphicWidth = 164.dp
@@ -98,7 +98,7 @@ private val GraphicDashOff = 8.dp
 
 /** 큰 카드: 최소 높이 136, 안쪽 위아래 20·좌우 22, 모서리 24 (38행) */
 private val CardMinHeight = 136.dp
-private val CardPaddingVertical = 20.dp
+private val CardPaddingVertical = DuriseoSpacing.Space5
 private val CardPaddingHorizontal = 22.dp
 
 /** 카드 아이콘 칸 48, 모서리 16 (40행) */
@@ -109,7 +109,7 @@ private val CardTitleSize = 20.sp
 private val CardTitleLineHeight = 28.sp
 
 /** 카드 부제 위 간격 4 (45행) */
-private val CardTitleGap = 4.dp
+private val CardTitleGap = DuriseoSpacing.Space1
 
 /** 카드 오른쪽 화살표 22 (42행) */
 private val CardChevronSize = 22.dp
@@ -145,7 +145,7 @@ private val GuestBodyLineHeight = 20.8.sp
 
 /** 아래 "다른 계정으로 로그인": 안쪽 위 12·좌우 24·아래 28, 눌리는 영역 안쪽 12 (86~87행) */
 private val OtherAccountBottom = 28.dp
-private val OtherAccountPadding = 12.dp
+private val OtherAccountPadding = DuriseoSpacing.Space3
 
 /** 스낵바는 위에서 40 (SCREENS.md에 이 화면의 위치가 없어 시작 화면과 같게 둔다) */
 private val SnackbarTop = 40.dp

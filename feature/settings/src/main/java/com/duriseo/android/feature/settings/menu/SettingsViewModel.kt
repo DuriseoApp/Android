@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.LocalDate
+import java.time.YearMonth
 import javax.inject.Inject
 
 /**
@@ -90,6 +91,7 @@ class SettingsViewModel @Inject constructor(
             SettingsAction.StartDatePreviousMonth -> moveStartDateMonth(forward = false)
             SettingsAction.StartDateNextMonth -> moveStartDateMonth(forward = true)
             is SettingsAction.StartDateSelected -> selectStartDate(action.date)
+            is SettingsAction.StartDateMonthSelected -> selectStartMonth(action.month)
             SettingsAction.StartDateSaved -> saveStartDate()
             SettingsAction.StartDateSheetDismissed -> {
                 if (local.value.startDateSheet?.saving != true) local.update { it.copy(startDateSheet = null) }
@@ -123,6 +125,14 @@ class SettingsViewModel @Inject constructor(
                 StartDateRules.previousMonth(sheet.visibleMonth)
             }
             if (next == null) current else current.copy(startDateSheet = sheet.copy(visibleMonth = next))
+        }
+    }
+
+    private fun selectStartMonth(month: YearMonth) {
+        if (!StartDateRules.isMonthSelectable(month, LocalDate.now(clock))) return
+        local.update { current ->
+            val sheet = current.startDateSheet ?: return@update current
+            if (sheet.saving) current else current.copy(startDateSheet = sheet.copy(visibleMonth = month))
         }
     }
 

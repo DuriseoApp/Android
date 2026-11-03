@@ -64,14 +64,14 @@ import java.time.temporal.ChronoUnit
  * 앱바 아래 위 여백 4. 출처: 캔버스 원본 `../Docs/design/source/Menu.dc.html` 24행(`padding: 4px 20px 0`).
  * design-system 명세에는 아직 없다 (Docs 후속: "전체 메뉴 본문 위 여백 4" 추가 필요, unit-2.md).
  */
-private val ContentTop = 4.dp
+private val ContentTop = DuriseoSpacing.Space1
 
 /** 덩어리 사이 간격 24 (24행, `space-6`) */
 private val BlockGap = DuriseoSpacing.Space6
 
 /** 현재 색 점 지름 14, 사이 4 (105·206행) */
 private val DotSize = 14.dp
-private val DotGap = 4.dp
+private val DotGap = DuriseoSpacing.Space1
 
 /** 로그아웃 행 높이 52 (139행) */
 private val LogoutHeight = 52.dp
@@ -143,6 +143,7 @@ fun SettingsScreen(
                         onNextMonth = { onAction(SettingsAction.StartDateNextMonth) },
                         onDateSelected = { onAction(SettingsAction.StartDateSelected(it)) },
                         onSave = { onAction(SettingsAction.StartDateSaved) },
+                        onMonthSelected = { onAction(SettingsAction.StartDateMonthSelected(it)) },
                         saveEnabled = sheet.selected != null && !sheet.saving,
                     )
                 }

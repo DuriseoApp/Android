@@ -34,7 +34,7 @@ interface MeRepository {
     /**
      * 연결 해제를 알았을 때의 앱 초기화 (D-103): 로그인 정보를 뺀 로컬 데이터를 지우고 `GET /me`로 새 개인 공간을 채운 뒤
      * [SpaceChange.UNLINKED]를 낸다. `DELETE /couple` 응답 직후, 그리고 `PATCH /space`·`PATCH /space/colors`·
-     * `POST /couple/import`가 409 `NOT_COUPLE`을 줬을 때 부른다. `GET /me`가 실패해도(오프라인) 지운 채로 끝낸다.
+     * `DELETE /couple`이 409 `NOT_COUPLE`을 줬을 때 부른다. `GET /me`가 실패해도(오프라인) 지운 채로 끝낸다.
      */
     suspend fun resetAfterUnlink()
 

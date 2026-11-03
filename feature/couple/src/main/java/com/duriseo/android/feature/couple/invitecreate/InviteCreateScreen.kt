@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.couple.invitecreate
 
+import com.duriseo.android.core.designsystem.theme.DuriseoSize
 import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -82,13 +83,13 @@ import kotlinx.coroutines.launch
 // 토큰에 없는 값이라 이름을 붙인 상수로 둔다 (unit-3.md 확인 필요 14).
 
 /** 본문 위 여백 12, 사이 간격 24 (23행) */
-private val ContentTop = 12.dp
-private val SectionGap = 24.dp
+private val ContentTop = DuriseoSpacing.Space3
+private val SectionGap = DuriseoSpacing.Space6
 
 /** 코드 패널: 안쪽 위 24·좌우 20·아래 20, 사이 14 (28행) */
-private val PanelPaddingTop = 24.dp
-private val PanelPaddingHorizontal = 20.dp
-private val PanelPaddingBottom = 20.dp
+private val PanelPaddingTop = DuriseoSpacing.Space6
+private val PanelPaddingHorizontal = DuriseoSpacing.Space5
+private val PanelPaddingBottom = DuriseoSpacing.Space5
 private val PanelGap = 14.dp
 
 /** 남은 시간 줄: 아이콘 16, 글자와 사이 6 (43행) */
@@ -101,11 +102,11 @@ private val NoticePaddingHorizontal = 14.dp
 private val NoticeLineHeight = 19.5.sp
 
 /** 복사·공유 버튼 줄 위로 4 더, 아이콘 18 (50·55행) */
-private val ButtonsTop = 4.dp
+private val ButtonsTop = DuriseoSpacing.Space1
 private val ButtonIconSize = 18.dp
 
 /** 연결 상태 카드: 안쪽 위아래 16·좌우 18, 모서리 18, 테두리 1 `line-100`, 사이 14 (65행) */
-private val StatusPaddingVertical = 16.dp
+private val StatusPaddingVertical = DuriseoSpacing.Space4
 private val StatusPaddingHorizontal = 18.dp
 private val StatusGap = 14.dp
 private val StatusBorderWidth = 1.dp
@@ -118,15 +119,15 @@ private val StatusDotInner = 8.dp
 private val StatusTextGap = 2.dp
 
 /** [코드 새로 만들기]: 높이 44, 좌우 12, 글자 14/500, 아래 안내 12 (77~84행) */
-private val ReissueHeight = 44.dp
-private val ReissuePaddingHorizontal = 12.dp
+private val ReissueHeight = DuriseoSize.Touch
+private val ReissuePaddingHorizontal = DuriseoSpacing.Space3
 private val ReissueGap = 2.dp
 private val WaitTextSize = 12.sp
 private val WaitTextLineHeight = 16.sp
 
 /** 맨 아래 버튼 영역: 위 16·좌우 24·아래 32 (89행) */
-private val BottomAreaTop = 16.dp
-private val BottomAreaBottom = 32.dp
+private val BottomAreaTop = DuriseoSpacing.Space4
+private val BottomAreaBottom = DuriseoSpacing.Space8
 
 /** 스낵바는 바닥에서 112 (버튼 위, 94행. SCREENS.md "아직 연결 전") */
 private val SnackbarBottom = 112.dp

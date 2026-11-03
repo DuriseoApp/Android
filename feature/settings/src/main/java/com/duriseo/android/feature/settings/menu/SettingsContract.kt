@@ -101,6 +101,9 @@ sealed interface SettingsAction {
     data object StartDateNextMonth : SettingsAction
     data class StartDateSelected(val date: LocalDate) : SettingsAction
 
+    /** 연·월 제목에서 고른 달 (연도·월 선택, 1950-01 ~ 오늘이 든 달) */
+    data class StartDateMonthSelected(val month: YearMonth) : SettingsAction
+
     /** 선택 시트의 [저장]: `PATCH /space {startDate}` (FR-COUPLE-04 AC1) */
     data object StartDateSaved : SettingsAction
     data object StartDateSheetDismissed : SettingsAction
