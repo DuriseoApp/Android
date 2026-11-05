@@ -1,5 +1,6 @@
 package com.duriseo.android.data.repository.couple
 
+import com.duriseo.android.data.local.event.EventLocalDataSource
 import com.duriseo.android.data.local.me.MeLocalDataSource
 import com.duriseo.android.data.remote.couple.CoupleRemoteDataSource
 import com.duriseo.android.data.repository.me.MeWriteLock
@@ -31,6 +32,7 @@ class CoupleRepositoryImpl @Inject constructor(
     private val meLocal: MeLocalDataSource,
     private val networkMonitor: NetworkMonitor,
     private val writeLock: MeWriteLock,
+    private val events: EventLocalDataSource,
 ) : CoupleRepository {
 
     override suspend fun currentInviteCode(): DataResult<InviteCode?> {
@@ -47,7 +49,10 @@ class CoupleRepositoryImpl @Inject constructor(
 
     override suspend fun decideImport(import: Boolean): DataResult<Unit> =
         // 가져오기의 409는 `NO_IMPORT_PENDING`뿐이다 (API.md R-18, 3.2). `NOT_COUPLE`은 오지 않아 초기화하지 않는다
-        networkMonitor.runOnlineWrite { remote.decideImport(import) }.thenRefreshMe()
+        networkMonitor.runOnlineWrite { remote.decideImport(import) }
+            // 개인 공간의 일정이 커플 공간으로 옮겨지거나 지워졌다: 일정 캐시를 비워 다시 받게 한다 (unit-4.md 확인 필요 12)
+            .also { if (it is DataResult.Success) events.clear() }
+            .thenRefreshMe()
 
     override suspend fun updateStartDate(date: LocalDate): DataResult<Unit> =
         networkMonitor.runOnlineWrite { remote.updateStartDate(date) }.thenApplySpace().thenRefreshMe().thenResetIfNotCouple()

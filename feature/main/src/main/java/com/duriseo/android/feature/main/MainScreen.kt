@@ -20,6 +20,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.duriseo.android.core.designsystem.component.DuriseoSnackbarHost
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 import com.duriseo.android.feature.calendar.CalendarScreen
+import com.duriseo.android.feature.calendar.CalendarUiState
 import com.duriseo.android.feature.couple.linkedsheet.LinkedSheetRoute
 import com.duriseo.android.feature.main.component.MainBottomBar
 import com.duriseo.android.feature.main.component.MainTab
@@ -37,6 +38,7 @@ fun MainScreen(
 ) {
     val start by viewModel.start.collectAsState()
     val linkedSheetNeeded by viewModel.linkedSheetNeeded.collectAsState()
+    val personColors by viewModel.personColors.collectAsState()
     val startDestination = navigator.startDestination(start)
 
     val scope = rememberCoroutineScope()
@@ -66,26 +68,29 @@ fun MainScreen(
     }
 
     val currentTab = navigator.currentTab
-    Box {
-        MainScaffold(
-            currentTab = currentTab,
-            showBottomBar = navigator.showBottomBar(),
-            snackbarHostState = snackbarHostState,
-            onTabSelected = navigator::navigate,
-        ) { padding ->
-            // 토큰 저장소를 읽는 동안은 문구 없는 빈 화면이다 (FR-AUTH-01)
-            if (startDestination != null) {
-                MainNavHost(
-                    navigator = navigator,
-                    startDestination = startDestination,
-                    padding = padding,
-                    onShowSnackBar = onShowSnackBar,
-                )
+    // 일정 색 등 사람 색은 내 정보의 색 키에서 온다 (FR-CAL-04 AC1)
+    DuriseoTheme(personColors = personColors) {
+        Box {
+            MainScaffold(
+                currentTab = currentTab,
+                showBottomBar = navigator.showBottomBar(),
+                snackbarHostState = snackbarHostState,
+                onTabSelected = navigator::navigate,
+            ) { padding ->
+                // 토큰 저장소를 읽는 동안은 문구 없는 빈 화면이다 (FR-AUTH-01)
+                if (startDestination != null) {
+                    MainNavHost(
+                        navigator = navigator,
+                        startDestination = startDestination,
+                        padding = padding,
+                        onShowSnackBar = onShowSnackBar,
+                    )
+                }
             }
-        }
-        // 연결 완료 시트(SCR-COUPLE-04)는 캘린더(SCR-CAL-01) 위에 뜬다 (D-48, D-49). 새 내비게이션 경로가 아니다
-        if (linkedSheetNeeded && currentTab == MainTab.CALENDAR) {
-            LinkedSheetRoute()
+            // 연결 완료 시트(SCR-COUPLE-04)는 캘린더(SCR-CAL-01) 위에 뜬다 (D-48, D-49). 새 내비게이션 경로가 아니다
+            if (linkedSheetNeeded && currentTab == MainTab.CALENDAR) {
+                LinkedSheetRoute()
+            }
         }
     }
 }
@@ -105,7 +110,7 @@ internal fun MainScaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         snackbarHost = {
             // 탭 있는 화면의 스낵바 위치는 Docs에서 아직 정하지 않았다 (design-system.md "스낵바").
-            // 정해질 때까지 Scaffold 기본 자리(하단 탭 바로 위)에 둔다. FAB가 생기는 단위 4 전에 정한다.
+            // 정해질 때까지 Scaffold 기본 자리(하단 탭 바로 위)에 둔다. 캘린더 FAB(탭 위 20)와 겹칠 수 있다 (unit-4.md 남은 일).
             DuriseoSnackbarHost(hostState = snackbarHostState)
         },
         bottomBar = {
@@ -129,7 +134,7 @@ private fun MainScreenCalendarTabPreview() {
             snackbarHostState = remember { SnackbarHostState() },
             onTabSelected = {},
         ) { padding ->
-            CalendarScreen(padding = padding, onOpenMenu = {})
+            CalendarScreen(state = CalendarUiState(), padding = padding, onOpenMenu = {}, onAction = {})
         }
     }
 }

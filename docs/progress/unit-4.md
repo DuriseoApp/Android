@@ -1,6 +1,6 @@
 # 단위 4: 캘린더
 
-> 브랜치: `feat/4-calendar` · PR: (링크) · 상태: **범위 확정 대기** (사람 확인 전, 코드 없음)
+> 브랜치: `feat/4-calendar` · PR: (링크) · 상태: **구현 중 (1부)** (확인 필요 1~14는 추천안으로 정해짐, PRD v0.10 반영은 리드 진행 중)
 > 기준: PRD v0.9 (Docs main `728ea08`), SCREENS.md(캔버스 버전 38, 2026-11-01 갱신: SCR-CAL-01~03), API.md 3.3(일정), 1.1, 5장, 6장, design-system.md(FAB, 하단 탭, 스낵바, 다이얼로그), tokens.json
 > 서버: Server 단위 3(캘린더: 일정, 일정 알림, 날짜 범위) 머지됨, 개발 서버 배포됨 (리드 확인, 아래 "서버 연동")
 
@@ -240,6 +240,30 @@
     - 근거: 날짜는 FAB·"+ 이 날에 추가하기"를 누른 시점의 선택된 날로 보는 것이 자연스럽지만 문서에 없다. 시간은 보드 샘플이 "오후 7:30 – 9:30"(`AddEvent.dc.html` 209·210행)이고 샘플 값은 자리표시다(SCREENS 18행). 시작·종료는 필수라 비워 둘 수 없다 (FR-CAL-02 AC1, API.md 283행). 종일을 켰다 끄는 전환 때 시간 값이 어떻게 되는지도 문서에 없다.
     - A (추천): 날짜는 선택된 날(없으면 오늘). 시간은 기기 시계의 다음 정시부터 1시간. 종일을 껐다 켜도 마지막 시간 값을 유지한다. 새 문구는 없고 규칙만이라 Docs에 확인을 요청해 정해지면 맞춘다.
     - B: Docs `/prd-sync`에서 기본값을 정한 뒤 만든다.
+
+## 구현 기록 (1부)
+
+문서로 이미 정해진 부분과 추천안 중 문서를 바꾸지 않는 부분을 만들었다. 이 환경에는 Android SDK가 없어 `./gradlew assembleDebug testDebugUnitTest`를 돌리지 못했다. 컴파일·테스트·Preview 확인은 CI가 한다.
+
+- 데이터: `domain/event`(모델, `EventRules`, `EventRepository`), `data:local`(`event` 테이블, DB v3), `data:remote`(7개 경로, 초 단위 UTC `Z`), `data:repository`(범위 새로고침, `runOnlineWrite`, 공간이 바뀌면 일정 캐시 비움).
+- 디자인 시스템: 날짜 시트가 고를 수 있는 범위를 인자로 받는다(`DatePickerRange`: 기존 `UntilTodayRange`, 일정용 `CalendarDateRange`). `PersonColors`는 `personColorsOf`로 `MainViewModel`이 만들어 `DuriseoTheme`에 넣는다.
+- 화면: `feature:calendar`의 SCR-CAL-01(`CalendarScreen`), SCR-CAL-02(`EventDetailScreen`), SCR-CAL-03(`EventEditScreen`). 캘린더 전용 부품(일정 카드, 날짜 칸 등)은 재사용 처가 없어 `core:designsystem`이 아니라 `feature:calendar` 안에 뒀다.
+- 이동: `CalendarRouteModel.EventDetail/EventEdit`, `MainNavHost`가 상세·작성·수정·색상 변경을 잇는다. 임시 [전체 메뉴] 버튼은 지우고 앱바의 [전체 메뉴]만 남겼다.
+
+### v0.10 반영 대기 (자리만 둔 곳)
+
+| 자리 | 지금 | v0.10에서 정해지면 |
+| --- | --- | --- |
+| 개인 공간 삭제 다이얼로그 본문 (확인 필요 7) | 커플·개인 모두 보드 문구 `event_delete_dialog_body` | 개인 공간 문구 추가 |
+| 일정 날짜 시트의 안내 문구 (확인 필요 1) | 제목 "시작"/"종료"만, 안내 줄 없음 | 문서에 문구가 생기면 `description`/`rangeNote`에 넘김 |
+| 시간 선택 화면 (확인 필요 1) | Material3 `TimePicker`를 시트에 넣음 | 디자인 반영 후 맞춤 |
+| 내 알림 선택 시트 (확인 필요 2) | 상세와 같은 칩 | 디자인 반영 후 맞춤 |
+| 새 일정 기본값 (확인 필요 14) | 선택한 날, 다음 정시부터 1시간 | 정해진 값으로 |
+| 비활성 [저장] 글자색 | `ink-500` (문서에 없음) | 디자인 반영 후 맞춤 |
+| 상세 제목 글자 | 보드 24/700이 토큰에 없어 `title-lg`(22) | 토큰에 24가 생기면 |
+| 범위 끝에서 꺼진 이전·다음 달 버튼 | `ink-300` | 디자인 반영 후 맞춤 |
+| 오류 안내 (확인 필요 10) | `NOT_FOUND`·`NOT_AUTHOR`·`INVALID_TARGET`·`VALIDATION_FAILED`도 공통 오류 스낵바 | 문구가 정해지면 |
+| 스낵바 위치 (확인 필요 6) | Scaffold 기본 자리(탭 바로 위). 캘린더 FAB(탭 위 20)와 겹칠 수 있다 | 위치가 정해지면 |
 
 ## 남은 일
 

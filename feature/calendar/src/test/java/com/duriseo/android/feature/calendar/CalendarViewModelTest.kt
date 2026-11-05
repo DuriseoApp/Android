@@ -1,0 +1,227 @@
+package com.duriseo.android.feature.calendar
+
+import app.cash.turbine.test
+import com.duriseo.android.core.designsystem.R as DesignR
+import com.duriseo.android.domain.event.EventTarget
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDate
+import java.time.YearMonth
+import java.time.ZoneId
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class CalendarViewModelTest {
+
+    private val me = FakeMeRepository(coupleMe())
+    private val couple = FakeCoupleRepository()
+    private val events = FakeEventRepository()
+
+    /** 2026-10-12(월) 오전 10:20, 서울 */
+    private val clock = Clock.fixed(Instant.parse("2026-10-12T01:20:00Z"), ZoneId.of("Asia/Seoul"))
+    private val today = LocalDate.of(2026, 10, 12)
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    private fun TestScope.viewModel(): CalendarViewModel {
+        val vm = CalendarViewModel(events, me, couple, clock)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect { } }
+        return vm
+    }
+
+    @Test
+    fun `FR-CAL-01 AC1 처음 열면 오늘이 속한 달이 보이고 오늘이 선택돼 있다`() = runTest {
+        val state = viewModel().uiState.value
+        assertEquals(YearMonth.of(2026, 10), state.visibleMonth)
+        assertEquals(today, state.selectedDate)
+        assertEquals(today, state.today)
+    }
+
+    @Test
+    fun `FR-CAL-01 AC2 일정이 있는 날에 사람 색 점이 보인다`() = runTest {
+        events.events.value = listOf(sampleEvent(id = "a"), sampleEvent(id = "b", isTogether = true, authorId = PartnerId))
+        val state = viewModel().uiState.value
+        val dots = state.eventsByDay[today].orEmpty().map { it.target }
+        assertEquals(setOf(EventTarget.ME, EventTarget.TOGETHER), dots.toSet())
+        assertNull(state.eventsByDay[today.plusDays(1)])
+    }
+
+    @Test
+    fun `FR-CAL-01 AC2 날짜를 누르면 그 날의 일정이 종일 먼저 시작 시간순으로 나온다`() = runTest {
+        val tenth = LocalDate.of(2026, 10, 14)
+        events.events.value = listOf(
+            sampleEvent(id = "late", title = "늦은", time = timed("2026-10-14T11:00:00Z", "2026-10-14T12:00:00Z")),
+            sampleEvent(id = "early", title = "이른", time = timed("2026-10-14T01:00:00Z", "2026-10-14T02:00:00Z")),
+            sampleEvent(id = "all", title = "종일", time = allDay(tenth)),
+        )
+        val vm = viewModel()
+        vm.onAction(CalendarAction.DateSelected(tenth))
+        assertEquals(listOf("all", "early", "late"), vm.uiState.value.selectedEvents.map { it.id })
+    }
+
+    @Test
+    fun `FR-CAL-01 AC2 선택한 날에 일정이 없으면 빈 안내가 보인다`() = runTest {
+        val vm = viewModel()
+        assertTrue(vm.uiState.value.selectedEvents.isEmpty())
+    }
+
+    @Test
+    fun `FR-CAL-02 AC5 여러 날 일정은 걸친 모든 날에 표시된다`() = runTest {
+        events.events.value = listOf(sampleEvent(id = "trip", time = allDay(LocalDate.of(2026, 10, 17), LocalDate.of(2026, 10, 19))))
+        val byDay = viewModel().uiState.value.eventsByDay
+        assertEquals(listOf(17, 18, 19), byDay.keys.map { it.dayOfMonth }.sorted())
+    }
+
+    @Test
+    fun `FR-CAL-04 AC6 일정 카드에 대상 라벨이 함께 보인다`() = runTest {
+        events.events.value = listOf(sampleEvent(id = "p", authorId = PartnerId))
+        assertEquals(EventTarget.PARTNER, viewModel().uiState.value.selectedEvents.single().target)
+    }
+
+    @Test
+    fun `FR-CAL-01 AC3 커플이고 처음 만난 날이 있으면 D+N이 보인다`() = runTest {
+        me.me.value = coupleMe(startDate = LocalDate.of(2026, 4, 7))
+        val header = viewModel().uiState.value.header as CalendarHeader.Couple
+        assertEquals(189L, header.dayNumber)
+    }
+
+    @Test
+    fun `FR-ANNIV-01 AC1 처음 만난 날 당일은 D+1이다`() = runTest {
+        me.me.value = coupleMe(startDate = today)
+        val header = viewModel().uiState.value.header as CalendarHeader.Couple
+        assertEquals(1L, header.dayNumber)
+    }
+
+    @Test
+    fun `FR-CAL-01 AC5 개인 공간은 내 아바타와 나의 캘린더가 보인다`() = runTest {
+        me.me.value = soloMe()
+        assertEquals(CalendarHeader.Solo("pick-orange"), viewModel().uiState.value.header)
+    }
+
+    @Test
+    fun `FR-ANNIV-01 AC2 개인 공간에는 D-day가 없다`() = runTest {
+        me.me.value = soloMe()
+        assertFalse(viewModel().uiState.value.header is CalendarHeader.Couple)
+    }
+
+    @Test
+    fun `FR-COUPLE-04 AC2 처음 만난 날이 없는 커플은 앱바에 입력 안내가 보인다`() = runTest {
+        me.me.value = coupleMe(startDate = null)
+        val header = viewModel().uiState.value.header as CalendarHeader.Couple
+        assertNull(header.dayNumber)
+    }
+
+    @Test
+    fun `FR-COUPLE-04 AC2 입력 안내를 누르면 처음 만난 날 시트를 연다`() = runTest {
+        me.me.value = coupleMe(startDate = null)
+        val vm = viewModel()
+        vm.onAction(CalendarAction.StartDatePromptClicked)
+        assertNotNull(vm.uiState.value.startDateSheet)
+    }
+
+    @Test
+    fun `FR-COUPLE-04 AC2 시트에서 저장하면 PATCH space를 보내고 D+N이 보인다`() = runTest {
+        me.me.value = coupleMe(startDate = null)
+        val vm = viewModel()
+        vm.onAction(CalendarAction.StartDatePromptClicked)
+        vm.onAction(CalendarAction.StartDateSelected(LocalDate.of(2026, 4, 7)))
+        vm.onAction(CalendarAction.StartDateSaved)
+        assertEquals(listOf(LocalDate.of(2026, 4, 7)), couple.startDateCalls)
+        assertNull(vm.uiState.value.startDateSheet)
+    }
+
+    @Test
+    fun `NFR-OFF-02 오프라인이면 처음 만난 날 저장을 안내하고 시트를 그대로 둔다`() = runTest {
+        me.me.value = coupleMe(startDate = null)
+        couple.startDateResult = Offline
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(CalendarAction.StartDatePromptClicked)
+            vm.onAction(CalendarAction.StartDateSelected(LocalDate.of(2026, 4, 7)))
+            vm.onAction(CalendarAction.StartDateSaved)
+            assertEquals(CalendarSideEffect.ShowMessage(DesignR.string.offline_required), awaitItem())
+        }
+        assertNotNull(vm.uiState.value.startDateSheet)
+        assertFalse(vm.uiState.value.startDateSheet!!.saving)
+    }
+
+    @Test
+    fun `FR-CAL-01 AC6 1950년 1월에서는 이전 달 버튼이 꺼지고 2050년 12월에서는 다음 달 버튼이 꺼진다`() = runTest {
+        val vm = viewModel()
+        vm.onAction(CalendarAction.DateSelected(LocalDate.of(1950, 1, 15)))
+        assertFalse(vm.uiState.value.canGoPrevious)
+        assertTrue(vm.uiState.value.canGoNext)
+        vm.onAction(CalendarAction.DateSelected(LocalDate.of(2050, 12, 15)))
+        assertFalse(vm.uiState.value.canGoNext)
+        vm.onAction(CalendarAction.PreviousMonth)
+        assertTrue(vm.uiState.value.canGoNext)
+    }
+
+    @Test
+    fun `NFR-SYNC-02 월을 넘기면 그 월을 다시 불러온다`() = runTest {
+        val vm = viewModel()
+        vm.onAction(CalendarAction.Shown)
+        vm.onAction(CalendarAction.NextMonth)
+        assertEquals(
+            listOf(
+                LocalDate.of(2026, 10, 1) to LocalDate.of(2026, 10, 31),
+                LocalDate.of(2026, 11, 1) to LocalDate.of(2026, 11, 30),
+            ),
+            events.refreshRanges,
+        )
+        assertEquals(YearMonth.of(2026, 11), vm.uiState.value.visibleMonth)
+    }
+
+    @Test
+    fun `FR-CAL-02 AC1 날짜 목록의 더하기는 선택한 날로 작성 화면을 연다`() = runTest {
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(CalendarAction.AddClicked)
+            assertEquals(CalendarSideEffect.OpenCreate(today), awaitItem())
+        }
+    }
+
+    @Test
+    fun `FR-CAL-03 일정을 누르면 상세를 연다`() = runTest {
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(CalendarAction.EventClicked("e1"))
+            assertEquals(CalendarSideEffect.OpenEvent("e1"), awaitItem())
+        }
+    }
+
+    @Test
+    fun `FR-CAL-01 크게 보기 토글은 펼침과 접힘을 바꾼다`() = runTest {
+        val vm = viewModel()
+        vm.onAction(CalendarAction.ToggleExpanded)
+        assertTrue(vm.uiState.value.expanded)
+        vm.onAction(CalendarAction.ToggleExpanded)
+        assertFalse(vm.uiState.value.expanded)
+    }
+
+    private fun timed(start: String, end: String) =
+        com.duriseo.android.domain.event.EventTime.Timed(Instant.parse(start), Instant.parse(end))
+}

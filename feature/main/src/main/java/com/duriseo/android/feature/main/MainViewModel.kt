@@ -2,6 +2,9 @@ package com.duriseo.android.feature.main
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.duriseo.android.core.designsystem.theme.DefaultPersonColors
+import com.duriseo.android.core.designsystem.theme.PersonColors
+import com.duriseo.android.core.designsystem.theme.personColorsOf
 import com.duriseo.android.domain.auth.AuthRepository
 import com.duriseo.android.domain.auth.AuthState
 import com.duriseo.android.domain.auth.SessionEndReason
@@ -13,6 +16,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -69,6 +73,17 @@ class MainViewModel @Inject constructor(
      */
     val linkedSheetNeeded: StateFlow<Boolean> =
         meRepository.observeLinkedSheetNeeded().stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /**
+     * 사람 색 (FR-CAL-04 AC1). Room의 내 정보에서 나·상대·함께 색 키를 읽어 `DuriseoTheme`에 넣는다.
+     * 내 정보가 없거나 모르는 키면 기본 사람 색이다. 개인 공간은 나 색만 쓴다.
+     */
+    val personColors: StateFlow<PersonColors> = meRepository.observeMe()
+        .map { me ->
+            val space = me?.space ?: return@map DefaultPersonColors
+            personColorsOf(space.myColor, space.partner?.color, space.togetherColor)
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, DefaultPersonColors)
 
     private val effectChannel = Channel<MainEffect>(Channel.BUFFERED)
     val effects = effectChannel.receiveAsFlow()

@@ -29,11 +29,15 @@ import com.duriseo.android.core.designsystem.theme.onPersonColor
 /** 글자 크기는 보드 값 그대로: 72는 24, 56은 20, 굵기 700 (`Menu.dc.html` 199행, `ConnectionInfo.dc.html` 연결 정보) */
 private val AvatarLargeSize = 72.dp
 private val AvatarMediumSize = 56.dp
+private val AvatarSmallSize = 32.dp
 
 /** 아바타 크기 (보드 값: 전체 메뉴 프로필 카드 72, 연결 정보 56) */
 enum class DuriseoAvatarSize(val diameter: Dp, val fontSize: Float) {
     Large(AvatarLargeSize, 24f),
     Medium(AvatarMediumSize, 20f),
+
+    /** 캘린더 앱바: 지름 32, 글자 13/700 (`Calendar.dc.html` 70행 `avatar`) */
+    Small(AvatarSmallSize, 13f),
 }
 
 /**
