@@ -167,60 +167,6 @@ class FakeEventRepository(initial: List<Event> = emptyList()) : EventRepository 
         return DataResult.Success(made)
     }
 
-    override suspend fun updateColors(change: ColorChange): DataResult<Unit> = error("캘린더는 쓰지 않아요")
-    override suspend fun unlink(): DataResult<Unit> = error("캘린더는 쓰지 않아요")
-
-    override suspend fun updateStartDate(date: LocalDate): DataResult<Unit> {
-        startDateCalls += date
-        return startDateResult
-    }
-}
-
-/** Room처럼 동작하는 가짜 저장소: 쓰기가 성공하면 [events]가 바뀌고 Flow가 따라온다 */
-class FakeEventRepository(initial: List<Event> = emptyList()) : EventRepository {
-    val events = MutableStateFlow(initial)
-
-    val refreshRanges = mutableListOf<Pair<LocalDate, LocalDate>>()
-    val refreshedIds = mutableListOf<String>()
-    val created = mutableListOf<NewEvent>()
-    val patches = mutableListOf<Pair<String, EventPatch>>()
-    val deleted = mutableListOf<String>()
-    val reminderCalls = mutableListOf<Pair<String, ReminderOption?>>()
-
-    var createResult: DataResult<Unit> = DataResult.Success(Unit)
-    var updateResult: DataResult<Unit> = DataResult.Success(Unit)
-    var deleteResult: DataResult<Unit> = DataResult.Success(Unit)
-    var reminderResult: DataResult<Unit> = DataResult.Success(Unit)
-    var refreshEventResult: DataResult<Unit> = DataResult.Success(Unit)
-
-    override fun observeEvents(from: LocalDate, to: LocalDate, zone: ZoneId): Flow<List<Event>> =
-        events.map { list ->
-            list.filter { e ->
-                EventRules.firstDay(e, zone) <= to && EventRules.lastDay(e, zone) >= from
-            }
-        }
-
-    override fun observeEvent(id: String): Flow<Event?> = events.map { list -> list.firstOrNull { it.id == id } }
-
-    override suspend fun refreshRange(from: LocalDate, to: LocalDate, zone: ZoneId): DataResult<Unit> {
-        refreshRanges += from to to
-        return DataResult.Success(Unit)
-    }
-
-    override suspend fun refreshEvent(id: String): DataResult<Unit> {
-        refreshedIds += id
-        return refreshEventResult
-    }
-
-    override suspend fun create(event: NewEvent): DataResult<Event> {
-        created += event
-        val failure = createResult as? DataResult.Failure ?: return DataResult.Success(
-            event(id = "new-${created.size}", title = event.title, note = event.note, time = event.time, isTogether = event.isTogether == true)
-                .also { events.value = events.value + it },
-        )
-        return failure
-    }
-
     override suspend fun update(id: String, patch: EventPatch): DataResult<Unit> {
         patches += id to patch
         return updateResult
