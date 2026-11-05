@@ -38,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -519,11 +520,18 @@ private fun DayCell(
     val isToday = inMonth && date == state.today
     val circle = if (expanded) ExpandedDaySize else CollapsedDaySize
     val description = stringResource(R.string.calendar_day_description, date.monthValue, date.dayOfMonth)
+    // joinToString 람다는 @Composable이 아니라서 문구와 대상 라벨을 먼저 읽어 둔다
+    val resources = LocalContext.current.resources
+    val targetLabels = mapOf(
+        EventTarget.ME to EventTarget.ME.label(),
+        EventTarget.PARTNER to EventTarget.PARTNER.label(),
+        EventTarget.TOGETHER to EventTarget.TOGETHER.label(),
+    )
     val label = if (events.isEmpty()) {
         description
     } else {
         val summary = events.joinToString(", ") {
-            stringResource(R.string.calendar_day_event_summary, it.target.label(), it.title)
+            resources.getString(R.string.calendar_day_event_summary, targetLabels.getValue(it.target), it.title)
         }
         stringResource(R.string.calendar_day_description_with_events, description, events.size, summary)
     }
