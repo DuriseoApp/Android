@@ -27,7 +27,8 @@
 | `docs/CONVENTIONS.md` | MVI·Compose·문구·이름·테스트·커밋 규칙 |
 | `docs/PLAN.md` | 작업 단위와 순서. 지금 어디까지 했는지 |
 | `docs/SETUP.md` | 맥 설정, `local.properties` 설정값, CI |
-| `docs/progress/` | 작업 단위별 진행 기록 |
+| `docs/progress/` | 지금 하는 작업 단위의 진행 기록. 끝난 단위는 `archive/`에 있다 (넘어온 일은 `docs/PLAN.md`) |
+| `.claude/agents/`, `.claude/skills/` | 구현·리뷰 에이전트와 Skill (`/dev-unit`, `/new-screen`, `/add-api`, `/new-feature-module`, `/sync-tokens`) |
 | 폴더별 `CLAUDE.md` | 그 폴더를 다룰 때만 필요한 규칙 (`app/`, `build-logic/`, `core/designsystem/`, `data/`, `feature/`) |
 
 ## 가장 중요한 규칙
@@ -41,7 +42,7 @@
 ## 빌드와 확인
 
 - 코드를 고친 뒤 `./gradlew assembleDebug testDebugUnitTest`로 빌드와 단위 테스트를 확인한다. 실패하면 고쳐서 성공할 때까지 반복한다.
-- Android SDK나 Google Maven에 닿지 않는 환경(클라우드 세션 등)이면 PR을 연 뒤 `gh pr checks`로 CI 결과를 확인한다. **CI가 초록불이 아니면 작업이 끝난 게 아니다.**
+- Android SDK나 Google Maven에 닿지 않는 환경(클라우드 세션 등)이면 PR을 연 뒤 `gh pr checks`로 CI 결과를 확인한다. CI는 `pull_request`에서만 도니 브랜치 push만으로는 돌지 않는다. draft PR을 먼저 연다. **CI가 초록불이 아니면 작업이 끝난 게 아니다.**
 
 ## Git
 
