@@ -44,6 +44,7 @@ fun NavGraphBuilder.calendarNavGraph(
     onOpenColors: () -> Unit,
     onBack: () -> Unit,
     onShowSnackBar: (Int) -> Unit,
+    snackbarVisible: Boolean = false,
 ) {
     composable<MainRouteModel.Calendar> { entry ->
         CalendarRoute(
@@ -53,6 +54,7 @@ fun NavGraphBuilder.calendarNavGraph(
             onOpenEvent = onOpenEvent,
             onOpenCreate = onOpenCreate,
             onShowSnackBar = onShowSnackBar,
+            snackbarVisible = snackbarVisible,
         )
     }
     composable<CalendarRouteModel.EventDetail> { entry ->

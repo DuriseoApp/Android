@@ -2,6 +2,7 @@ package com.duriseo.android.feature.main
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -20,6 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.duriseo.android.core.designsystem.component.DuriseoSnackbarHost
 import com.duriseo.android.core.designsystem.component.DuriseoTopSnackbarHost
+import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 import com.duriseo.android.feature.calendar.CalendarScreen
 import com.duriseo.android.feature.calendar.CalendarUiState
@@ -32,6 +34,9 @@ import com.duriseo.android.feature.main.navigation.MainNavigator
 import com.duriseo.android.feature.main.navigation.rememberMainNavigator
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+
+/** 스낵바와 하단 탭(80) 사이 간격 16 (SCREENS.md 42·85행, `Calendar.dc.html` 148행: 바닥에서 96 = 탭 80 + 16) */
+private val SnackbarAboveTab = DuriseoSpacing.Space4
 
 @Composable
 fun MainScreen(
@@ -84,6 +89,7 @@ fun MainScreen(
                 if (startDestination != null) {
                     MainNavHost(
                         navigator = navigator,
+                        snackbarVisible = snackbarHostState.currentSnackbarData != null,
                         startDestination = startDestination,
                         padding = padding,
                         onShowSnackBar = onShowSnackBar,
@@ -113,8 +119,14 @@ internal fun MainScaffold(
         Scaffold(
             containerColor = MaterialTheme.colorScheme.surface,
             snackbarHost = {
-                // 위에서 띄우는 화면(SCR-CAL-01~03)은 아래 Box 위층에서 그린다. 나머지는 Scaffold 기본 자리
-                if (!snackbarAtTop) DuriseoSnackbarHost(hostState = snackbarHostState)
+                // 위에서 띄우는 화면(SCR-CAL-02·03)은 아래 Box 위층에서 그린다. 나머지는 Scaffold 기본 자리.
+                // 하단 탭이 있는 화면(SCR-CAL-01)은 탭 위로 16 띄운다: 바닥에서 96 (SCREENS.md 42·85행)
+                if (!snackbarAtTop) {
+                    DuriseoSnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = if (showBottomBar) Modifier.padding(bottom = SnackbarAboveTab) else Modifier,
+                    )
+                }
             },
             bottomBar = {
                 MainBottomBar(
@@ -125,7 +137,7 @@ internal fun MainScaffold(
             },
             content = content,
         )
-        // 탭 있는 화면(SCR-CAL-01~03)의 스낵바는 위치 그림이 나올 때까지 위에서 40 (SCREENS.md 공통 "스낵바", D-88)
+        // 하단 탭이 없는 SCR-CAL-02·03의 스낵바는 위에서 40 (SCREENS.md 112·142행, D-88)
         if (snackbarAtTop) {
             DuriseoTopSnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.TopCenter))
         }
