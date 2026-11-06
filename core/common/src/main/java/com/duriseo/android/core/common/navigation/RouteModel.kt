@@ -18,6 +18,22 @@ sealed interface MainRouteModel : RouteModel {
     data object Settings : MainRouteModel
 }
 
+/** 캘린더에서 들어가는 일정 화면 (`feature:calendar`). 하단 탭이 없다 */
+sealed interface CalendarRouteModel : RouteModel {
+    /** 일정 상세 (SCR-CAL-02) */
+    @Serializable
+    data class EventDetail(val eventId: String) : CalendarRouteModel
+
+    /**
+     * 일정 작성·수정 (SCR-CAL-03).
+     *
+     * @property eventId 있으면 수정, 없으면 새로 추가
+     * @property date 새로 추가할 때 처음 채울 날짜 (`YYYY-MM-DD`, 캘린더에서 선택한 날). 없으면 오늘
+     */
+    @Serializable
+    data class EventEdit(val eventId: String? = null, val date: String? = null) : CalendarRouteModel
+}
+
 /** 로그인 전 화면 (`feature:auth`). 하단 탭이 없다. */
 sealed interface AuthRouteModel : RouteModel {
     /**

@@ -2,6 +2,8 @@ package com.duriseo.android.data.local.db
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import com.duriseo.android.data.local.event.EventDao
+import com.duriseo.android.data.local.event.EventEntity
 import com.duriseo.android.data.local.me.MeDao
 import com.duriseo.android.data.local.me.MeEntity
 
@@ -12,14 +14,18 @@ import com.duriseo.android.data.local.me.MeEntity
  *
  * 버전 2 (단위 3): `me`에 `linked_at`, `import_events`, `import_anniversaries`, `import_memos`를 더했다
  * (API.md 3.1 `MeSpace.linkedAt`·`importCounts`). 출시 전이라 마이그레이션 없이 지우고 다시 만든다 (캐시, unit-3.md 결정 15).
+ *
+ * 버전 3 (단위 4): `event` 테이블을 더했다 (API.md 3.3 `Event`). 같은 방식으로 지우고 다시 만든다.
  */
 @Database(
-    entities = [MeEntity::class],
-    version = 2,
+    entities = [MeEntity::class, EventEntity::class],
+    version = 3,
     exportSchema = true,
 )
 abstract class DuriseoDatabase : RoomDatabase() {
     abstract fun meDao(): MeDao
+
+    abstract fun eventDao(): EventDao
 
     companion object {
         const val NAME = "duriseo.db"

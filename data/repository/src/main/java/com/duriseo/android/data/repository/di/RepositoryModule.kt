@@ -3,10 +3,12 @@ package com.duriseo.android.data.repository.di
 import com.duriseo.android.data.repository.auth.AuthRepositoryImpl
 import com.duriseo.android.data.repository.auth.SessionManager
 import com.duriseo.android.data.repository.couple.CoupleRepositoryImpl
+import com.duriseo.android.data.repository.event.EventRepositoryImpl
 import com.duriseo.android.data.repository.me.MeRepositoryImpl
 import com.duriseo.android.domain.auth.AuthRepository
 import com.duriseo.android.domain.auth.SessionEndNotifier
 import com.duriseo.android.domain.couple.CoupleRepository
+import com.duriseo.android.domain.event.EventRepository
 import com.duriseo.android.domain.me.MeRepository
 import dagger.Binds
 import dagger.Module
@@ -27,6 +29,9 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindCoupleRepository(impl: CoupleRepositoryImpl): CoupleRepository
+
+    @Binds
+    abstract fun bindEventRepository(impl: EventRepositoryImpl): EventRepository
 
     /** `data:remote`의 Authenticator가 세션 종료를 알릴 때 쓴다 (`data:remote`는 이 모듈을 모른다) */
     @Binds

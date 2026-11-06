@@ -50,6 +50,8 @@ ViewModel → Repository.create/update/delete → (오프라인이면 즉시 Off
 - 낙관적 갱신을 하지 않는다. 서버가 성공해야 Room을 바꾼다.
 - 오프라인에서 쓰기를 누르면 실행하지 않고 "인터넷 연결이 필요해요"를 보여 준다. 리포지토리는 쓰기를 `NetworkMonitor.runOnlineWrite { … }`(`data:repository`)로 감싸 오프라인이면 API를 부르지 않고 `Offline`을 돌려준다.
 - 동시 수정은 마지막 저장이 이긴다 (NFR-SYNC-03). 앱에서 따로 막지 않는다.
+- 범위로 불러오는 목록(일정 `GET /events`)은 응답을 받으면 그 범위에 걸친 행을 지우고 새로 넣는다(한 트랜잭션). 서버에서 지워진 항목이 남지 않는다.
+- 공간이 바뀌면(연결, 가져오기 결정, 다른 커플 공간으로 `GET /me`) 일정 캐시를 비운다. 해제·로그아웃·탈퇴는 `clearAllTables`가 비운다. 다른 공간의 일정이 잠깐이라도 보이면 안 되기 때문이다 (unit-4.md 확인 필요 12-A).
 
 **동기화 신호** (NFR-SYNC-01, API.md 동기화 신호 장)
 

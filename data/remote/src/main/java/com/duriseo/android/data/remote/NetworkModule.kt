@@ -5,6 +5,7 @@ import com.duriseo.android.core.common.config.AppConfig
 import com.duriseo.android.data.remote.auth.AuthApi
 import com.duriseo.android.data.remote.auth.AuthSessionApi
 import com.duriseo.android.data.remote.couple.CoupleApi
+import com.duriseo.android.data.remote.event.EventApi
 import com.duriseo.android.data.remote.json.createApiJson
 import com.duriseo.android.data.remote.me.MeApi
 import com.duriseo.android.data.remote.network.AndroidNetworkMonitor
@@ -152,6 +153,10 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideCoupleApi(@Authed retrofit: Retrofit): CoupleApi = retrofit.create(CoupleApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideEventApi(@Authed retrofit: Retrofit): EventApi = retrofit.create(EventApi::class.java)
 }
 
 @Module

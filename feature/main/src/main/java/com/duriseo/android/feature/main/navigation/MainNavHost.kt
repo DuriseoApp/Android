@@ -61,14 +61,19 @@ fun MainNavHost(
         )
         calendarNavGraph(
             padding = padding,
-            // 단위 4의 캘린더 앱바가 생기기 전까지 임시 [전체 메뉴] 버튼 (unit-2.md 확인 필요 3)
             onOpenMenu = navigator::navigateToSettings,
+            onOpenEvent = navigator::navigateToEventDetail,
+            onOpenCreate = navigator::navigateToEventCreate,
+            onOpenEdit = navigator::navigateToEventEdit,
+            onOpenColors = navigator::navigateToColors,
+            onBack = navigator::navigateUp,
+            onShowSnackBar = onShowSnackBar,
         )
         // feature:memo(단위 6)가 생기면 그 모듈의 그래프로 바꾼다
         composable<MainRouteModel.Memo> {
             MemoTabPlaceholder(padding = padding)
         }
-        // 하단 탭이 아니다. 진입은 캘린더 앱바(단위 4)
+        // 하단 탭이 아니다. 진입은 캘린더 앱바
         settingsNavGraph(
             padding = padding,
             onClose = navigator::navigateUp,

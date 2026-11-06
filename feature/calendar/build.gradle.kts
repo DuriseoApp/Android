@@ -10,4 +10,7 @@ dependencies {
     implementation(projects.core.designsystem)
     implementation(projects.core.common)
     implementation(projects.domain)
+
+    // EventDetail/EventEditViewModel이 경로 인자를 SavedStateHandle.toRoute로 읽어 Bundle이 필요하다 (feature:settings와 같다)
+    testImplementation(libs.robolectric)
 }

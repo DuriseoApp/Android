@@ -1,11 +1,17 @@
 package com.duriseo.android.feature.main
 
 import app.cash.turbine.test
+import com.duriseo.android.core.designsystem.theme.DefaultPersonColors
+import com.duriseo.android.core.designsystem.theme.DuriseoPickPalette
 import com.duriseo.android.domain.auth.AuthRepository
 import com.duriseo.android.domain.auth.AuthState
 import com.duriseo.android.domain.auth.LoginResult
 import com.duriseo.android.domain.auth.SessionEndReason
+import com.duriseo.android.domain.me.AccountType
 import com.duriseo.android.domain.me.Me
+import com.duriseo.android.domain.me.MePartner
+import com.duriseo.android.domain.me.MeSpace
+import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.me.SocialProvider
 import com.duriseo.android.domain.me.SpaceChange
@@ -25,6 +31,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelTest {
@@ -172,5 +179,70 @@ class MainViewModelTest {
 
         meRepository.sheetNeeded.value = false
         assertFalse(vm.linkedSheetNeeded.value)
+    }
+
+    private fun meWithColors(my: String, partner: String?, together: String?) = Me(
+        id = "m1",
+        accountType = AccountType.MEMBER,
+        nickname = "민지",
+        timeZone = "Asia/Seoul",
+        providers = emptyList(),
+        hasProfileImage = false,
+        createdAt = Instant.EPOCH,
+        space = MeSpace(
+            id = "s1",
+            type = if (partner == null) SpaceType.PERSONAL else SpaceType.COUPLE,
+            myColor = my,
+            partner = partner?.let { MePartner("p1", "지우", it, false) },
+            togetherColor = together,
+            startDate = null,
+            importPending = false,
+        ),
+    )
+
+    @Test
+    fun `FR-CAL-04 AC1 내 정보가 오기 전에는 기본 사람 색이다`() = runTest {
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        assertEquals(DefaultPersonColors, vm.personColors.value)
+    }
+
+    @Test
+    fun `FR-CAL-04 AC1 내 정보의 색으로 DuriseoTheme에 PersonColors를 넣는다`() = runTest {
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        meRepository.me.value = meWithColors("pick-rose", "pick-blue", "pick-purple")
+
+        val colors = vm.personColors.value
+        assertEquals(DuriseoPickPalette.colorOf("pick-rose"), colors.me)
+        assertEquals(DuriseoPickPalette.colorOf("pick-blue"), colors.partner)
+        assertEquals(DuriseoPickPalette.colorOf("pick-purple"), colors.together)
+    }
+
+    @Test
+    fun `FR-CAL-04 AC1 색을 바꾸면 캘린더 일정 색이 바뀐다`() = runTest {
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        meRepository.me.value = meWithColors("pick-rose", "pick-blue", "pick-purple")
+        meRepository.me.value = meWithColors("pick-green", "pick-blue", "pick-purple")
+
+        assertEquals(DuriseoPickPalette.colorOf("pick-green"), vm.personColors.value.me)
+    }
+
+    @Test
+    fun `FR-CAL-04 AC1 개인 공간은 나 색만 바꾸고 나머지는 기본 사람 색이다`() = runTest {
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        meRepository.me.value = meWithColors("pick-teal", null, null)
+
+        val colors = vm.personColors.value
+        assertEquals(DuriseoPickPalette.colorOf("pick-teal"), colors.me)
+        assertEquals(DefaultPersonColors.partner, colors.partner)
+        assertEquals(DefaultPersonColors.together, colors.together)
+    }
+
+    @Test
+    fun `FR-CAL-04 AC1 모르는 팔레트 키는 기본 사람 색으로 그린다`() = runTest {
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        meRepository.me.value = meWithColors("pick-unknown", "pick-blue", "nope")
+
+        assertEquals(DefaultPersonColors.me, vm.personColors.value.me)
+        assertEquals(DefaultPersonColors.together, vm.personColors.value.together)
     }
 }

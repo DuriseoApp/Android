@@ -2,6 +2,7 @@ package com.duriseo.android.data.local.db
 
 import android.content.Context
 import androidx.room.Room
+import com.duriseo.android.data.local.event.EventDao
 import com.duriseo.android.data.local.me.MeDao
 import dagger.Module
 import dagger.Provides
@@ -24,4 +25,7 @@ object DatabaseModule {
 
     @Provides
     fun provideMeDao(database: DuriseoDatabase): MeDao = database.meDao()
+
+    @Provides
+    fun provideEventDao(database: DuriseoDatabase): EventDao = database.eventDao()
 }

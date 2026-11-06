@@ -52,7 +52,6 @@ import com.duriseo.android.core.designsystem.theme.Ink500
 import com.duriseo.android.core.designsystem.theme.Ink600
 import com.duriseo.android.core.designsystem.theme.Ink900
 import com.duriseo.android.core.designsystem.theme.OnBrand
-import com.duriseo.android.domain.couple.StartDateRules
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -110,6 +109,10 @@ private const val CHEVRON_DOWN_ROTATION = 90f
  * - 상태는 호출하는 쪽이 들고 있다: 보이는 달 [visibleMonth], 고른 날 [selectedDate].
  *
  * @param saveEnabled [저장]을 누를 수 있는지. 보드는 항상 켜져 있다
+ * @param range 고를 수 있는 날짜 범위. 기본은 1950-01-01 ~ [today]. 일정은 [CalendarDateRange] (FR-CAL-01 AC6)
+ * @param title 시트 제목. 기본은 "처음 만난 날". 일정은 "시작"·"종료" (새 문구를 만들지 않는다)
+ * @param description 제목 아래 설명. null이면 줄이 없다
+ * @param rangeNote 달력 아래 안내. null이면 줄이 없다 (일정은 안내 문구가 문서에 없다, unit-4.md 확인 필요 1)
  */
 @Composable
 fun StartDatePickerSheet(
@@ -123,6 +126,10 @@ fun StartDatePickerSheet(
     modifier: Modifier = Modifier,
     saveEnabled: Boolean = true,
     onMonthSelected: ((YearMonth) -> Unit)? = null,
+    range: DatePickerRange = UntilTodayRange(today),
+    title: String = stringResource(R.string.start_date_sheet_title),
+    description: String? = stringResource(R.string.start_date_sheet_description),
+    rangeNote: String? = stringResource(R.string.start_date_sheet_range_note),
 ) {
     // 연도·월 선택이 열려 있는지, 열려 있다면 어느 해의 월을 고르는 중인지(null이면 연도 목록)
     var pickerOpen by remember { mutableStateOf(false) }
@@ -133,24 +140,26 @@ fun StartDatePickerSheet(
             verticalArrangement = Arrangement.spacedBy(TitleGap),
         ) {
             Text(
-                text = stringResource(R.string.start_date_sheet_title),
+                text = title,
                 modifier = Modifier.semantics { heading() },
                 style = MaterialTheme.typography.titleLarge,
                 color = Ink900,
             )
-            Text(
-                text = stringResource(R.string.start_date_sheet_description),
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = FontWeight.Normal,
-                    lineHeight = DescriptionLineHeight,
-                ),
-                color = Ink600,
-            )
+            if (description != null) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Normal,
+                        lineHeight = DescriptionLineHeight,
+                    ),
+                    color = Ink600,
+                )
+            }
         }
         MonthHeader(
             visibleMonth = visibleMonth,
-            canGoPrevious = StartDateRules.previousMonth(visibleMonth) != null,
-            canGoNext = StartDateRules.nextMonth(visibleMonth, today) != null,
+            canGoPrevious = range.previousMonth(visibleMonth) != null,
+            canGoNext = range.nextMonth(visibleMonth) != null,
             onPreviousMonth = onPreviousMonth,
             onNextMonth = onNextMonth,
             pickerOpen = pickerOpen,
@@ -165,7 +174,7 @@ fun StartDatePickerSheet(
             if (pickerOpen && onMonthSelected != null) {
                 YearMonthPicker(
                     visibleMonth = visibleMonth,
-                    today = today,
+                    range = range,
                     year = pickerYear,
                     onYearSelected = { pickerYear = it },
                     onBackToYears = { pickerYear = null },
@@ -179,19 +188,21 @@ fun StartDatePickerSheet(
                 MonthGrid(
                     visibleMonth = visibleMonth,
                     selectedDate = selectedDate,
-                    today = today,
+                    range = range,
                     onDateSelected = onDateSelected,
                 )
             }
-            Text(
-                text = stringResource(R.string.start_date_sheet_range_note),
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = NoteFontSize,
-                    lineHeight = NoteLineHeight,
-                    fontWeight = FontWeight.Normal,
-                ),
-                color = Ink600,
-            )
+            if (rangeNote != null) {
+                Text(
+                    text = rangeNote,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontSize = NoteFontSize,
+                        lineHeight = NoteLineHeight,
+                        fontWeight = FontWeight.Normal,
+                    ),
+                    color = Ink600,
+                )
+            }
         }
         DuriseoLargeButton(
             text = stringResource(R.string.start_date_sheet_save),
@@ -292,7 +303,7 @@ private fun MonthButton(iconRes: Int, description: String, enabled: Boolean, onC
 private fun MonthGrid(
     visibleMonth: YearMonth,
     selectedDate: LocalDate?,
-    today: LocalDate,
+    range: DatePickerRange,
     onDateSelected: (LocalDate) -> Unit,
 ) {
     val weekdays = stringArrayResource(R.array.weekday_short)
@@ -335,7 +346,7 @@ private fun MonthGrid(
                                 date = date,
                                 column = column,
                                 selected = date == selectedDate,
-                                selectable = StartDateRules.isSelectable(date, today),
+                                selectable = range.isSelectable(date),
                                 onClick = { onDateSelected(date) },
                             )
                         }
@@ -353,7 +364,7 @@ private fun MonthGrid(
 @Composable
 private fun YearMonthPicker(
     visibleMonth: YearMonth,
-    today: LocalDate,
+    range: DatePickerRange,
     year: Int?,
     onYearSelected: (Int) -> Unit,
     onBackToYears: () -> Unit,
@@ -361,7 +372,7 @@ private fun YearMonthPicker(
 ) {
     val height = WeekdayHeight + DayRowHeight * 6 + DayRowGap * 5
     if (year == null) {
-        val years = StartDateRules.years(today)
+        val years = range.years()
         // 열면 지금 고른 연도가 보이는 줄로 스크롤해 둔다
         val gridState = rememberLazyGridState(
             initialFirstVisibleItemIndex = years.indexOf(visibleMonth.year).coerceAtLeast(0),
@@ -417,7 +428,7 @@ private fun YearMonthPicker(
                             PickerCell(
                                 text = stringResource(R.string.start_date_sheet_month_name, m),
                                 selected = month == visibleMonth,
-                                enabled = StartDateRules.isMonthSelectable(month, today),
+                                enabled = range.isMonthSelectable(month),
                                 onClick = { onMonthSelected(month) },
                             )
                         }
@@ -506,6 +517,7 @@ private fun PreviewSheet(
     selected: LocalDate?,
     today: LocalDate = LocalDate.of(2026, 4, 30),
 ) {
+    val range = UntilTodayRange(today)
     DuriseoTheme {
         var visibleMonth by remember { mutableStateOf(month) }
         var selectedDate by remember { mutableStateOf(selected) }
@@ -519,8 +531,8 @@ private fun PreviewSheet(
                 visibleMonth = visibleMonth,
                 selectedDate = selectedDate,
                 today = today,
-                onPreviousMonth = { StartDateRules.previousMonth(visibleMonth)?.let { visibleMonth = it } },
-                onNextMonth = { StartDateRules.nextMonth(visibleMonth, today)?.let { visibleMonth = it } },
+                onPreviousMonth = { range.previousMonth(visibleMonth)?.let { visibleMonth = it } },
+                onNextMonth = { range.nextMonth(visibleMonth)?.let { visibleMonth = it } },
                 onDateSelected = { selectedDate = it },
                 onSave = {},
                 onMonthSelected = { visibleMonth = it },
@@ -554,7 +566,7 @@ private fun StartDatePickerSheetEarliestMonthPreview() = PreviewSheet(YearMonth.
 @Composable
 private fun YearMonthPickerYearsPreview() {
     DuriseoTheme {
-        YearMonthPicker(YearMonth.of(2026, 4), LocalDate.of(2026, 4, 30), null, {}, {}, {})
+        YearMonthPicker(YearMonth.of(2026, 4), UntilTodayRange(LocalDate.of(2026, 4, 30)), null, {}, {}, {})
     }
 }
 
@@ -563,6 +575,6 @@ private fun YearMonthPickerYearsPreview() {
 @Composable
 private fun YearMonthPickerMonthsPreview() {
     DuriseoTheme {
-        YearMonthPicker(YearMonth.of(2026, 4), LocalDate.of(2026, 4, 30), 2026, {}, {}, {})
+        YearMonthPicker(YearMonth.of(2026, 4), UntilTodayRange(LocalDate.of(2026, 4, 30)), 2026, {}, {}, {})
     }
 }

@@ -74,4 +74,29 @@ class PersonColorsTest {
         assertEquals(Color(0xFF6D4AE0), DefaultPersonColors.together)
         assertEquals(PersonColors(PersonMe, PersonPartner, PersonTogether), DefaultPersonColors)
     }
+
+    @Test
+    fun `FR-CAL-04 AC1 내 정보의 색 키로 PersonColors를 만든다`() {
+        val colors = personColorsOf("pick-rose", "pick-green", "pick-teal")
+
+        assertEquals(DuriseoPickPalette.colorOf("pick-rose"), colors.me)
+        assertEquals(DuriseoPickPalette.colorOf("pick-green"), colors.partner)
+        assertEquals(DuriseoPickPalette.colorOf("pick-teal"), colors.together)
+    }
+
+    @Test
+    fun `FR-CAL-04 AC5 개인 공간은 나 색만 바뀌고 나머지는 기본 색이다`() {
+        val colors = personColorsOf("pick-rose", null, null)
+
+        assertEquals(DuriseoPickPalette.colorOf("pick-rose"), colors.me)
+        assertEquals(DefaultPersonColors.partner, colors.partner)
+        assertEquals(DefaultPersonColors.together, colors.together)
+    }
+
+    @Test
+    fun `FR-CAL-04 AC1 모르는 팔레트 키는 기본 사람 색으로 그린다`() {
+        val colors = personColorsOf("pick-new-color", "orange", "")
+
+        assertEquals(DefaultPersonColors, colors)
+    }
 }

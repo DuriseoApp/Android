@@ -65,6 +65,17 @@ object DuriseoPickPalette {
     fun colorOf(key: String): Color? = colors.firstOrNull { it.key == key }?.color
 }
 
+/**
+ * 서버 팔레트 키로 사람 색을 만든다 (`Me.space`의 `myColor`·`partner.color`·`togetherColor`, FR-CAL-04 AC1).
+ * 모르는 키(또는 없는 값)는 그 사람의 기본 색으로 둔다 (API.md 3.2 "앱 동작": 오류로 보지 않는다).
+ * 개인 공간은 나 색만 쓰므로 [partnerKey]·[togetherKey]가 null이다.
+ */
+fun personColorsOf(myKey: String?, partnerKey: String?, togetherKey: String?): PersonColors = PersonColors(
+    me = myKey?.let { DuriseoPickPalette.colorOf(it) } ?: DefaultPersonColors.me,
+    partner = partnerKey?.let { DuriseoPickPalette.colorOf(it) } ?: DefaultPersonColors.partner,
+    together = togetherKey?.let { DuriseoPickPalette.colorOf(it) } ?: DefaultPersonColors.together,
+)
+
 /** 이 값보다 상대휘도가 크면 사람 색 위 글자를 [Ink900]으로 쓴다 (design-system.md "사람 색 규칙"). */
 private const val LIGHT_BACKGROUND_LUMINANCE = 0.2f
 

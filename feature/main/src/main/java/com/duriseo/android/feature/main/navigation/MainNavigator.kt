@@ -8,9 +8,14 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navOptions
 import androidx.navigation.NavOptionsBuilder
+import androidx.navigation.NavDestination.Companion.hasRoute
 import com.duriseo.android.core.common.navigation.AuthRouteModel
+import com.duriseo.android.core.common.navigation.CalendarRouteModel
 import com.duriseo.android.core.common.navigation.MainRouteModel
 import com.duriseo.android.feature.calendar.navigation.navigateToCalendar
+import com.duriseo.android.feature.calendar.navigation.navigateToEventCreate
+import com.duriseo.android.feature.calendar.navigation.navigateToEventDetail
+import com.duriseo.android.feature.calendar.navigation.navigateToEventEdit
 import com.duriseo.android.feature.couple.navigation.navigateToConnect
 import com.duriseo.android.feature.couple.navigation.navigateToInviteCreate
 import com.duriseo.android.feature.couple.navigation.navigateToInviteEnter
@@ -84,7 +89,16 @@ class MainNavigator(
     /** 지금 화면 아래에 돌아갈 화면이 있는지 (없으면 뒤로 가기 버튼을 그리지 않는 화면이 쓴다) */
     fun hasPreviousScreen(): Boolean = navController.previousBackStackEntry != null
 
-    /** 전체 메뉴(SCR-SET-01). 진입은 캘린더 앱바 (단위 4 전까지는 임시 버튼) */
+    /** 일정 상세 (SCR-CAL-02) */
+    fun navigateToEventDetail(eventId: String) = navController.navigateToEventDetail(eventId)
+
+    /** 새 일정 작성 (SCR-CAL-03). [date]는 캘린더에서 고른 날 */
+    fun navigateToEventCreate(date: java.time.LocalDate) = navController.navigateToEventCreate(date)
+
+    /** 일정 수정 (SCR-CAL-03) */
+    fun navigateToEventEdit(eventId: String) = navController.navigateToEventEdit(eventId)
+
+    /** 전체 메뉴(SCR-SET-01). 진입은 캘린더 앱바 */
     fun navigateToSettings() = navController.navigateToSettings()
 
     /** [fromCouple]이면 연동을 마친 뒤 SCR-COUPLE-01로 돌아온다 (게스트의 [로그인하고 연결하기], FR-AUTH-03 AC4) */
@@ -101,6 +115,14 @@ class MainNavigator(
     private fun NavOptionsBuilder.clearBackStack() {
         popUpTo(navController.graph.id) { inclusive = true }
         launchSingleTop = true
+    }
+
+    /** SCR-CAL-01~03에서는 스낵바를 위에서 40에 띄운다 (SCREENS.md 공통 "스낵바", 탭 있는 화면의 그림이 나올 때까지) */
+    @Composable
+    fun snackbarAtTop(): Boolean {
+        val destination = currentDestination ?: return false
+        return listOf(MainRouteModel.Calendar::class, CalendarRouteModel.EventDetail::class, CalendarRouteModel.EventEdit::class)
+            .any { destination.hasRoute(it) }
     }
 
     /** 하단 탭은 탭 화면(캘린더·메모)에서만 보인다 */
