@@ -10,7 +10,7 @@ model: sonnet
 ## 먼저 읽을 것
 
 1. 리드가 알려 준 진행 기록 `docs/progress/unit-<N>.md`의 범위 표
-2. 범위에 적힌 `../Docs/docs/PRD.md`의 FR·AC, `../Docs/docs/SCREENS.md`의 화면과 `../Docs/design/screens/` 이미지, `../Docs/docs/API.md`의 경로·필드·오류 코드
+2. 범위에 적힌 `../Docs/docs/PRD.md`의 FR·AC, `../Docs/docs/SCREENS.md`의 화면과 `../Docs/design/screens/` 이미지, `../Docs/docs/API.md`의 경로·필드·오류 코드. 큰 문서(SCREENS.md, API.md)는 통째로 읽지 말고 필요한 절만 찾아 읽는다.
 3. `docs/ARCHITECTURE.md`, `docs/CONVENTIONS.md`, 손대는 폴더의 `CLAUDE.md`
 4. 맡은 일에 맞는 Skill: 화면 `/new-screen`, 모듈 `/new-feature-module`, API `/add-api`, 토큰 `/sync-tokens`
 

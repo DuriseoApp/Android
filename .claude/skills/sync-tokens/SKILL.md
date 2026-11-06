@@ -22,7 +22,7 @@ description: Docs의 디자인 토큰(design/tokens.json)을 core:designsystem�
 | `color.*` | `Color.kt` | 토큰 이름을 camelCase로 (`brand-500` → `Brand500`). 값은 hex 그대로 |
 | Material 역할 | `Theme.kt` `lightColorScheme(...)` | 매핑 표 그대로. 표에 없는 역할은 기본값을 두지 말고 매핑 표에 있는 것만 지정 |
 | `person-*`, `pick` | `PersonColors.kt` | `data class PersonColors(me, partner, together)` + `LocalPersonColors`. `pick` 팔레트는 키(`pick-*`) → 색 맵. 서버의 팔레트 키를 그대로 쓴다 (ERD `space_members.color`) |
-| `font`, `typography.*` | `Type.kt` | 매핑 표의 `Typography` 대응. `size`·`lineHeight`는 sp, `weight`는 `FontWeight`. 글꼴 파일이 필요하면 `res/font`에 두고 라이선스를 확인한다 |
+| `font`, `typography.*` | `Type.kt` | 매핑 표의 `Typography` 대응. `size`·`lineHeight`는 sp, `weight`는 `FontWeight`. 글꼴은 지금 Google Fonts 다운로드(`ui-text-google-fonts`, `res/values/font_certs.xml`)로 받는다. 파일을 앱에 넣어야 하면 `res/font`에 두고 라이선스를 확인한다 |
 | `radius.*` | `Shape.kt` | 매핑 표의 `Shapes` 대응 + 나머지는 `DuriseoShapes` 상수 |
 | `space.*`, `size.*` | `Dimens.kt` | `object DuriseoSpacing`, `object DuriseoSize`. 값은 dp |
 | `shadow.*` | `Elevation.kt` | Compose 그림자로 표현 가능한 값만. 표현할 수 없으면 주석으로 원본 값을 남긴다 |

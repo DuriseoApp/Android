@@ -11,7 +11,8 @@ description: 둘이서 Android의 작업 단위 하나(docs/PLAN.md)를 구현�
 
 1. `git switch main && git pull`로 최신을 받는다. Docs는 세션 시작 훅이 최신으로 받았는지 확인한다 (`../Docs`가 main이고 최신인지).
 2. `docs/PLAN.md`에서 단위 `<N>`의 범위, 기준, "서버" 열을 읽는다. 앞 단위가 머지되지 않았으면 멈추고 묻는다.
-3. 브랜치를 만든다: `git switch -c feat/<N>-<영문 이름>`.
+3. 앞 단위 PR이 머지됐으면 그 진행 기록 `docs/progress/unit-<N-1>.md`를 `git mv`로 `docs/progress/archive/`에 옮긴다. 옮기기 전에 그 파일의 "남은 일"·"Docs 후속"·디자인 대기 표 중 아직 안 끝난 것을 `docs/PLAN.md`의 해당 단위 "앞 단위에서 넘어온 일"로(Docs에 올릴 것은 PLAN.md 끝 "Docs 후속"으로) 옮기고, 이미 끝난 것은 뺀다. 다른 문서의 경로 참조(`grep -rn "progress/unit-"`)도 고친다.
+4. 브랜치를 만든다: `git switch -c feat/<N>-<영문 이름>`.
 
 ## 2. 범위 확정 (사람 확인)
 
@@ -28,18 +29,18 @@ description: 둘이서 Android의 작업 단위 하나(docs/PLAN.md)를 구현�
 
 1. `android-implementer` 서브에이전트에게 진행 기록 경로를 주고 구현을 맡긴다. 범위가 크면 레이어 순서(domain → data → feature)나 화면별로 나눠 순서대로 맡긴다 (같은 파일을 동시에 고치지 않게).
 2. 새 모듈은 `/new-feature-module`, 새 화면은 `/new-screen`, 새 API는 `/add-api`, 토큰 변경은 `/sync-tokens` 절차를 따르게 한다.
-3. 끝나면 `./gradlew assembleDebug testDebugUnitTest`를 직접 돌려 확인한다. SDK가 없는 환경이면 5장의 CI로 확인한다.
+3. 끝나면 `./gradlew assembleDebug testDebugUnitTest`를 직접 돌려 확인한다. SDK가 없는 환경이면 5장의 CI로 확인한다. CI는 `pull_request`에서만 도니(브랜치 push만으로는 안 돈다) 구현을 시작해 첫 커밋을 push할 때 **draft PR을 먼저 연다.** 이후 push마다 CI가 돈다.
 
 ## 4. 리뷰 반복
 
-1. `android-reviewer`에게 단위 번호를 주고 검사를 맡긴다.
-2. Critical·Major는 `android-implementer`에게 고치게 하고 다시 리뷰한다. 결과를 진행 기록의 "리뷰 기록"에 남긴다.
+1. `android-reviewer`(기본 모델 sonnet)에게 단위 번호를 주고 검사를 맡긴다. 리뷰는 sonnet 1회 + Major 수정분만 리드가 확인한다. 큰 단위는 리드가 opus로 지정해 부를 수 있다.
+2. Critical·Major는 `android-implementer`에게 고치게 한다. Major 수정분은 리드가 diff로 확인하고 다시 리뷰하지 않는다. Critical은 고친 뒤 다시 리뷰한다. 결과를 진행 기록의 "리뷰 기록"에 남긴다.
 3. 3번 반복해도 Critical이 남으면 멈추고, 남은 문제를 PR 본문 맨 위 "⚠️ 사람 확인 필요"에 적는다.
 
 ## 5. PR
 
-1. `docs/PLAN.md`의 상태를 "PR 완료"로, 진행 기록 상태를 바꾼다. 모듈이 생겼으면 `docs/MODULES.md`도 고친다.
-2. 커밋: `feat(<모듈>): <단위 이름> (<대표 FR>, <대표 SCR>)`. push 후 `gh pr create --base main`.
+1. `docs/PLAN.md`의 상태를 "PR 완료 (#번호)"로, 진행 기록 상태를 바꾼다. 번호는 draft PR을 열 때 알았으니 그 값을 쓴다. 모듈이 생겼으면 `docs/MODULES.md`도 고친다.
+2. 커밋: `feat(<모듈>): <단위 이름> (<대표 FR>, <대표 SCR>)`. push 후 draft PR을 준비 완료로 바꾸고 본문을 채운다 (draft PR이 없으면 `gh pr create --base main`).
 3. PR 본문: 요약, 다룬 FR·AC·SCR·API 표와 테스트 이름, 화면 Preview 목록(또는 캡처), 리뷰 결과, 문서와 다르게 한 점(없어야 정상), 서버 연동 확인 여부, 새 `local.properties` 키(있으면 `docs/SETUP.md` 반영 여부), 닫는 이슈(`Closes #N`), 남은 일.
 4. `gh pr checks --watch`로 CI를 기다린다. 실패하면 고쳐서 다시 push 한다.
 5. **머지하지 않는다.** 사용자에게 PR 링크와 결과를 짧게 알리고, 맥에서 확인할 것(실기기에서 볼 화면, 로그인처럼 CI로 확인할 수 없는 것)을 적는다.
