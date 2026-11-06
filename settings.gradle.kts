@@ -17,7 +17,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        // 카카오 SDK(com.kakao.sdk)만 이 저장소에서 받는다 (docs/progress/unit-2.md 위험 1)
+        // 카카오 SDK(com.kakao.sdk)만 이 저장소에서 받는다 (docs/progress/archive/unit-2.md 위험 1)
         maven(url = "https://devrepo.kakao.com/nexus/content/groups/public/") {
             content {
                 includeGroupByRegex("com\\.kakao.*")

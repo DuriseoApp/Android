@@ -1,6 +1,6 @@
 # 단위 4: 캘린더
 
-> 브랜치: `feat/4-calendar` · PR: (링크) · 상태: **구현 완료 (1·2부), CI 확인 중** (확인 필요 1~14는 PRD v0.10 D-107~D-114·Q-16·Q-17로 정해짐)
+> 브랜치: `feat/4-calendar` · PR: #11 https://github.com/DuriseoApp/Android/pull/11 (스낵바 위치 후속 #13) · 상태: **PR 완료 (머지됨)** (확인 필요 1~14는 PRD v0.10 D-107~D-114·Q-16·Q-17로 정해짐)
 > 기준: PRD v0.9 (Docs main `728ea08`), SCREENS.md(캔버스 버전 38, 2026-11-01 갱신: SCR-CAL-01~03), API.md 3.3(일정), 1.1, 5장, 6장, design-system.md(FAB, 하단 탭, 스낵바, 다이얼로그), tokens.json
 > 서버: Server 단위 3(캘린더: 일정, 일정 알림, 날짜 범위) 머지됨, 개발 서버 배포됨 (리드 확인, 아래 "서버 연동")
 
