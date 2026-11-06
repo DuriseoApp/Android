@@ -11,6 +11,7 @@ import com.duriseo.android.feature.calendar.FakeMeRepository
 import com.duriseo.android.feature.calendar.Offline
 import com.duriseo.android.feature.calendar.PartnerId
 import com.duriseo.android.feature.calendar.allDay
+import com.duriseo.android.feature.calendar.apiError
 import com.duriseo.android.feature.calendar.coupleMe
 import com.duriseo.android.feature.calendar.sampleEvent
 import com.duriseo.android.feature.calendar.soloMe
@@ -238,5 +239,58 @@ class EventDetailViewModelTest {
         me.me.value = soloMe()
         events.events.value = listOf(sampleEvent())
         assertEquals(EventTarget.ME, viewModel().uiState.value.event!!.target)
+    }
+
+    @Test
+    fun `D-109 개인 공간이면 삭제 확인 본문이 개인용이다`() = runTest {
+        me.me.value = soloMe()
+        events.events.value = listOf(sampleEvent())
+        assertTrue(viewModel().uiState.value.isPersonalSpace)
+    }
+
+    @Test
+    fun `D-109 커플 공간은 개인 공간 표시가 꺼져 있다`() = runTest {
+        events.events.value = listOf(sampleEvent())
+        assertFalse(viewModel().uiState.value.isPersonalSpace)
+    }
+
+    @Test
+    fun `D-111 삭제에서 일정이 없다고 하면 공통 오류를 한 번 보이고 닫는다`() = runTest {
+        events.events.value = listOf(sampleEvent())
+        events.deleteResult = apiError("NOT_FOUND")
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(EventDetailAction.DeleteClicked)
+            vm.onAction(EventDetailAction.DeleteConfirmed)
+            assertEquals(EventDetailSideEffect.ShowMessage(DesignR.string.error_common), awaitItem())
+            assertEquals(EventDetailSideEffect.Close, awaitItem())
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `D-111 알림 변경에서 일정이 없다고 하면 공통 오류를 보이고 닫는다`() = runTest {
+        events.events.value = listOf(sampleEvent())
+        events.reminderResult = apiError("NOT_FOUND")
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(EventDetailAction.ReminderSelected(ReminderOption.MIN_10))
+            assertEquals(EventDetailSideEffect.ShowMessage(DesignR.string.error_common), awaitItem())
+            assertEquals(EventDetailSideEffect.Close, awaitItem())
+        }
+    }
+
+    @Test
+    fun `D-111 삭제에서 권한이 없다고 하면 공통 오류만 보이고 화면은 그대로다`() = runTest {
+        events.events.value = listOf(sampleEvent())
+        events.deleteResult = apiError("NOT_AUTHOR")
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(EventDetailAction.DeleteClicked)
+            vm.onAction(EventDetailAction.DeleteConfirmed)
+            assertEquals(EventDetailSideEffect.ShowMessage(DesignR.string.error_common), awaitItem())
+            expectNoEvents()
+        }
+        assertNotNull(vm.uiState.value.event)
     }
 }

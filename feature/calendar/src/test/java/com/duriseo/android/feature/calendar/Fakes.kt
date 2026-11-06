@@ -133,6 +133,7 @@ class FakeEventRepository(initial: List<Event> = emptyList()) : EventRepository 
     var deleteResult: DataResult<Unit> = DataResult.Success(Unit)
     var reminderResult: DataResult<Unit> = DataResult.Success(Unit)
     var refreshEventResult: DataResult<Unit> = DataResult.Success(Unit)
+    var refreshRangeResult: DataResult<Unit> = DataResult.Success(Unit)
 
     override fun observeEvents(from: LocalDate, to: LocalDate, zone: ZoneId): Flow<List<Event>> =
         events.map { list ->
@@ -145,7 +146,7 @@ class FakeEventRepository(initial: List<Event> = emptyList()) : EventRepository 
 
     override suspend fun refreshRange(from: LocalDate, to: LocalDate, zone: ZoneId): DataResult<Unit> {
         refreshRanges += from to to
-        return DataResult.Success(Unit)
+        return refreshRangeResult
     }
 
     override suspend fun refreshEvent(id: String): DataResult<Unit> {

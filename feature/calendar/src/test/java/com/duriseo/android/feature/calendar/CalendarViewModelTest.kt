@@ -3,9 +3,11 @@ package com.duriseo.android.feature.calendar
 import app.cash.turbine.test
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.domain.event.EventTarget
+import com.duriseo.android.domain.event.EventTime
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.YearMonth
 import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
@@ -178,6 +180,37 @@ class CalendarViewModelTest {
         assertFalse(vm.uiState.value.canGoNext)
         vm.onAction(CalendarAction.PreviousMonth)
         assertTrue(vm.uiState.value.canGoNext)
+    }
+
+    @Test
+    fun `D-112 화면에 들어오면 보이는 달을 다시 불러온다`() = runTest {
+        val vm = viewModel()
+        vm.onAction(CalendarAction.Shown)
+        assertEquals(listOf(LocalDate.of(2026, 10, 1) to LocalDate.of(2026, 10, 31)), events.refreshRanges)
+    }
+
+    @Test
+    fun `D-112 FR-CAL-01 AC7 불러오기가 실패하거나 오프라인이어도 안내 없이 저장된 일정을 그대로 보여 준다`() = runTest {
+        events.events.value = listOf(sampleEvent(time = allDay(LocalDate.of(2026, 10, 12))))
+        events.refreshRangeResult = Offline
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(CalendarAction.Shown)
+            vm.onAction(CalendarAction.NextMonth)
+            vm.onAction(CalendarAction.PreviousMonth)
+            expectNoEvents()
+        }
+        assertEquals(1, vm.uiState.value.eventsByDay.size)
+    }
+
+    @Test
+    fun `D-113 FR-CAL-02 AC5 여러 날 시간 일정은 걸친 모든 날에 시작 시각이 보인다`() = runTest {
+        // 2026-10-17 10:00 ~ 10-19 12:00 (서울)
+        val trip = EventTime.Timed(Instant.parse("2026-10-17T01:00:00Z"), Instant.parse("2026-10-19T03:00:00Z"))
+        events.events.value = listOf(sampleEvent(id = "trip", time = trip))
+        val byDay = viewModel().uiState.value.eventsByDay
+        assertEquals(listOf(17, 18, 19), byDay.keys.map { it.dayOfMonth }.sorted())
+        assertEquals(listOf(LocalTime.of(10, 0)), byDay.values.flatten().map { it.startTime }.distinct())
     }
 
     @Test

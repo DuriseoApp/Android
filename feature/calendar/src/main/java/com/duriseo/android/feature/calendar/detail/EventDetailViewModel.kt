@@ -14,6 +14,7 @@ import com.duriseo.android.domain.event.EventRules
 import com.duriseo.android.domain.event.EventTime
 import com.duriseo.android.domain.me.Me
 import com.duriseo.android.domain.me.MeRepository
+import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.domain.result.DataResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -73,6 +74,7 @@ class EventDetailViewModel @Inject constructor(
             everLoaded = true
             EventDetailUiState(
                 event = event.toDetail(me, zone),
+                isPersonalSpace = me.space.type == SpaceType.PERSONAL,
                 deleteDialogVisible = local.deleteDialogVisible,
                 deleting = local.deleting,
                 reminderSaving = local.reminderSaving,
@@ -121,9 +123,19 @@ class EventDetailViewModel @Inject constructor(
         viewModelScope.launch {
             val result = eventRepository.setReminder(eventId, option)
             local.update { it.copy(reminderSaving = false) }
-            if (result is DataResult.Failure) {
-                effectChannel.trySend(EventDetailSideEffect.ShowMessage(result.error.toMessageRes()))
-            }
+            if (result is DataResult.Failure) showFailure(result)
+        }
+    }
+
+    /**
+     * 쓰기 실패 안내 (D-111). 일정이 없다고 하면(404) 저장소가 Room에서 지웠고 [onVanished]가 닫으면서 공통 오류를 보이므로 여기서는 또 보이지 않는다.
+     * 권한이 없다고 하면(403) 저장소가 그 일정을 다시 불러온다. 문구는 모두 공통 오류다 (새 문구 없음)
+     */
+    private fun showFailure(result: DataResult.Failure) {
+        if (result.error.hasCode(ErrorCode.NOT_FOUND)) {
+            onVanished()
+        } else {
+            effectChannel.trySend(EventDetailSideEffect.ShowMessage(result.error.toMessageRes()))
         }
     }
 
@@ -139,8 +151,7 @@ class EventDetailViewModel @Inject constructor(
                 }
                 is DataResult.Failure -> {
                     local.update { it.copy(deleting = false, deleteDialogVisible = false) }
-                    effectChannel.trySend(EventDetailSideEffect.ShowMessage(result.error.toMessageRes()))
-                    // 이미 지워졌으면(404) 저장소가 Room에서도 지워서 화면이 닫힌다
+                    showFailure(result)
                 }
             }
         }

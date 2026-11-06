@@ -34,7 +34,6 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.YearMonth
 import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import com.duriseo.android.core.designsystem.R as DesignR
 
@@ -42,8 +41,8 @@ import com.duriseo.android.core.designsystem.R as DesignR
  * SCR-CAL-03 일정 작성·수정. 입력은 화면 안에서만 들고 있고, [저장]은 온라인에서만 한다 (NFR-OFF-02).
  * 저장이 성공해야 Room이 바뀐다 (낙관적 갱신 없음).
  *
- * - 새 일정의 기본값 (unit-4.md 확인 필요 14-A, v0.10 반영 대기): 날짜는 캘린더에서 고른 날, 시간은 기기 시계의 다음 정시부터 1시간.
- * - 알림은 일정을 만든 뒤 따로 정한다. 알림 설정이 실패해도 일정은 남기고 오류 안내만 한 뒤 닫는다 (확인 필요 3-A).
+ * - 새 일정의 기본값 (D-114, Q-17): 날짜는 캘린더에서 고른 날, 시간은 기기 시계의 다음 정시부터 1시간.
+ * - 알림은 일정을 만든 뒤 따로 정한다. 알림 설정이 실패해도 일정은 남기고 오류 안내만 한 뒤 닫는다 (D-108).
  */
 @HiltViewModel
 class EventEditViewModel @Inject constructor(
@@ -124,13 +123,16 @@ class EventEditViewModel @Inject constructor(
 
     private data class Defaults(val startDate: LocalDate, val startTime: LocalTime, val endDate: LocalDate, val endTime: LocalTime)
 
-    /** 선택한 날의 다음 정시부터 1시간 */
+    /**
+     * 선택한 날의 기기 시각 다음 정시부터 1시간 (D-114, FR-CAL-02 AC8).
+     * 다음 정시가 다음 날(23시대)이면 시작은 선택한 날 23:00, 종료가 다음 날로 넘어가면(22시대 이후) 종료는 선택한 날 23:59 (Q-17 기본값).
+     */
     private fun defaultTimes(date: LocalDate?): Defaults {
         val day = date?.takeIf { EventRules.isSelectable(it) } ?: LocalDate.now(clock)
-        val nextHour = LocalDateTime.now(clock).truncatedTo(ChronoUnit.HOURS).plusHours(1).toLocalTime()
-        val start = LocalDateTime.of(day, nextHour)
-        val end = start.plusHours(1)
-        return Defaults(start.toLocalDate(), start.toLocalTime(), end.toLocalDate(), end.toLocalTime())
+        val nowHour = LocalDateTime.now(clock).hour
+        val start = LocalTime.of(minOf(nowHour + 1, LAST_HOUR), 0)
+        val end = if (start.hour >= LAST_HOUR) LocalTime.of(LAST_HOUR, LAST_MINUTE) else start.plusHours(1)
+        return Defaults(day, start, day, end)
     }
 
     fun onAction(action: EventEditAction) {
@@ -174,11 +176,8 @@ class EventEditViewModel @Inject constructor(
 
     private fun setAllDay(allDay: Boolean) {
         _uiState.update { state ->
-            // 종일 <-> 시간 전환 때 시간 값은 마지막 값을 유지한다 (확인 필요 14-A). 알림 선택지가 달라 고른 알림은 없음으로 돌린다 (FR-CAL-05 AC3)
-            state.copy(
-                isAllDay = allDay,
-                reminder = state.reminder?.takeIf { it.forAllDay == allDay },
-            ).recomputed()
+            // 종일 <-> 시간 전환 때 시간 값은 마지막 값을 유지한다 (D-114). 알림 선택지가 달라 고른 알림은 "없음"으로 돌린다 (D-107)
+            state.copy(isAllDay = allDay, reminder = null).recomputed()
         }
     }
 
@@ -271,7 +270,7 @@ class EventEditViewModel @Inject constructor(
                 if (s.reminder != null) {
                     val reminderResult = eventRepository.setReminder(result.value.id, s.reminder)
                     if (reminderResult is DataResult.Failure) {
-                        // 일정은 이미 저장됐다. 남기고 오류 안내만 한 뒤 닫는다 (확인 필요 3-A)
+                        // 일정은 이미 저장됐다. 남기고 공통 오류 안내만 한 뒤 닫는다 (D-108)
                         effectChannel.trySend(EventEditSideEffect.ShowMessage(reminderResult.error.toMessageRes()))
                     }
                 }
@@ -310,10 +309,16 @@ class EventEditViewModel @Inject constructor(
         effectChannel.trySend(EventEditSideEffect.Close)
     }
 
+    /**
+     * 저장 실패 (D-111): 어떤 코드든 공통 오류 안내. 일정이 없다고 하면(404) 저장소가 Room에서 지웠으므로 화면을 닫고,
+     * 권한이 없다고 하면(403 NOT_AUTHOR) 저장소가 그 일정을 다시 불러온다. 문구는 모두 공통 오류다 (새 문구 없음)
+     */
     private fun fail(result: DataResult.Failure) {
         _uiState.update { it.copy(saving = false) }
         effectChannel.trySend(EventEditSideEffect.ShowMessage(result.error.toMessageRes()))
-        // 그 사이 지워진 일정이면(404) 저장소가 Room에서도 지웠다. 더 고칠 수 없어 닫는다
         if (result.error.hasCode(ErrorCode.NOT_FOUND)) effectChannel.trySend(EventEditSideEffect.Close)
     }
 }
+
+private const val LAST_HOUR = 23
+private const val LAST_MINUTE = 59

@@ -28,6 +28,8 @@ data class EventDetail(
 data class EventDetailUiState(
     /** 아직 Room에서 읽지 못했다 */
     val event: EventDetail? = null,
+    /** 개인 공간이면 삭제 확인 본문이 다르다 (D-109) */
+    val isPersonalSpace: Boolean = false,
     val deleteDialogVisible: Boolean = false,
     /** 삭제 요청 중에는 다이얼로그 버튼과 뒤 막이 눌리지 않는다 (D-88) */
     val deleting: Boolean = false,

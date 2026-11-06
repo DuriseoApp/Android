@@ -138,7 +138,9 @@ fun EventDetailScreen(
         dialog = {
             DuriseoDialog(
                 title = stringResource(R.string.event_delete_dialog_title),
-                body = stringResource(R.string.event_delete_dialog_body),
+                body = stringResource(
+                    if (state.isPersonalSpace) R.string.event_delete_dialog_body_personal else R.string.event_delete_dialog_body,
+                ),
                 cancelText = stringResource(DesignR.string.action_cancel),
                 confirmText = stringResource(R.string.event_delete_dialog_confirm),
                 onCancel = { onAction(EventDetailAction.DeleteCancelled) },
@@ -429,3 +431,9 @@ private fun EventDetailReadOnlyPreview() =
 @Composable
 private fun EventDetailDeleteDialogPreview() =
     PreviewScreen(EventDetailUiState(event = sample(), deleteDialogVisible = true))
+
+/** 개인 공간의 삭제 확인 다이얼로그 (D-109) */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun EventDetailDeleteDialogPersonalPreview() =
+    PreviewScreen(EventDetailUiState(event = sample(), isPersonalSpace = true, deleteDialogVisible = true))

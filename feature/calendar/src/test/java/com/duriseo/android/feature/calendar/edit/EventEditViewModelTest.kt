@@ -67,12 +67,20 @@ class EventEditViewModelTest {
         return EventEditViewModel(SavedStateHandle(args), events, me, clock)
     }
 
+    /** [utc] 시각에 연 작성 화면 (서울) */
+    private fun createAt(utc: String, date: String = "2026-10-12") = EventEditViewModel(
+        SavedStateHandle(mapOf(CalendarRouteModel.EventEdit::date.name to date)),
+        events,
+        me,
+        Clock.fixed(Instant.parse(utc), seoul),
+    )
+
     private fun edit(id: String = "e1"): EventEditViewModel =
         EventEditViewModel(SavedStateHandle(mapOf(CalendarRouteModel.EventEdit::eventId.name to id)), events, me, clock)
 
     private fun EventEditViewModel.fill(title: String = "저녁 데이트") = onAction(EventEditAction.TitleChanged(title))
 
-    // --- 새 일정 기본값 (확인 필요 14-A, v0.10 반영 대기) ---
+    // --- 새 일정 기본값 (D-114, Q-17) ---
 
     @Test
     fun `FR-CAL-02 AC1 새 일정은 선택한 날 다음 정시부터 한 시간으로 시작한다`() = runTest {
@@ -81,6 +89,41 @@ class EventEditViewModelTest {
         assertEquals(LocalTime.of(11, 0), state.startTime)
         assertEquals(LocalTime.of(12, 0), state.endTime)
         assertFalse(state.endError)
+    }
+
+    @Test
+    fun `D-114 Q-17 22시대에 열면 시작은 23시 종료는 같은 날 23시 59분이다`() = runTest {
+        val state = createAt("2026-10-12T13:30:00Z").uiState.value // 서울 22:30
+        assertEquals(LocalTime.of(23, 0), state.startTime)
+        assertEquals(LocalTime.of(23, 59), state.endTime)
+        assertEquals(LocalDate.of(2026, 10, 12), state.endDate)
+        assertFalse(state.endError)
+    }
+
+    @Test
+    fun `D-114 Q-17 23시대에 열면 시작은 선택한 날 23시 종료는 23시 59분이다`() = runTest {
+        val state = createAt("2026-10-12T14:30:00Z", "2026-10-15").uiState.value // 서울 23:30
+        assertEquals(LocalDate.of(2026, 10, 15), state.startDate)
+        assertEquals(LocalTime.of(23, 0), state.startTime)
+        assertEquals(LocalDate.of(2026, 10, 15), state.endDate)
+        assertEquals(LocalTime.of(23, 59), state.endTime)
+    }
+
+    @Test
+    fun `D-114 Q-17 2050년 12월 31일을 골라도 날짜 범위를 넘지 않는다`() = runTest {
+        val state = createAt("2026-10-12T14:30:00Z", "2050-12-31").uiState.value
+        assertEquals(LocalDate.of(2050, 12, 31), state.startDate)
+        assertEquals(LocalDate.of(2050, 12, 31), state.endDate)
+    }
+
+    @Test
+    fun `D-114 종일을 켰다가 끄면 마지막으로 고른 시간으로 돌아간다`() = runTest {
+        val vm = create()
+        vm.onAction(EventEditAction.TimeRowClicked(EditField.Start))
+        vm.onAction(EventEditAction.TimeConfirmed(LocalTime.of(14, 30)))
+        vm.onAction(EventEditAction.AllDayChanged(true))
+        vm.onAction(EventEditAction.AllDayChanged(false))
+        assertEquals(LocalTime.of(14, 30), vm.uiState.value.startTime)
     }
 
     @Test
@@ -277,6 +320,22 @@ class EventEditViewModelTest {
         assertEquals(1000, vm.uiState.value.note.length)
     }
 
+    @Test
+    fun `D-110 이모지는 한 글자로 세어 제목 50자에서 막는다`() = runTest {
+        val vm = create()
+        vm.fill("😀".repeat(60))
+        assertEquals(50, vm.uiState.value.title.codePointCount(0, vm.uiState.value.title.length))
+    }
+
+    @Test
+    fun `D-110 공백이나 줄바꿈뿐인 제목은 저장 버튼이 꺼진다`() = runTest {
+        val vm = create()
+        vm.fill("  \n ")
+        assertFalse(vm.uiState.value.saveEnabled)
+        vm.onAction(EventEditAction.SaveClicked)
+        assertTrue(events.created.isEmpty())
+    }
+
     // --- 알림 ---
 
     @Test
@@ -335,6 +394,99 @@ class EventEditViewModelTest {
         }
         assertEquals(1, events.created.size)
         assertEquals(1, events.events.value.size)
+    }
+
+    @Test
+    fun `D-107 내 알림 행을 누르면 선택 시트가 열리고 고른 값이 반영된다`() = runTest {
+        val vm = create()
+        vm.onAction(EventEditAction.ReminderRowClicked)
+        assertEquals(EditSheet.Reminder, vm.uiState.value.sheet)
+        vm.onAction(EventEditAction.ReminderSelected(ReminderOption.HOUR_1))
+        assertEquals(ReminderOption.HOUR_1, vm.uiState.value.reminder)
+        assertNull(vm.uiState.value.sheet)
+    }
+
+    @Test
+    fun `D-107 하루 종일을 켜고 끌 때마다 고른 알림은 없음으로 돌아간다`() = runTest {
+        val vm = create()
+        vm.onAction(EventEditAction.AllDayChanged(true))
+        vm.onAction(EventEditAction.ReminderSelected(ReminderOption.ALLDAY_9AM))
+        vm.onAction(EventEditAction.AllDayChanged(false))
+        assertNull(vm.uiState.value.reminder)
+    }
+
+    @Test
+    fun `D-108 일정 만들기가 실패하면 알림은 보내지 않고 화면에 남는다`() = runTest {
+        events.createResult = apiError("INTERNAL_ERROR")
+        val vm = create()
+        vm.fill()
+        vm.onAction(EventEditAction.ReminderSelected(ReminderOption.MIN_10))
+        vm.onAction(EventEditAction.SaveClicked)
+        assertTrue(events.reminderCalls.isEmpty())
+        assertFalse(vm.uiState.value.saving)
+    }
+
+    @Test
+    fun `D-108 수정은 일정을 저장한 뒤 알림을 바꾼다`() = runTest {
+        events.events.value = listOf(sampleEvent())
+        val vm = edit()
+        vm.onAction(EventEditAction.ReminderSelected(ReminderOption.MIN_10))
+        vm.onAction(EventEditAction.SaveClicked)
+        assertEquals(1, events.patches.size)
+        assertEquals(listOf("e1" to ReminderOption.MIN_10), events.reminderCalls)
+    }
+
+    @Test
+    fun `D-108 수정에서 알림 변경만 실패해도 저장된 채 공통 오류를 보이고 닫는다`() = runTest {
+        events.events.value = listOf(sampleEvent())
+        events.reminderResult = apiError("INTERNAL_ERROR")
+        val vm = edit()
+        vm.onAction(EventEditAction.ReminderSelected(ReminderOption.MIN_10))
+        vm.effects.test {
+            vm.onAction(EventEditAction.SaveClicked)
+            assertEquals(EventEditSideEffect.ShowMessage(DesignR.string.error_common), awaitItem())
+            assertEquals(EventEditSideEffect.Close, awaitItem())
+        }
+        assertEquals(1, events.patches.size)
+    }
+
+    @Test
+    fun `D-111 수정 저장에서 일정이 없다고 하면 공통 오류를 보이고 화면을 닫는다`() = runTest {
+        events.events.value = listOf(sampleEvent(title = "원래"))
+        events.updateResult = apiError("NOT_FOUND")
+        val vm = edit()
+        vm.fill("바꿈")
+        vm.effects.test {
+            vm.onAction(EventEditAction.SaveClicked)
+            assertEquals(EventEditSideEffect.ShowMessage(DesignR.string.error_common), awaitItem())
+            assertEquals(EventEditSideEffect.Close, awaitItem())
+        }
+    }
+
+    @Test
+    fun `D-111 수정 저장에서 권한이 없다고 하면 공통 오류만 보이고 화면은 그대로다`() = runTest {
+        events.events.value = listOf(sampleEvent(title = "원래"))
+        events.updateResult = apiError("NOT_AUTHOR")
+        val vm = edit()
+        vm.fill("바꿈")
+        vm.effects.test {
+            vm.onAction(EventEditAction.SaveClicked)
+            assertEquals(EventEditSideEffect.ShowMessage(DesignR.string.error_common), awaitItem())
+            expectNoEvents()
+        }
+        assertFalse(vm.uiState.value.saving)
+    }
+
+    @Test
+    fun `D-111 입력 오류도 공통 오류로 알린다`() = runTest {
+        events.createResult = apiError("VALIDATION_FAILED")
+        val vm = create()
+        vm.fill()
+        vm.effects.test {
+            vm.onAction(EventEditAction.SaveClicked)
+            assertEquals(EventEditSideEffect.ShowMessage(DesignR.string.error_common), awaitItem())
+            expectNoEvents()
+        }
     }
 
     // --- 수정 ---
