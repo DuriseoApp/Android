@@ -265,7 +265,7 @@
 | 13 시간 표기 | D-113, FR-CAL-02 AC5 | 1부 구현이 문서와 같음(목록 24시간·"종일", 상세·작성 오전/오후, 여러 날 시간 일정은 모든 날에 시작 시각). 테스트 보강 |
 | 14 새 일정 기본값 | D-114, FR-CAL-02 AC8, Q-17 | 선택한 날(없으면 오늘), 다음 정시부터 1시간. 다음 정시가 다음 날이면(23시대) 시작 23:00, 종료가 다음 날로 넘어가면(22시대 이후) 종료 23:59, 모두 선택한 날 안 (Q-17 기본값). 종일 껐다 켜면 마지막 시간 |
 
-테스트 추가: `CalendarViewModelTest` 3개, `EventEditViewModelTest` 15개, `EventDetailViewModelTest` 5개 (이름에 D-ID).
+테스트 추가: `CalendarViewModelTest` 3개, `EventEditViewModelTest` 14개, `EventDetailViewModelTest` 5개 (이름에 D-ID).
 
 ### 디자인 이미지 대기 (그대로 둠)
 
