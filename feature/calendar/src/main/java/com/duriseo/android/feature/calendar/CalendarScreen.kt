@@ -49,6 +49,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -169,6 +170,19 @@ private val FabIcon = 26.dp
 private val FabEnd = DuriseoSpacing.Space5
 private val FabBottom = DuriseoSpacing.Space5
 
+/** 스낵바 높이 49 = 위아래 14 + 한 줄 21 (design-system.md "스낵바", `Calendar.dc.html` 364행) */
+private val SnackbarHeight = 49.dp
+
+/** 스낵바와 하단 탭 사이 간격 16, 스낵바와 FAB 사이 간격 16 (SCREENS.md 42행) */
+private val SnackbarGap = DuriseoSpacing.Space4
+
+/**
+ * FAB 아래 간격(탭 위 기준). 스낵바가 없으면 20(바닥에서 100), 있으면 스낵바 위 16:
+ * 16 + 49 + 16 = 81 (바닥에서 161, SCREENS.md 42·85행, `Calendar.dc.html` 364행)
+ */
+internal fun calendarFabBottom(snackbarVisible: Boolean): Dp =
+    if (snackbarVisible) SnackbarGap + SnackbarHeight + SnackbarGap else FabBottom
+
 private const val DAYS_PER_WEEK = 7
 
 @Composable
@@ -180,6 +194,7 @@ fun CalendarRoute(
     onOpenCreate: (LocalDate) -> Unit,
     onShowSnackBar: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    snackbarVisible: Boolean = false,
     viewModel: CalendarViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -209,6 +224,7 @@ fun CalendarRoute(
         onOpenMenu = onOpenMenu,
         onAction = viewModel::onAction,
         modifier = modifier,
+        snackbarVisible = snackbarVisible,
     )
 }
 
@@ -219,6 +235,7 @@ fun CalendarScreen(
     onOpenMenu: () -> Unit,
     onAction: (CalendarAction) -> Unit,
     modifier: Modifier = Modifier,
+    snackbarVisible: Boolean = false,
 ) {
     val sheet = state.startDateSheet
     DuriseoDialogLayer(
@@ -260,7 +277,7 @@ fun CalendarScreen(
             }
             CalendarFab(
                 onClick = { onAction(CalendarAction.AddClicked) },
-                modifier = Modifier.align(Alignment.BottomEnd).padding(end = FabEnd, bottom = FabBottom),
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = FabEnd, bottom = calendarFabBottom(snackbarVisible)),
             )
         }
     }

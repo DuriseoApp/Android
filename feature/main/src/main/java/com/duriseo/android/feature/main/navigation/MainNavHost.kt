@@ -16,6 +16,7 @@ import com.duriseo.android.feature.settings.navigation.settingsNavGraph
 
 /**
  * @param startDestination 앱을 켰을 때 첫 화면. 토큰이 있으면 캘린더, 없으면 시작 화면 (FR-AUTH-01)
+ * @param snackbarVisible 스낵바가 떠 있는지. 캘린더 FAB가 스낵바 위로 올라가는 데 쓴다 (SCR-CAL-01)
  * @param onShowSnackBar 스낵바를 띄운다. 인자는 문구 리소스 ID(`@StringRes`)다.
  *   기능 화면이 오프라인 안내 같은 문구를 띄울 때 쓴다 (전체 메뉴·계정 화면).
  *   시작 화면은 위에서 40에 자기 스낵바를 따로 그린다 (SCREENS.md SCR-START-01).
@@ -26,6 +27,7 @@ fun MainNavHost(
     startDestination: Any,
     padding: PaddingValues,
     onShowSnackBar: (Int) -> Unit,
+    snackbarVisible: Boolean = false,
 ) {
     NavHost(
         navController = navigator.navController,
@@ -68,6 +70,7 @@ fun MainNavHost(
             onOpenColors = navigator::navigateToColors,
             onBack = navigator::navigateUp,
             onShowSnackBar = onShowSnackBar,
+            snackbarVisible = snackbarVisible,
         )
         // feature:memo(단위 6)가 생기면 그 모듈의 그래프로 바꾼다
         composable<MainRouteModel.Memo> {

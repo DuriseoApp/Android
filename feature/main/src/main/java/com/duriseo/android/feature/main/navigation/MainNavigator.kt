@@ -117,12 +117,13 @@ class MainNavigator(
         launchSingleTop = true
     }
 
-    /** SCR-CAL-01~03에서는 스낵바를 위에서 40에 띄운다 (SCREENS.md 공통 "스낵바", 탭 있는 화면의 그림이 나올 때까지) */
+    /**
+     * SCR-CAL-02·03에서는 스낵바를 위에서 40에 띄운다 (SCREENS.md 112·142행). SCR-CAL-01은 하단 탭 위라서 false다 (SCREENS.md 42·85행).
+     */
     @Composable
     fun snackbarAtTop(): Boolean {
         val destination = currentDestination ?: return false
-        return listOf(MainRouteModel.Calendar::class, CalendarRouteModel.EventDetail::class, CalendarRouteModel.EventEdit::class)
-            .any { destination.hasRoute(it) }
+        return isSnackbarAtTop { destination.hasRoute(it) }
     }
 
     /** 하단 탭은 탭 화면(캘린더·메모)에서만 보인다 */
@@ -136,3 +137,9 @@ fun rememberMainNavigator(
 ): MainNavigator = remember(navController) {
     MainNavigator(navController)
 }
+
+/** 스낵바를 위에서 40에 띄우는 화면: 일정 상세(SCR-CAL-02)와 일정 작성·수정(SCR-CAL-03). 하단 탭이 없는 화면이다 */
+private val TopSnackbarRoutes = listOf(CalendarRouteModel.EventDetail::class, CalendarRouteModel.EventEdit::class)
+
+/** [hasRoute]가 지금 화면이 그 경로인지 알려 준다. SCR-CAL-01(캘린더 탭)은 목록에 없다 */
+internal fun isSnackbarAtTop(hasRoute: (kotlin.reflect.KClass<*>) -> Boolean): Boolean = TopSnackbarRoutes.any(hasRoute)
