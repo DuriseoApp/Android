@@ -8,7 +8,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navOptions
 import androidx.navigation.NavOptionsBuilder
+import androidx.navigation.NavDestination.Companion.hasRoute
 import com.duriseo.android.core.common.navigation.AuthRouteModel
+import com.duriseo.android.core.common.navigation.CalendarRouteModel
 import com.duriseo.android.core.common.navigation.MainRouteModel
 import com.duriseo.android.feature.calendar.navigation.navigateToCalendar
 import com.duriseo.android.feature.calendar.navigation.navigateToEventCreate
@@ -113,6 +115,14 @@ class MainNavigator(
     private fun NavOptionsBuilder.clearBackStack() {
         popUpTo(navController.graph.id) { inclusive = true }
         launchSingleTop = true
+    }
+
+    /** SCR-CAL-01~03에서는 스낵바를 위에서 40에 띄운다 (SCREENS.md 공통 "스낵바", 탭 있는 화면의 그림이 나올 때까지) */
+    @Composable
+    fun snackbarAtTop(): Boolean {
+        val destination = currentDestination ?: return false
+        return listOf(MainRouteModel.Calendar::class, CalendarRouteModel.EventDetail::class, CalendarRouteModel.EventEdit::class)
+            .any { destination.hasRoute(it) }
     }
 
     /** 하단 탭은 탭 화면(캘린더·메모)에서만 보인다 */

@@ -2,6 +2,7 @@ package com.duriseo.android.feature.main
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
@@ -18,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.duriseo.android.core.designsystem.component.DuriseoSnackbarHost
+import com.duriseo.android.core.designsystem.component.DuriseoTopSnackbarHost
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 import com.duriseo.android.feature.calendar.CalendarScreen
 import com.duriseo.android.feature.calendar.CalendarUiState
@@ -76,6 +78,7 @@ fun MainScreen(
                 showBottomBar = navigator.showBottomBar(),
                 snackbarHostState = snackbarHostState,
                 onTabSelected = navigator::navigate,
+                snackbarAtTop = navigator.snackbarAtTop(),
             ) { padding ->
                 // 토큰 저장소를 읽는 동안은 문구 없는 빈 화면이다 (FR-AUTH-01)
                 if (startDestination != null) {
@@ -103,25 +106,30 @@ internal fun MainScaffold(
     snackbarHostState: SnackbarHostState,
     onTabSelected: (MainTab) -> Unit,
     modifier: Modifier = Modifier,
+    snackbarAtTop: Boolean = false,
     content: @Composable (PaddingValues) -> Unit,
 ) {
-    Scaffold(
-        modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.surface,
-        snackbarHost = {
-            // 탭 있는 화면의 스낵바 위치는 Docs에서 아직 정하지 않았다 (design-system.md "스낵바").
-            // 정해질 때까지 Scaffold 기본 자리(하단 탭 바로 위)에 둔다. 캘린더 FAB(탭 위 20)와 겹칠 수 있다 (unit-4.md 남은 일).
-            DuriseoSnackbarHost(hostState = snackbarHostState)
-        },
-        bottomBar = {
-            MainBottomBar(
-                currentTab = currentTab,
-                onTabSelected = onTabSelected,
-                isVisible = showBottomBar,
-            )
-        },
-        content = content,
-    )
+    Box(modifier = modifier) {
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.surface,
+            snackbarHost = {
+                // 위에서 띄우는 화면(SCR-CAL-01~03)은 아래 Box 위층에서 그린다. 나머지는 Scaffold 기본 자리
+                if (!snackbarAtTop) DuriseoSnackbarHost(hostState = snackbarHostState)
+            },
+            bottomBar = {
+                MainBottomBar(
+                    currentTab = currentTab,
+                    onTabSelected = onTabSelected,
+                    isVisible = showBottomBar,
+                )
+            },
+            content = content,
+        )
+        // 탭 있는 화면(SCR-CAL-01~03)의 스낵바는 위치 그림이 나올 때까지 위에서 40 (SCREENS.md 공통 "스낵바", D-88)
+        if (snackbarAtTop) {
+            DuriseoTopSnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.TopCenter))
+        }
+    }
 }
 
 @Preview(showBackground = true)

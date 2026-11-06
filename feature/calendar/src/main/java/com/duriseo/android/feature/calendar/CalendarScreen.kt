@@ -566,8 +566,8 @@ private fun DayCell(
             Text(
                 text = date.dayOfMonth.toString(),
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = if (expanded) 13.sp else 15.sp,
-                    lineHeight = 20.sp,
+                    fontSize = if (expanded) DayNumberExpanded else DayNumberCollapsed,
+                    lineHeight = DayNumberLineHeight,
                     fontWeight = if (selected || isToday) FontWeight.Bold else if (inMonth) FontWeight.Medium else FontWeight.Normal,
                 ),
                 color = numberColor,
@@ -581,6 +581,14 @@ private fun DayCell(
 
 /** 오늘 표시 테두리 1.5 (`box-shadow: inset 0 0 0 1.5px`) */
 private val TodayRing = 1.5.dp
+
+/** 날짜 숫자 글자 크기(접힘 15, 펼침 13)와 행간 20 (보드 값) */
+private val DayNumberCollapsed = 15.sp
+private val DayNumberExpanded = 13.sp
+private val DayNumberLineHeight = 20.sp
+
+/** 일정 카드 메모 행간 19.5 (보드 값) */
+private val NoteLineHeight = 19.5.sp
 
 @Composable
 private fun EventDots(events: List<CalendarEvent>) {
@@ -793,7 +801,7 @@ private fun EventCard(event: CalendarEvent, onClick: () -> Unit) {
             if (!event.note.isNullOrEmpty()) {
                 Text(
                     text = event.note,
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Normal, lineHeight = 19.5.sp),
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Normal, lineHeight = NoteLineHeight),
                     color = Ink600,
                 )
             }

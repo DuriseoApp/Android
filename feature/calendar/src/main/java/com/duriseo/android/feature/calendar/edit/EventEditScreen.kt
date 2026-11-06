@@ -43,6 +43,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -242,7 +244,7 @@ private fun EditBody(state: EventEditUiState, onAction: (EventEditAction) -> Uni
             if (state.endError) {
                 Text(
                     text = stringResource(R.string.event_edit_end_error),
-                    modifier = Modifier.semantics { contentDescription = "" },
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Normal),
                     color = Danger600,
                 )
@@ -489,22 +491,29 @@ private fun DateTimeRow(
 @Composable
 private fun ValueChip(text: String, description: String, error: Boolean, onClick: () -> Unit) {
     val shape = MaterialTheme.shapes.small
+    // 보이는 높이는 36 그대로, 터치 영역만 44로 키운다
     Box(
         modifier = Modifier
-            .height(ChipHeight)
-            .clip(shape)
-            .background(Surface100)
-            .then(if (error) Modifier.border(ErrorBorder, Danger600, shape) else Modifier)
+            .heightIn(min = DuriseoSize.Touch)
             .clickable(role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = description }
-            .padding(horizontal = DuriseoSpacing.Space3),
+            .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-            color = if (error) Danger600 else Ink900,
-        )
+        Box(
+            modifier = Modifier
+                .height(ChipHeight)
+                .clip(shape)
+                .background(Surface100)
+                .then(if (error) Modifier.border(ErrorBorder, Danger600, shape) else Modifier)
+                .padding(horizontal = DuriseoSpacing.Space3),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                color = if (error) Danger600 else Ink900,
+            )
+        }
     }
 }
 
@@ -606,20 +615,27 @@ private fun ReminderSheet(isAllDay: Boolean, selected: ReminderOption?, onSelect
         ) {
             (listOf<ReminderOption?>(null) + ReminderOption.optionsFor(isAllDay)).forEach { option ->
                 val isSelected = option == selected
+                // 보이는 높이 40 그대로, 터치 영역만 44로 키운다
                 Box(
                     modifier = Modifier
-                        .height(40.dp)
-                        .clip(CircleShape)
-                        .then(if (isSelected) Modifier.background(Ink900) else Modifier.border(1.dp, Line200, CircleShape))
-                        .clickable(role = Role.RadioButton) { onSelect(option) }
-                        .padding(horizontal = DuriseoSpacing.Space4),
+                        .heightIn(min = DuriseoSize.Touch)
+                        .clickable(role = Role.RadioButton) { onSelect(option) },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = reminderLabel(option),
-                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal),
-                        color = if (isSelected) OnBrand else Ink900,
-                    )
+                    Box(
+                        modifier = Modifier
+                            .height(40.dp)
+                            .clip(CircleShape)
+                            .then(if (isSelected) Modifier.background(Ink900) else Modifier.border(1.dp, Line200, CircleShape))
+                            .padding(horizontal = DuriseoSpacing.Space4),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = reminderLabel(option),
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal),
+                            color = if (isSelected) OnBrand else Ink900,
+                        )
+                    }
                 }
             }
         }

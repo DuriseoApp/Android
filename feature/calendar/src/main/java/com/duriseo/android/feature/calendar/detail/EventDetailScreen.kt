@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -358,22 +359,29 @@ private fun InfoRow(label: String, value: String) {
 
 @Composable
 private fun ReminderChip(text: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    // 보이는 높이 40 그대로, 터치 영역만 44로 키운다
     Box(
         modifier = Modifier
-            .height(ReminderChipHeight)
-            .clip(CircleShape)
-            .then(
-                if (selected) Modifier.background(Ink900) else Modifier.border(1.dp, Line200, CircleShape),
-            )
-            .clickable(enabled = enabled, role = Role.RadioButton, onClick = onClick)
-            .padding(horizontal = DuriseoSpacing.Space4),
+            .heightIn(min = DuriseoSize.Touch)
+            .clickable(enabled = enabled, role = Role.RadioButton, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall.copy(fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal),
-            color = if (selected) OnBrand else Ink900,
-        )
+        Box(
+            modifier = Modifier
+                .height(ReminderChipHeight)
+                .clip(CircleShape)
+                .then(
+                    if (selected) Modifier.background(Ink900) else Modifier.border(1.dp, Line200, CircleShape),
+                )
+                .padding(horizontal = DuriseoSpacing.Space4),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall.copy(fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal),
+                color = if (selected) OnBrand else Ink900,
+            )
+        }
     }
 }
 

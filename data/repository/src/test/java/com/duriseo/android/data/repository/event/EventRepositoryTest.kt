@@ -278,6 +278,20 @@ class EventRepositoryTest {
     }
 
     @Test
+    fun `D-111 PATCH가 403 NOT_AUTHOR로 실패해도 그 일정을 다시 읽는다`() = runTestWithTimeout {
+        val h = harness()
+        server.enqueue(jsonResponse(200, listJson(eventJson("a", title = "낡은 제목"))))
+        h.eventRepository.refreshRange(october.first, october.second, seoul)
+        server.enqueue(jsonResponse(403, errorJson("NOT_AUTHOR")))
+        server.enqueue(jsonResponse(200, eventJson("a", title = "최신 제목")))
+
+        val result = h.eventRepository.update("a", EventPatch(title = "내가 고친 제목"))
+
+        assertTrue((result as DataResult.Failure).error.hasCode(ErrorCode.NOT_AUTHOR))
+        assertEquals(listOf("최신 제목"), h.titles())
+    }
+
+    @Test
     fun `FR-CAL-03 403 NOT_AUTHOR이면 그 일정을 다시 읽는다`() = runTestWithTimeout {
         val h = harness()
         server.enqueue(jsonResponse(200, listJson(eventJson("a", title = "낡은 제목"))))

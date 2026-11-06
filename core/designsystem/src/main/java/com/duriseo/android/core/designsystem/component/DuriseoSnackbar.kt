@@ -29,6 +29,9 @@ import com.duriseo.android.core.designsystem.theme.duriseoShadow
 /** 안쪽 위아래 여백 14 */
 private val VerticalPadding = 14.dp
 
+/** 위에서 띄우는 스낵바의 위쪽 간격 40 (SCREENS.md 공통 "스낵바": 탭 있는 화면은 그림이 나올 때까지 위에서 40, 보드 `Main.dc.html` 51행). 토큰에 없는 보드 값 */
+private val TopOffset = 40.dp
+
 /** 글자 행간 21 (14 x 1.5). 크기·굵기는 `body-sm`(14/400)과 같다 */
 private val LineHeight = 21.sp
 
@@ -75,6 +78,24 @@ fun DuriseoSnackbarHost(
     SnackbarHost(
         hostState = hostState,
         modifier = modifier,
+    ) { data ->
+        DuriseoSnackbar(message = data.visuals.message)
+    }
+}
+
+/**
+ * 화면 위쪽에 띄우는 스낵바 자리. 탭이 있는 화면(SCR-CAL-01~03)용이다. 위에서 40, 좌우 16.
+ * Scaffold 슬롯이 아니라 화면 전체를 덮는 `Box` 안에서 `Alignment.TopCenter`로 놓는다.
+ * 탭 있는 화면의 최종 위치 그림이 나오면 맞춘다 (이미지 대기).
+ */
+@Composable
+fun DuriseoTopSnackbarHost(
+    hostState: SnackbarHostState,
+    modifier: Modifier = Modifier,
+) {
+    SnackbarHost(
+        hostState = hostState,
+        modifier = modifier.padding(top = TopOffset),
     ) { data ->
         DuriseoSnackbar(message = data.visuals.message)
     }
