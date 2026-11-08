@@ -1,6 +1,6 @@
 # 단위 2: 인증
 
-> 브랜치: `feat/2-auth` · PR: https://github.com/DuriseoApp/Android/pull/9 · 상태: 리뷰 1회차 수정 반영 (CI 202 통과 이후 수정분은 CI 재확인 대기)
+> 브랜치: `feat/2-auth` · PR: https://github.com/DuriseoApp/Android/pull/9 · 상태: **PR 완료 (머지됨)**
 > 기준: PRD v0.8 (Docs main, Docs PR #9 머지), SCREENS.md(캔버스 버전 38, 2026-10-26 갱신), API.md(2026-10-26 갱신: 1장 토큰 형식·인증 실패 순서, 3.1 `AuthTokens`·`Me`, 4.1~4.3·4.6·4.7, 5장), design-system.md(Android 매핑, 스낵바), tokens.json
 > 서버: Server 단위 1(계정) 머지됨. 개발 서버 배포는 사용자 확인 (아래 "서버 연동")
 
