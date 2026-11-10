@@ -93,17 +93,6 @@ class EventRulesTest {
     }
 
     @Test
-    fun `FR-CAL-01 AC2 날짜 목록은 종일 일정이 먼저고 시간 일정은 시작 시간순이다`() {
-        val late = event(id = "late", time = EventTime.Timed(Instant.parse("2026-10-12T10:30:00Z"), Instant.parse("2026-10-12T11:00:00Z")))
-        val early = event(id = "early", time = EventTime.Timed(Instant.parse("2026-10-12T05:00:00Z"), Instant.parse("2026-10-12T06:00:00Z")))
-        val allDay = event(id = "allday")
-
-        val sorted = EventRules.sortForDay(listOf(late, early, allDay)).map { it.id }
-
-        assertEquals(listOf("allday", "early", "late"), sorted)
-    }
-
-    @Test
     fun `FR-CAL-02 AC4 일정 색은 대상의 사람 색이다`() {
         assertEquals(EventTarget.ME, EventRules.targetOf(event(author = me), me))
         assertEquals(EventTarget.PARTNER, EventRules.targetOf(event(author = partner), me))

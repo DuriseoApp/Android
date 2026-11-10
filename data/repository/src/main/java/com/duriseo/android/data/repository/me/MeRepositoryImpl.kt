@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -39,6 +40,12 @@ class MeRepositoryImpl @Inject constructor(
     private val anniversaries: AnniversaryLocalDataSource,
 ) : MeRepository {
 
+    /**
+     * 초기화 세대. `resetAfterUnlink`가 시작할 때 올린다. `GET /me`는 요청 전에 이 값을 적어 두고,
+     * 락을 얻어 저장할 때 값이 바뀌었으면(초기화 전에 시작한 응답) 저장하지 않고 버린다.
+     */
+    private val resetGeneration = AtomicLong(0)
+
     private val changeChannel = Channel<SpaceChange>(Channel.BUFFERED)
 
     /** 구독자가 없을 때 난 것은 버퍼에 남았다가 첫 구독자에게 간다 (`SessionManager.events`와 같다) */
@@ -49,7 +56,8 @@ class MeRepositoryImpl @Inject constructor(
     override suspend fun refreshMe(): DataResult<Unit> {
         // 오프라인이면 조용히 실패한다. 화면은 마지막으로 저장한 내 정보를 그대로 보여 준다 (NFR-OFF-01)
         if (!networkMonitor.isOnlineNow()) return DataResult.Failure(DataError.Offline)
-        return save(remote.getMe())
+        val generation = resetGeneration.get()
+        return save(remote.getMe(), generation)
     }
 
     override fun observeLinkedSheetNeeded(): Flow<Boolean> =
@@ -60,11 +68,20 @@ class MeRepositoryImpl @Inject constructor(
         }.distinctUntilChanged()
 
     override suspend fun acknowledgeSpace() {
-        val spaceId = local.get()?.spaceId ?: return
-        acknowledged.set(spaceId)
+        // 읽고 저장하는 사이에 초기화·GET /me 저장이 끼어들지 못하게 락 아래에서 한다
+        writeLock.withLock {
+            val spaceId = local.get()?.spaceId
+            if (spaceId != null) acknowledged.set(spaceId)
+        }
     }
 
-    override suspend fun resetAfterUnlink() = writeLock.withLock {
+    override suspend fun resetAfterUnlink(): Unit {
+        // 락을 기다리기 전에 올려, 이 호출 전에 시작한 GET /me 응답은 뒤늦게 락을 얻어도 버려진다
+        resetGeneration.incrementAndGet()
+        resetLocked()
+    }
+
+    private suspend fun resetLocked() = writeLock.withLock {
         // 지우기 전의 커플 공간 ID. 그 사이 다른 커플과 연결돼 있으면 연결 완료 시트를 띄우는 데 쓴다 (D-125)
         val previousCoupleId = local.get()?.toDomainOrNull()?.space?.takeIf { it.type == SpaceType.COUPLE }?.id
         session.clearUserData()
@@ -92,9 +109,10 @@ class MeRepositoryImpl @Inject constructor(
         return save(networkMonitor.runOnlineWrite { remote.patchTimeZone(zoneId) })
     }
 
-    private suspend fun save(result: DataResult<Me>): DataResult<Unit> = when (result) {
+    /** [generation]이 있으면 그 세대의 응답만 저장한다 (초기화 뒤에 도착한 이전 세대 응답은 버리고 성공으로 돌려준다) */
+    private suspend fun save(result: DataResult<Me>, generation: Long? = null): DataResult<Unit> = when (result) {
         is DataResult.Success -> {
-            saveFresh(result.value)
+            saveFresh(result.value, generation)
             DataResult.Success(Unit)
         }
 
@@ -102,7 +120,9 @@ class MeRepositoryImpl @Inject constructor(
     }
 
     /** `GET /me` 응답이 동시에 두 번 저장되면 감지·저장 순서가 섞이므로 한 번에 하나씩 처리한다 ([MeWriteLock]) */
-    private suspend fun saveFresh(fresh: Me) = writeLock.withLock { saveFreshLocked(fresh) }
+    private suspend fun saveFresh(fresh: Me, generation: Long? = null) = writeLock.withLock {
+        if (generation == null || generation == resetGeneration.get()) saveFreshLocked(fresh)
+    }
 
     /**
      * 받은 내 정보를 저장한다. **해제 감지가 저장보다 먼저**다 (API.md 4.5의 6단계, 리드 결정):

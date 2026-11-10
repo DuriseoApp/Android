@@ -1,6 +1,5 @@
 package com.duriseo.android.domain.event
 
-import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
@@ -74,15 +73,6 @@ object EventRules {
     /** 여러 날 일정은 시작일부터 종료일까지 모든 날짜에 나온다 (FR-CAL-02 AC5) */
     fun occursOn(event: Event, day: LocalDate, zone: ZoneId): Boolean =
         !day.isBefore(firstDay(event, zone)) && !day.isAfter(lastDay(event, zone))
-
-    /**
-     * 날짜 목록 순서: 종일 일정 -> 시간 일정(시작 시각순) (FR-CAL-01 AC2의 일정 부분).
-     * 같으면 만든 순서(id)로 정해 흔들리지 않게 한다.
-     */
-    fun sortForDay(events: List<Event>): List<Event> =
-        events.sortedWith(
-            compareBy<Event>({ if (it.isAllDay) 0 else 1 }, { (it.time as? EventTime.Timed)?.start ?: Instant.MIN }, { it.id }),
-        )
 
     /** 대상: `isTogether`면 함께, 아니면 작성자 = 대상 (D-34). 보는 사람 기준 (나·상대) */
     fun targetOf(event: Event, myId: String): EventTarget = when {
