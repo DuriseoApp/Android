@@ -150,6 +150,8 @@ class FakeAnniversaryRepository(
     var updateResult: DataResult<Unit> = DataResult.Success(Unit)
     var deleteResult: DataResult<Unit> = DataResult.Success(Unit)
 
+    override fun setVisibleRange(from: LocalDate, to: LocalDate) = Unit
+
     override fun observeRange(from: LocalDate, to: LocalDate): Flow<List<AnniversaryOccurrence>> =
         MutableStateFlow(emptyList())
 

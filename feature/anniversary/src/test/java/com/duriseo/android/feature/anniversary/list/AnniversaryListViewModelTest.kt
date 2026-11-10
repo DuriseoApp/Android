@@ -90,6 +90,16 @@ class AnniversaryListViewModelTest {
     }
 
     @Test
+    fun `FR-ANNIV-04 같은 날 같은 이름의 기념일이 있어도 목록 key는 겹치지 않는다`() = runTest {
+        val vm = viewModel(FakeAnniversaryRepository(listOf(auto("우리 기념일", d1023), auto("우리 기념일", d1023))))
+
+        val keys = vm.uiState.value.items.map { it.key }
+
+        assertEquals(2, keys.size)
+        assertEquals(keys.size, keys.toSet().size)
+    }
+
+    @Test
     fun `FR-ANNIV-04 AC2 개인 공간에 기념일이 없으면 빈 화면이다`() = runTest {
         me.me.value = soloMe()
 

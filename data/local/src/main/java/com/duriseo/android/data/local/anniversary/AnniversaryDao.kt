@@ -79,10 +79,11 @@ abstract class AnniversaryDao {
     }
 
     @Transaction
-    open suspend fun appendPast(items: List<PastAnniversaryEntity>, nextCursor: String?, totalCount: Int) {
+    open suspend fun appendPast(items: List<PastAnniversaryEntity>, nextCursor: String?, totalCount: Int?) {
         val start = lastPastPosition() + 1
         insertPast(items.mapIndexed { i, e -> e.copy(position = start + i) })
-        upsertState(AnniversaryPageStateEntity(STATE_PAST, nextCursor, totalCount))
+        // 다음 페이지에 totalCount가 없으면 저장된 값을 그대로 둔다
+        upsertState(AnniversaryPageStateEntity(STATE_PAST, nextCursor, totalCount ?: getState(STATE_PAST)?.totalCount))
     }
 
     // --- 이어 받기 상태 ---

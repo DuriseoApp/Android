@@ -6,6 +6,7 @@ import com.duriseo.android.data.local.me.AcknowledgedSpaceLocalDataSource
 import com.duriseo.android.data.local.me.MeLocalDataSource
 import com.duriseo.android.data.remote.me.MeRemoteDataSource
 import com.duriseo.android.data.repository.auth.SessionManager
+import com.duriseo.android.data.repository.cache.LocalCacheGeneration
 import com.duriseo.android.data.repository.online.runOnlineWrite
 import com.duriseo.android.domain.error.DataError
 import com.duriseo.android.domain.me.Me
@@ -20,7 +21,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
-import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -38,13 +38,8 @@ class MeRepositoryImpl @Inject constructor(
     private val writeLock: MeWriteLock,
     private val events: EventLocalDataSource,
     private val anniversaries: AnniversaryLocalDataSource,
+    private val cache: LocalCacheGeneration,
 ) : MeRepository {
-
-    /**
-     * 초기화 세대. `resetAfterUnlink`가 시작할 때 올린다. `GET /me`는 요청 전에 이 값을 적어 두고,
-     * 락을 얻어 저장할 때 값이 바뀌었으면(초기화 전에 시작한 응답) 저장하지 않고 버린다.
-     */
-    private val resetGeneration = AtomicLong(0)
 
     private val changeChannel = Channel<SpaceChange>(Channel.BUFFERED)
 
@@ -56,7 +51,8 @@ class MeRepositoryImpl @Inject constructor(
     override suspend fun refreshMe(): DataResult<Unit> {
         // 오프라인이면 조용히 실패한다. 화면은 마지막으로 저장한 내 정보를 그대로 보여 준다 (NFR-OFF-01)
         if (!networkMonitor.isOnlineNow()) return DataResult.Failure(DataError.Offline)
-        val generation = resetGeneration.get()
+        // 요청 전에 캐시 세대를 적어 둔다. 응답이 오기 전에 초기화·로그아웃·공간 변경으로 캐시가 지워졌으면 저장하지 않는다
+        val generation = cache.current()
         return save(remote.getMe(), generation)
     }
 
@@ -77,7 +73,7 @@ class MeRepositoryImpl @Inject constructor(
 
     override suspend fun resetAfterUnlink(): Unit {
         // 락을 기다리기 전에 올려, 이 호출 전에 시작한 GET /me 응답은 뒤늦게 락을 얻어도 버려진다
-        resetGeneration.incrementAndGet()
+        cache.invalidate()
         resetLocked()
     }
 
@@ -106,10 +102,14 @@ class MeRepositoryImpl @Inject constructor(
         // 저장된 내 정보가 없으면 비교할 수 없다 (로그인 직후에는 refreshMe가 먼저 채운다)
         val cached = local.get() ?: return DataResult.Success(Unit)
         if (cached.timeZone == zoneId) return DataResult.Success(Unit)
-        return save(networkMonitor.runOnlineWrite { remote.patchTimeZone(zoneId) })
+        // 앱에 돌아올 때마다 나가는 요청이라 해제 초기화와 겹치기 쉽다: GET /me와 같이 세대를 확인한다
+        val generation = cache.current()
+        return save(networkMonitor.runOnlineWrite { remote.patchTimeZone(zoneId) }, generation)
     }
 
-    /** [generation]이 있으면 그 세대의 응답만 저장한다 (초기화 뒤에 도착한 이전 세대 응답은 버리고 성공으로 돌려준다) */
+    /** [generation]이 있으면 그 세대의 응답만 저장한다 (캐시를 지운 뒤에 도착한 이전 세대 응답은 버리고 성공으로 돌려준다).
+     * 확인은 [MeWriteLock] 아래에서 한다. 지우는 쪽 대부분이 이 락 아래라 확인과 저장 사이에 끼어들지 못한다
+     * (락 밖의 로그아웃·세션 끊김 지우기는 세대만 올린다) */
     private suspend fun save(result: DataResult<Me>, generation: Long? = null): DataResult<Unit> = when (result) {
         is DataResult.Success -> {
             saveFresh(result.value, generation)
@@ -121,7 +121,7 @@ class MeRepositoryImpl @Inject constructor(
 
     /** `GET /me` 응답이 동시에 두 번 저장되면 감지·저장 순서가 섞이므로 한 번에 하나씩 처리한다 ([MeWriteLock]) */
     private suspend fun saveFresh(fresh: Me, generation: Long? = null) = writeLock.withLock {
-        if (generation == null || generation == resetGeneration.get()) saveFreshLocked(fresh)
+        if (generation == null || generation == cache.current()) saveFreshLocked(fresh)
     }
 
     /**
@@ -146,8 +146,10 @@ class MeRepositoryImpl @Inject constructor(
         if (unlinked) session.clearUserData()
         // 공간이 바뀌었으면(연결·복구·다른 커플 공간) 이전 공간의 일정·기념일 캐시를 비운다 (unit-4.md 확인 필요 12, 단위 5)
         if (!unlinked && previous != null && previous.space.id != fresh.space.id) {
-            events.clear()
-            anniversaries.clear()
+            cache.clearing {
+                events.clear()
+                anniversaries.clear()
+            }
         }
         local.replace(fresh.toEntity())
         when {

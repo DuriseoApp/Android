@@ -268,14 +268,13 @@ class EventEditViewModel @Inject constructor(
         when (result) {
             is DataResult.Failure -> fail(result)
             is DataResult.Success -> {
-                if (s.reminder != null) {
-                    val reminderResult = eventRepository.setReminder(result.value.id, s.reminder)
-                    if (reminderResult is DataResult.Failure) {
-                        // 일정은 이미 저장됐다. 남기고 공통 오류 안내만 한 뒤 닫는다 (D-108)
-                        effectChannel.trySend(EventEditSideEffect.ShowMessage(reminderResult.error.toMessageRes()))
-                    }
-                }
+                val reminderResult = s.reminder?.let { eventRepository.setReminder(result.value.id, it) }
+                // 덮개를 먼저 걷고 안내한다 (D-115)
                 finishLoading()
+                if (reminderResult is DataResult.Failure) {
+                    // 일정은 이미 저장됐다. 남기고 공통 오류 안내만 한 뒤 닫는다 (D-108)
+                    effectChannel.trySend(EventEditSideEffect.ShowMessage(reminderResult.error.toMessageRes()))
+                }
                 effectChannel.trySend(EventEditSideEffect.Close)
             }
         }
@@ -302,13 +301,12 @@ class EventEditViewModel @Inject constructor(
         }
         // 종일을 바꿔 저장하면 서버가 알림을 없음으로 돌린다 (FR-CAL-05 AC4, D-91)
         val serverReminder = if (time.isAllDay != before.isAllDay) null else before.reminder?.option
-        if (s.reminder != serverReminder) {
-            val reminderResult = eventRepository.setReminder(before.id, s.reminder)
-            if (reminderResult is DataResult.Failure) {
-                effectChannel.trySend(EventEditSideEffect.ShowMessage(reminderResult.error.toMessageRes()))
-            }
-        }
+        val reminderResult = if (s.reminder != serverReminder) eventRepository.setReminder(before.id, s.reminder) else null
+        // 덮개를 먼저 걷고 안내한다 (D-115)
         finishLoading()
+        if (reminderResult is DataResult.Failure) {
+            effectChannel.trySend(EventEditSideEffect.ShowMessage(reminderResult.error.toMessageRes()))
+        }
         effectChannel.trySend(EventEditSideEffect.Close)
     }
 

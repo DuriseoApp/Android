@@ -208,4 +208,22 @@ class MeRepositoryTest {
         assertEquals(DataResult.Success(Unit), staleResult)
         assertEquals("fresh-user", h.roomMe()?.id)
     }
+
+    @Test
+    fun `초기화 전에 시작한 PATCH me 응답은 저장하지 않는다`() = runTestWithTimeout {
+        val h = harness()
+        h.preload(fixtureMe(id = "cached-user", timeZone = "Asia/Seoul"))
+        // 첫 요청(초기화 전에 시작한 PATCH)은 응답이 늦게 온다
+        server.enqueue(jsonResponse(200, meJson(id = "stale-user", timeZone = "Asia/Tokyo")).setHeadersDelay(1500, TimeUnit.MILLISECONDS))
+        server.enqueue(jsonResponse(200, meJson(id = "fresh-user")))
+
+        val stale = async(Dispatchers.Default) { h.meRepository.syncTimeZone("Asia/Tokyo") }
+        assertEquals("PATCH", server.takeRequest(5, TimeUnit.SECONDS)?.method)
+        h.meRepository.resetAfterUnlink()
+        val staleResult = stale.await()
+
+        assertEquals(DataResult.Success(Unit), staleResult)
+        assertEquals("fresh-user", h.roomMe()?.id)
+        assertEquals("Asia/Seoul", h.roomMe()?.timeZone)
+    }
 }

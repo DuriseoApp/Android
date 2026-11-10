@@ -10,12 +10,18 @@ import java.time.LocalDate
  * - 응답 배열의 **순서를 그대로** 쓴다. Room에 위치를 함께 저장하고 앱이 다시 정렬하지 않는다 (API.md "리드 보충 (순서 사용)").
  * - `refresh…`·`loadMore…`는 읽기라서 오프라인이면 요청 없이 `DataError.Offline`이다. 부른 쪽이 조용히 넘긴다.
  * - 쓰기([create]·[update]·[delete])는 온라인에서만 한다. 오프라인이면 요청 없이 `Offline` (NFR-OFF-02).
- *   성공하면 upcoming·past 첫 페이지와 마지막으로 불러온 캘린더 범위를 다시 불러온다 (자동 기념일 계산은 서버가 한다).
+ *   성공하면 upcoming·past 첫 페이지와 [setVisibleRange]로 알린 캘린더 범위를 다시 불러온다 (자동 기념일 계산은 서버가 한다).
  * - 404 `NOT_FOUND`면 Room에서도 그 기념일을 지운다. 403 `NOT_AUTHOR`면 [refreshAll]과 같이 다시 불러온다 (D-121).
  */
 interface AnniversaryRepository {
     /** [from]~[to](포함)의 발생일. 캘린더용이고 위치 순서 그대로다 */
     fun observeRange(from: LocalDate, to: LocalDate): Flow<List<AnniversaryOccurrence>>
+
+    /**
+     * 캘린더가 지금 보이는 범위를 알린다. 쓰기 뒤·[refreshAll]이 이 범위를 다시 불러온다 (달이 바뀔 때마다 부른다).
+     * 캐시를 지우면(해제·로그아웃·공간 변경) 이 값도 비워지므로 캘린더가 다시 알려야 한다.
+     */
+    fun setVisibleRange(from: LocalDate, to: LocalDate)
 
     /** SCR-ANNIV-01 "다가오는 기념일" */
     fun observeUpcoming(): Flow<UpcomingAnniversaries>
@@ -25,7 +31,7 @@ interface AnniversaryRepository {
 
     /**
      * `GET /anniversaries?from=&to=`. 범위를 1950-01-01 ~ 2050-12-31 안으로 잘라 요청하고(밖이면 요청 없이 성공),
-     * 응답을 받으면 그 범위의 발생일을 Room에서 지우고 새로 넣는다. 마지막으로 성공한 범위는 쓰기 뒤 다시 불러오는 데 쓴다.
+     * 응답을 받으면 그 범위의 발생일을 Room에서 지우고 새로 넣는다. 요청 뒤 캐시가 지워졌거나 겹치는 더 새 응답이 이미 저장됐으면 저장하지 않는다.
      * 월 조회의 앞뒤 하루 여유(Q-19 ②)는 부르는 쪽이 정한다 ([calendarMonthRange]).
      */
     suspend fun refreshRange(from: LocalDate, to: LocalDate): DataResult<Unit>
@@ -42,7 +48,7 @@ interface AnniversaryRepository {
     /** `GET /anniversaries/past?cursor=` 다음 페이지를 이어 붙인다. 다음 페이지가 없으면 요청 없이 성공 */
     suspend fun loadMorePast(): DataResult<Unit>
 
-    /** upcoming·past 첫 페이지와 마지막 캘린더 범위를 다시 불러온다 (처음 만난 날 변경 뒤, 403 뒤). 하나라도 실패하면 첫 실패를 돌려준다 */
+    /** upcoming·past 첫 페이지와 보이는 캘린더 범위를 다시 불러온다 (처음 만난 날 변경 뒤, 403 뒤). 하나라도 실패하면 첫 실패를 돌려준다 */
     suspend fun refreshAll(): DataResult<Unit>
 
     /** `POST /anniversaries` (201). 성공하면 목록과 달을 다시 불러온다 */

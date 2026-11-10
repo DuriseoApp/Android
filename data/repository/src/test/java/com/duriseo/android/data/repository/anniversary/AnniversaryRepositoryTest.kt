@@ -11,6 +11,9 @@ import com.duriseo.android.domain.error.DataError
 import com.duriseo.android.domain.error.ErrorCode
 import com.duriseo.android.domain.error.hasCode
 import com.duriseo.android.domain.result.DataResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -31,6 +34,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.time.LocalDate
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.TimeUnit
 
 /** 기념일 리포지토리 (API.md 3.3 "기념일"): Room 구독, 응답 순서 저장, 커서 페이지, 온라인 쓰기 */
 @RunWith(RobolectricTestRunner::class)
@@ -236,6 +240,7 @@ class AnniversaryRepositoryTest {
         // 보이는 달을 먼저 불러 둔다
         server.enqueue(jsonResponse(200, items()))
         h.anniversaryRepository.refreshRange(october.first, october.second)
+        h.anniversaryRepository.setVisibleRange(october.first, october.second)
         server.takeRequest()
         val path = PathServer(
             mapOf(
@@ -346,6 +351,7 @@ class AnniversaryRepositoryTest {
         val h = harness()
         server.enqueue(jsonResponse(200, items()))
         h.anniversaryRepository.refreshRange(october.first, october.second)
+        h.anniversaryRepository.setVisibleRange(october.first, october.second)
         server.takeRequest()
         val path = PathServer(
             mapOf(
@@ -377,4 +383,167 @@ class AnniversaryRepositoryTest {
     private fun anniversaryJson(id: String, name: String, date: String) =
         """{"id":"$id","name":"$name","date":"$date","repeatsYearly":true,"authorId":"11111111-1111-1111-1111-111111111111",
             "createdAt":"2026-10-01T00:00:00Z","updatedAt":"2026-10-02T00:00:00Z"}"""
+
+    @Test
+    fun `기념일 목록 - 캐시를 지운 뒤 도착한 이전 응답은 저장하지 않는다`() = runTestWithTimeout {
+        val h = harness()
+        server.enqueue(jsonResponse(200, page(null, occ("늦은 응답", "2026-10-20", id = "a1", author = "u1"))).setHeadersDelay(1500, TimeUnit.MILLISECONDS))
+
+        val stale = async(Dispatchers.Default) { h.anniversaryRepository.refreshUpcoming() }
+        assertTrue(server.takeRequest(5, TimeUnit.SECONDS) != null)
+        h.session.clearUserData() // 로그아웃·초기화처럼 캐시를 지운다
+        val result = stale.await()
+
+        assertTrue(result is DataResult.Success)
+        assertEquals(emptyList<String>(), h.upcomingNames())
+    }
+
+    @Test
+    fun `기념일 범위 - 캐시를 지운 뒤 도착한 이전 응답은 저장하지 않는다`() = runTestWithTimeout {
+        val h = harness()
+        server.enqueue(jsonResponse(200, items(occ("늦은 응답", "2026-10-20", id = "a1", author = "u1"))).setHeadersDelay(1500, TimeUnit.MILLISECONDS))
+
+        val stale = async(Dispatchers.Default) { h.anniversaryRepository.refreshRange(october.first, october.second) }
+        assertTrue(server.takeRequest(5, TimeUnit.SECONDS) != null)
+        h.session.clearUserData()
+        stale.await()
+
+        assertEquals(emptyList<String>(), h.rangeNames())
+    }
+
+    @Test
+    fun `보이는 범위를 알리면 쓰기 뒤 그 범위를 다시 불러오고 캐시를 지우면 비워진다`() = runTestWithTimeout {
+        val h = harness()
+        h.anniversaryRepository.setVisibleRange(october.first, october.second)
+        val path = PathServer(
+            mapOf(
+                "DELETE /api/v1/anniversaries/a1" to MockResponse().setResponseCode(204),
+                "GET /api/v1/anniversaries/upcoming" to jsonResponse(200, page(null)),
+                "GET /api/v1/anniversaries/past" to jsonResponse(200, pastPage(null, 0)),
+                "GET /api/v1/anniversaries" to jsonResponse(200, items()),
+            ),
+        )
+        server.dispatcher = path
+
+        h.anniversaryRepository.delete("a1")
+        assertTrue(path.requests.contains("GET /api/v1/anniversaries?from=2026-09-30&to=2026-11-01"))
+
+        h.session.clearUserData()
+        path.requests.clear()
+        h.anniversaryRepository.delete("a1")
+        assertFalse(path.requests.any { it.startsWith("GET /api/v1/anniversaries?") })
+    }
+
+    @Test
+    fun `보이는 범위는 마지막으로 알린 값이다`() = runTestWithTimeout {
+        val h = harness()
+        val november = LocalDate.of(2026, 10, 31) to LocalDate.of(2026, 12, 1)
+        h.anniversaryRepository.setVisibleRange(october.first, october.second)
+        h.anniversaryRepository.setVisibleRange(november.first, november.second)
+        val path = PathServer(
+            mapOf(
+                "DELETE /api/v1/anniversaries/a1" to MockResponse().setResponseCode(204),
+                "GET /api/v1/anniversaries/upcoming" to jsonResponse(200, page(null)),
+                "GET /api/v1/anniversaries/past" to jsonResponse(200, pastPage(null, 0)),
+                "GET /api/v1/anniversaries" to jsonResponse(200, items()),
+            ),
+        )
+        server.dispatcher = path
+
+        h.anniversaryRepository.delete("a1")
+
+        assertTrue(path.requests.contains("GET /api/v1/anniversaries?from=2026-10-31&to=2026-12-01"))
+        assertFalse(path.requests.contains("GET /api/v1/anniversaries?from=2026-09-30&to=2026-11-01"))
+    }
+
+    @Test
+    fun `쓰기 성공 뒤 다시 불러오다 예외가 나도 쓰기 결과는 성공이다`() = runTestWithTimeout {
+        val h = harness()
+        val path = PathServer(
+            mapOf(
+                "DELETE /api/v1/anniversaries/a1" to MockResponse().setResponseCode(204),
+                // 깨진 본문: 파싱 실패가 예외로 번지더라도 쓰기 결과를 바꾸지 않는다
+                "GET /api/v1/anniversaries/upcoming" to jsonResponse(200, "{깨진 JSON"),
+                "GET /api/v1/anniversaries/past" to jsonResponse(200, pastPage(null, 0)),
+            ),
+        )
+        server.dispatcher = path
+
+        val result = h.anniversaryRepository.delete("a1")
+
+        assertTrue(result is DataResult.Success)
+    }
+
+    @Test
+    fun `loadMoreUpcoming 중에 refreshUpcoming은 기다렸다가 목록을 교체한다`() = runTestWithTimeout {
+        val h = harness()
+        server.enqueue(jsonResponse(200, page("c1", occ("첫 페이지", "2026-10-20", id = "a1", author = "u1"))))
+        h.anniversaryRepository.refreshUpcoming()
+        server.takeRequest(5, TimeUnit.SECONDS)
+        // 다음 페이지 응답은 늦게 온다
+        server.enqueue(jsonResponse(200, page(null, occ("다음 페이지", "2026-10-25", id = "a2", author = "u1"))).setHeadersDelay(800, TimeUnit.MILLISECONDS))
+        server.enqueue(jsonResponse(200, page(null, occ("새 첫 페이지", "2026-10-21", id = "a3", author = "u1"))))
+
+        val more = async(Dispatchers.Default) { h.anniversaryRepository.loadMoreUpcoming() }
+        assertTrue(server.takeRequest(5, TimeUnit.SECONDS)?.path?.contains("cursor=c1") == true)
+        val refresh = async(Dispatchers.Default) { h.anniversaryRepository.refreshUpcoming() }
+        awaitAll(more, refresh)
+
+        // 두 번째 요청은 refresh의 것이라 loadMore가 끝난 뒤에 나갔고, 결과는 교체된 목록이다
+        assertEquals(3, server.requestCount)
+        assertEquals(listOf("새 첫 페이지"), h.upcomingNames())
+    }
+
+    @Test
+    fun `이웃 달 범위를 교체해도 서로의 날짜를 지우지 않는다`() = runTestWithTimeout {
+        val h = harness()
+        val november = LocalDate.of(2026, 10, 31) to LocalDate.of(2026, 12, 1)
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when (request.requestUrl?.queryParameter("from")) {
+                "2026-09-30" -> jsonResponse(200, items(occ("10월 초", "2026-10-05"), occ("겹침", "2026-10-31")))
+                else -> jsonResponse(200, items(occ("겹침", "2026-10-31"), occ("11월 말", "2026-11-20")))
+            }
+        }
+
+        h.anniversaryRepository.refreshRange(october.first, october.second)
+        h.anniversaryRepository.refreshRange(november.first, november.second)
+
+        assertEquals(listOf("10월 초", "겹침", "11월 말"), h.rangeNames(october.first, november.second))
+    }
+
+    @Test
+    fun `겹치는 더 새 범위 응답이 먼저 저장됐으면 늦게 온 오래된 응답은 겹치는 날을 덮지 않는다`() = runTestWithTimeout {
+        val h = harness()
+        val november = LocalDate.of(2026, 10, 31) to LocalDate.of(2026, 12, 1)
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when (request.requestUrl?.queryParameter("from")) {
+                // 오래된 요청(10월)의 응답은 늦게 오고 겹치는 날의 이름이 낡았다
+                "2026-09-30" -> jsonResponse(200, items(occ("10월 초", "2026-10-05"), occ("낡은 겹침", "2026-10-31")))
+                    .setHeadersDelay(1000, TimeUnit.MILLISECONDS)
+                else -> jsonResponse(200, items(occ("새 겹침", "2026-10-31"), occ("11월 말", "2026-11-20")))
+            }
+        }
+
+        val older = async(Dispatchers.Default) { h.anniversaryRepository.refreshRange(october.first, october.second) }
+        // 오래된 요청이 먼저 나가도록 잠깐 기다린 뒤 새 요청을 보낸다
+        while (server.requestCount < 1) kotlinx.coroutines.delay(10)
+        h.anniversaryRepository.refreshRange(november.first, november.second)
+        older.await()
+
+        assertEquals(listOf("10월 초", "새 겹침", "11월 말"), h.rangeNames(october.first, november.second))
+    }
+
+    @Test
+    fun `past 다음 페이지에 totalCount가 없으면 저장된 값을 유지한다`() = runTestWithTimeout {
+        val h = harness()
+        server.enqueue(jsonResponse(200, pastPage("c1", 5, pastItem("p1", "하나", "2026-01-01"))))
+        h.anniversaryRepository.refreshPast()
+        server.enqueue(jsonResponse(200, page(null).replace("\"items\":[]", "\"items\":[${pastItem("p2", "둘", "2025-01-01")}]")))
+
+        h.anniversaryRepository.loadMorePast()
+
+        val past = h.anniversaryRepository.observePast().first()
+        assertEquals(2, past.items.size)
+        assertEquals(5, past.totalCount)
+    }
 }

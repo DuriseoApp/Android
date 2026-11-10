@@ -225,17 +225,32 @@ class FakeAnniversaryRepository(initial: List<AnniversaryOccurrence> = emptyList
     val occurrences = MutableStateFlow(initial)
 
     val refreshRanges = mutableListOf<Pair<LocalDate, LocalDate>>()
+
+    /** 요청 도중 취소된 범위 */
+    val cancelledRanges = mutableListOf<Pair<LocalDate, LocalDate>>()
     var refreshRangeResult: DataResult<Unit> = DataResult.Success(Unit)
 
     /** 설정하면 [refreshRange]가 이 값이 끝날 때까지 기다린다 (당겨서 새로고침 중 상태를 보려고) */
     var refreshGate: CompletableDeferred<Unit>? = null
+
+    /** [setVisibleRange]로 알려 온 범위들 (마지막이 지금 보이는 범위) */
+    val visibleRanges = mutableListOf<Pair<LocalDate, LocalDate>>()
+
+    override fun setVisibleRange(from: LocalDate, to: LocalDate) {
+        visibleRanges += from to to
+    }
 
     override fun observeRange(from: LocalDate, to: LocalDate): Flow<List<AnniversaryOccurrence>> =
         occurrences.map { list -> list.filter { it.date >= from && it.date <= to }.sortedBy { it.date } }
 
     override suspend fun refreshRange(from: LocalDate, to: LocalDate): DataResult<Unit> {
         refreshRanges += from to to
-        refreshGate?.await()
+        try {
+            refreshGate?.await()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            cancelledRanges += from to to
+            throw e
+        }
         return refreshRangeResult
     }
 

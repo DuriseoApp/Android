@@ -4,6 +4,7 @@ import com.duriseo.android.data.local.anniversary.AnniversaryLocalDataSource
 import com.duriseo.android.data.local.event.EventLocalDataSource
 import com.duriseo.android.data.local.me.MeLocalDataSource
 import com.duriseo.android.data.remote.couple.CoupleRemoteDataSource
+import com.duriseo.android.data.repository.cache.LocalCacheGeneration
 import com.duriseo.android.data.repository.me.MeWriteLock
 import com.duriseo.android.data.repository.online.runOnlineWrite
 import com.duriseo.android.domain.couple.ColorChange
@@ -35,6 +36,7 @@ class CoupleRepositoryImpl @Inject constructor(
     private val writeLock: MeWriteLock,
     private val events: EventLocalDataSource,
     private val anniversaries: AnniversaryLocalDataSource,
+    private val cache: LocalCacheGeneration,
 ) : CoupleRepository {
 
     override suspend fun currentInviteCode(): DataResult<InviteCode?> {
@@ -55,8 +57,10 @@ class CoupleRepositoryImpl @Inject constructor(
             // 개인 공간의 일정·기념일이 커플 공간으로 옮겨지거나 지워졌다: 캐시를 비워 다시 받게 한다 (unit-4.md 확인 필요 12, 단위 5)
             .also {
                 if (it is DataResult.Success) {
-                    events.clear()
-                    anniversaries.clear()
+                    cache.clearing {
+                        events.clear()
+                        anniversaries.clear()
+                    }
                 }
             }
             .thenRefreshMe()

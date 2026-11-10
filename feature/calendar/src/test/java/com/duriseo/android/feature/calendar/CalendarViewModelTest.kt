@@ -251,6 +251,23 @@ class CalendarViewModelTest {
     }
 
     @Test
+    fun `달을 빨리 넘기면 이전 달 새로고침을 취소하고 보이는 달을 기억한다`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        anniversaries.refreshGate = gate // 새로고침이 끝나지 않은 채로 달을 넘긴다
+        val vm = viewModel()
+        val october = LocalDate.of(2026, 9, 30) to LocalDate.of(2026, 11, 1)
+        val november = LocalDate.of(2026, 10, 31) to LocalDate.of(2026, 12, 1)
+
+        vm.onAction(CalendarAction.Shown)
+        vm.onAction(CalendarAction.NextMonth)
+
+        assertEquals(listOf(october), anniversaries.cancelledRanges)
+        assertEquals(listOf(october, november), anniversaries.visibleRanges)
+        assertEquals(listOf(october, november), anniversaries.refreshRanges)
+        gate.complete(Unit)
+    }
+
+    @Test
     fun `FR-CAL-02 AC1 날짜 목록의 더하기는 선택한 날로 작성 화면을 연다`() = runTest {
         val vm = viewModel()
         vm.effects.test {

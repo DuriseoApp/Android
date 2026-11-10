@@ -133,7 +133,7 @@ class AnniversaryListViewModel @Inject constructor(
                     // 직접 기념일은 작성자만 수정·삭제한다. 자동과 상대 것은 누를 수 없다
                     editable = !o.isAuto && author == AnniversaryAuthor.ME,
                 )
-            },
+            }.withUniqueKeys({ it.key }) { item, key -> item.copy(key = key) },
             pastCount = past.totalCount,
             pastItems = past.items.map { p ->
                 val author = authorOf(p.authorId) ?: AnniversaryAuthor.PARTNER
@@ -145,7 +145,7 @@ class AnniversaryListViewModel @Inject constructor(
                     author = author,
                     editable = author == AnniversaryAuthor.ME,
                 )
-            },
+            }.withUniqueKeys({ it.key }) { item, key -> item.copy(key = key) },
             pastOpen = state.pastOpen,
             hasMoreUpcoming = upcoming.hasMore,
             hasMorePast = past.hasMore,
@@ -273,5 +273,19 @@ class AnniversaryListViewModel @Inject constructor(
                 }
             }
         }
+    }
+}
+
+/**
+ * LazyColumn의 key는 겹치면 앱이 죽는다. 같은 날 같은 이름처럼 key가 겹치는 항목은 뒤에 `#순번`을 붙여 구분한다
+ * (첫 항목의 key는 그대로라 목록이 바뀌어도 대부분 같은 key를 유지한다).
+ */
+private fun <T> List<T>.withUniqueKeys(keyOf: (T) -> String, withKey: (T, String) -> T): List<T> {
+    val seen = mutableMapOf<String, Int>()
+    return map { item ->
+        val key = keyOf(item)
+        val count = (seen[key] ?: 0) + 1
+        seen[key] = count
+        if (count == 1) item else withKey(item, "$key#$count")
     }
 }

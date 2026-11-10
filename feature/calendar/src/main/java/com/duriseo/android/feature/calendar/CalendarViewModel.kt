@@ -154,11 +154,17 @@ class CalendarViewModel @Inject constructor(
      */
     private fun refreshVisibleMonth(): Job {
         val (from, to) = calendarMonthRange(local.value.visibleMonth)
+        // 저장소가 쓰기 뒤에 다시 불러올 범위는 보이는 달이다 (요청이 끝나기를 기다리지 않고 바로 알린다)
+        anniversaryRepository.setVisibleRange(from, to)
+        // 달을 빨리 넘기면 이전 달 요청은 취소한다. 겹치는 이틀을 오래된 응답이 덮지 않게
+        refreshJob?.cancel()
         return viewModelScope.launch {
             launch { eventRepository.refreshRange(from, to, zone) }
             launch { anniversaryRepository.refreshRange(from, to) }
-        }
+        }.also { refreshJob = it }
     }
+
+    private var refreshJob: Job? = null
 
     /** 당겨서 새로고침 (Q-16): 다시 불러오는 동안 표시를 켠다. 요청 중 또 당겨도 한 번만 한다 */
     private fun pullToRefresh() {
@@ -187,6 +193,9 @@ class CalendarViewModel @Inject constructor(
     private fun selectDate(date: LocalDate) {
         if (!EventRules.isSelectable(date)) return
         local.update { it.copy(selectedDate = date, visibleMonth = YearMonth.from(date)) }
+        // 다른 달의 날짜를 골라 보이는 달이 바뀌어도 저장소가 아는 보이는 범위는 따라간다
+        val (from, to) = calendarMonthRange(local.value.visibleMonth)
+        anniversaryRepository.setVisibleRange(from, to)
     }
 
     // --- 처음 만난 날 시트 (FR-COUPLE-04 AC2, 설정 화면 시트와 같은 규칙) ---

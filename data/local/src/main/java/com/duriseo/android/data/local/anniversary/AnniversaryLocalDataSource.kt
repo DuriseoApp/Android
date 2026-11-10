@@ -37,7 +37,7 @@ class AnniversaryLocalDataSource @Inject constructor(
     suspend fun replacePast(items: List<PastAnniversaryEntity>, nextCursor: String?, totalCount: Int) =
         dao.replacePast(items, nextCursor, totalCount)
 
-    suspend fun appendPast(items: List<PastAnniversaryEntity>, nextCursor: String?, totalCount: Int) =
+    suspend fun appendPast(items: List<PastAnniversaryEntity>, nextCursor: String?, totalCount: Int?) =
         dao.appendPast(items, nextCursor, totalCount)
 
     /** 404: 그 기념일의 발생일·지난 항목을 지운다 */
