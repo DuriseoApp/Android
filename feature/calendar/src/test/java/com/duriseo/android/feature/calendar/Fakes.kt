@@ -1,5 +1,13 @@
 package com.duriseo.android.feature.calendar
 
+import com.duriseo.android.domain.anniversary.Anniversary
+import com.duriseo.android.domain.anniversary.AnniversaryKind
+import com.duriseo.android.domain.anniversary.AnniversaryOccurrence
+import com.duriseo.android.domain.anniversary.AnniversaryPatch
+import com.duriseo.android.domain.anniversary.AnniversaryRepository
+import com.duriseo.android.domain.anniversary.NewAnniversary
+import com.duriseo.android.domain.anniversary.PastAnniversaries
+import com.duriseo.android.domain.anniversary.UpcomingAnniversaries
 import com.duriseo.android.domain.couple.ColorChange
 import com.duriseo.android.domain.couple.CoupleJoinResult
 import com.duriseo.android.domain.couple.CoupleRepository
@@ -21,6 +29,7 @@ import com.duriseo.android.domain.me.MeSpace
 import com.duriseo.android.domain.me.SpaceChange
 import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.domain.result.DataResult
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -189,3 +198,60 @@ class FakeEventRepository(initial: List<Event> = emptyList()) : EventRepository 
         return reminderResult
     }
 }
+
+/** 캘린더가 쓰는 [observeRange]·[refreshRange]만 흉내 낸다. 나머지는 SCR-ANNIV-01·02의 몫이라 부르면 실패한다 */
+class FakeAnniversaryRepository(initial: List<AnniversaryOccurrence> = emptyList()) : AnniversaryRepository {
+    /** 저장소가 기억하는 위치 순서 그대로의 발생일 목록 */
+    val occurrences = MutableStateFlow(initial)
+
+    val refreshRanges = mutableListOf<Pair<LocalDate, LocalDate>>()
+    var refreshRangeResult: DataResult<Unit> = DataResult.Success(Unit)
+
+    /** 설정하면 [refreshRange]가 이 값이 끝날 때까지 기다린다 (당겨서 새로고침 중 상태를 보려고) */
+    var refreshGate: CompletableDeferred<Unit>? = null
+
+    override fun observeRange(from: LocalDate, to: LocalDate): Flow<List<AnniversaryOccurrence>> =
+        occurrences.map { list -> list.filter { it.date >= from && it.date <= to }.sortedBy { it.date } }
+
+    override suspend fun refreshRange(from: LocalDate, to: LocalDate): DataResult<Unit> {
+        refreshRanges += from to to
+        refreshGate?.await()
+        return refreshRangeResult
+    }
+
+    override fun observeUpcoming(): Flow<UpcomingAnniversaries> = error("캘린더는 쓰지 않아요")
+    override fun observePast(): Flow<PastAnniversaries> = error("캘린더는 쓰지 않아요")
+    override suspend fun refreshUpcoming(): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun loadMoreUpcoming(): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun refreshPast(): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun loadMorePast(): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun refreshAll(): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun create(anniversary: NewAnniversary): DataResult<Anniversary> = error("캘린더는 쓰지 않아요")
+    override suspend fun update(id: String, patch: AnniversaryPatch): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun delete(id: String): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+}
+
+fun autoAnniversary(name: String, date: LocalDate) = AnniversaryOccurrence(
+    anniversaryId = null,
+    kind = AnniversaryKind.AUTO,
+    name = name,
+    date = date,
+    daysLeft = 0,
+    repeatsYearly = false,
+    authorId = null,
+)
+
+fun customAnniversary(
+    name: String,
+    date: LocalDate,
+    authorId: String = MyId,
+    repeatsYearly: Boolean = true,
+) = AnniversaryOccurrence(
+    anniversaryId = "ann-$name",
+    kind = AnniversaryKind.CUSTOM,
+    name = name,
+    date = date,
+    daysLeft = 0,
+    repeatsYearly = repeatsYearly,
+    authorId = authorId,
+)

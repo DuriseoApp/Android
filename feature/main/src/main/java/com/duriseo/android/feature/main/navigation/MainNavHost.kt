@@ -68,12 +68,13 @@ fun MainNavHost(
             onOpenEvent = navigator::navigateToEventDetail,
             onOpenCreate = navigator::navigateToEventCreate,
             onOpenEdit = navigator::navigateToEventEdit,
+            onOpenAnniversaries = navigator::navigateToAnniversaries,
             onOpenColors = navigator::navigateToColors,
             onBack = navigator::navigateUp,
             onShowSnackBar = onShowSnackBar,
             snackbarVisible = snackbarVisible,
         )
-        // 기념일 (SCR-ANNIV-01·02). 캘린더에서 들어가는 길은 단위 5 묶음 B가 `MainNavigator.navigateToAnniversaries`로 연다
+        // 기념일 (SCR-ANNIV-01·02). 캘린더(앱바·기념일 카드)에서 `navigateToAnniversaries`로 들어간다
         anniversaryNavGraph(
             padding = padding,
             onBack = navigator::navigateUp,

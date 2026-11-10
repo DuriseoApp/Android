@@ -133,6 +133,16 @@ NFR-TIME-02(작성일·받은 시각 표기)는 이 단위 화면에 쓰는 곳�
 12. **범위 표 테스트 이름과 다른 점**: `…AC5 404면 기기에서 지우고 화면을 닫는다`·`…AC5 403이면 … 다시 불러온다`는 가짜 저장소가 저장소 계약(404면 지움, 403이면 다시 불러옴)을 흉내 내고, 진짜 동작은 `AnniversaryRepositoryTest`의 `FR-ANNIV-03 AC5 404면 기기에서 지운다`·`…403이면 목록과 달을 다시 불러온다`가 확인한다.
 13. **Room 스키마 JSON**: 버전이 4가 됐다. 클라우드에서 빌드할 수 없어 맥에서 만들어 커밋한다 (E 묶음 항목).
 
+**묶음 B (캘린더 기념일 표시)**
+
+14. **월 조회 범위**: 일정·기념일 모두 `calendarMonthRange(month)`(앞뒤 하루)로 `refreshRange`를 부른다(Q-19 ②). 구독(`observe…`)은 일정이 그 달 1일~말일, 기념일이 앞뒤 하루 범위이고, 달력에는 보이는 달의 날짜만 그린다(이웃 달 가장자리 기념일은 `groupAnniversariesByDay`가 뺀다). 일정·기념일 요청은 병렬이고 한쪽이 실패해도 다른 쪽은 그대로다.
+15. **당겨서 새로고침(Q-16)**: `CalendarUiState.refreshing`은 당겼을 때만 켜고(화면 진입·달 넘김에는 켜지 않는다, D-112), 두 요청이 끝나면 끈다. 오프라인·실패는 안내 없이 끝난다(문서에 없어 D-112와 같게). 요청 중에 또 당겨도 한 번만. 목록이 비어 있어도 당길 수 있게 `EmptyDay`를 스크롤 영역으로 뒀다. 당기는 동안의 모양은 보드에 없어서 끄는 만큼 원판이 나타나게만 했다(알파).
+16. **기념일 카드 보조 줄**: SCREENS 글에는 없지만 이미지(`SCR-CAL-01--anniversary.png`, `--solo.png`)와 보드 `sub`에 있는 "자동 기념일"·"내가 만든 기념일 · 매년"·"상대가 만든 기념일"을 그대로 그렸고, 직접 기념일의 태그는 일정 카드와 같은 사람 태그(점 + 나·상대), 자동은 점 없는 "D+N" 알약이다. **SCREENS 글(기념일 카드 구성)과 이미지가 달라 Docs 후속에 올린다.** 필요 없다면 `subText`·`AnniversaryTag`만 지우면 된다.
+17. **날짜 목록 정렬**: 시간 일정은 목록 카드에 보이는 시각(분 단위, 기기 시간대) → 시작 일시 → id 순(D-119)이라 `EventRules.sortForDay`(시작 일시순) 대신 `CalendarViewModel.sortForCalendarDay`를 새로 썼다. 종일은 시작 날짜 → id. `EventRules.sortForDay`는 쓰는 곳이 없어졌지만 도메인 테스트가 있어 그대로 뒀다(E 묶음에서 지울지 정한다).
+18. **점 구분 기준**: "서로 다른 사람 색"을 대상(나·상대·함께)으로 구분한다(사람 색은 대상마다 하나). 메모는 단위 6에서 시간 일정 뒤에 더한다 (`calendarDayMarks`).
+19. **앱바**: 두 줄(제목 + 링크)을 하나의 버튼(최소 높이 44)으로 묶었고 접근성 라벨은 보드 aria-label("기념일 보기, 함께한 지 D+N", "나의 캘린더, 기념일 보기")이다. 처음 만난 날이 없는 커플은 그대로. 설정 프로필 카드는 `StartDateRules.dayNumber`를 계속 쓴다(묶음 D).
+20. **Preview 이름**: 캘린더 Preview를 `CalendarPreview_<상태>`로 모두 바꿨다(`_Default`, `_Anniversary`, `_AnniversaryCustom`, `_Expanded`, `_ExpandedAnniversary`, `_Solo`, `_Refresh`, `_NoStartDate`, `_EmptyDay`, `_StartDateSheet`, `_Cards`).
+
 ## 리뷰 기록
 
 | 회차 | Critical | Major | 비고 |
@@ -142,4 +152,6 @@ NFR-TIME-02(작성일·받은 시각 표기)는 이 단위 화면에 쓰는 곳�
 
 - 묶음 A: 클라우드에서 `./gradlew`가 돌지 않아(Gradle 배포판을 받을 수 없음) 눈으로만 확인했다. PR #16 CI에서 `assembleDebug testDebugUnitTest` 확인 필요. Preview는 Android Studio에서 확인(맥)
 - 묶음 B가 알아야 할 것: 캘린더 월 조회는 `AnniversaryRepository.refreshRange(from, to)`와 `observeRange(from, to)`(범위는 `calendarMonthRange(month)`), SCR-ANNIV-01 이동은 `MainNavigator.navigateToAnniversaries()`(`feature:main`)이고 `calendarNavGraph`에 `onOpenAnniversaries` 콜백을 더해 연결, D+N은 `DayCount.of`·`DayCount.onDate`
-- Docs 후속: 결정 8(처음 만난 날도 직접 기념일도 없는 커플의 빈 화면), 결정 9(삭제 문구 조사), 확인 필요 1(API.md에 수정 화면의 날짜 처리)
+- 묶음 B: 클라우드에서 `./gradlew`를 돌릴 수 없어 눈으로만 확인했다(PR CI 확인 필요). 특히 `PullToRefreshBox`(BOM 2025.08의 material3에서 실험 API라 `@OptIn(ExperimentalMaterial3Api::class)`를 붙였다)·`CircularProgressIndicator`의 `trackColor`·`strokeCap`, 도는 호가 보드(1/4 호)와 다른지는 맥 Preview에서 확인
+- 묶음 C(로딩 덮개)가 알아야 할 것: 캘린더 처음 만난 날 시트 저장(`saveStartDate`)이 덮개 대상이다. `CalendarStartDateSheet.saving`이 이미 있어 `loading`은 거기서 읽으면 된다. 캘린더 당겨서 새로고침(Q-16)·월 조회는 덮개 제외(조회). Q-19 ②는 이 묶음에서 끝났다(C 표의 Q-16·Q-19 ② 행)
+- Docs 후속: 결정 16(기념일 카드 보조 줄·태그가 SCREENS 글에 없음), 결정 8(처음 만난 날도 직접 기념일도 없는 커플의 빈 화면), 결정 9(삭제 문구 조사), 확인 필요 1(API.md에 수정 화면의 날짜 처리)
