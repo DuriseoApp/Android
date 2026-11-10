@@ -31,7 +31,7 @@
     <string name="calendar_all_day">종일</string>
     <string name="calendar_bar_more">+%1$d</string>
 
-    <!-- 날짜 목록의 기념일 카드 (SCR-CAL-01, 보드 Calendar.dc.html 276~277행, SCR-CAL-01--anniversary.png) -->
+    <!-- 날짜 목록의 기념일 카드 (SCR-CAL-01, 보드 Calendar.dc.html 276~277행, SCR-CAL-01 anniversary 상태 이미지) -->
     <string name="calendar_anniversary_mark">기념일</string>
     <string name="calendar_anniversary_day_number">D+%1$d</string>
     <string name="calendar_anniversary_sub_auto">자동 기념일</string>
