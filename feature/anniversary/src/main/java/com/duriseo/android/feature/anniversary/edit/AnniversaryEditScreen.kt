@@ -139,6 +139,8 @@ fun AnniversaryEditScreen(
                         title = stringResource(R.string.anniversary_edit_date_label),
                         description = null,
                         rangeNote = null,
+                        // 일정 날짜 시트와 같은 부품이라 버튼도 [완료] (기념일용 문구가 문서에 없다)
+                        confirmText = stringResource(DesignR.string.action_done),
                     )
                 }
             } else if (state.deleteDialogVisible) {

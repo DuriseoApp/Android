@@ -91,6 +91,10 @@
     <string name="event_edit_end_time_description">종료 시간 %1$s</string>
     <string name="event_edit_end_error">종료는 시작보다 뒤여야 해요.</string>
     <string name="event_edit_reminder">내 알림</string>
+    <string name="event_edit_start_date_sheet_title">시작 날짜</string>
+    <string name="event_edit_end_date_sheet_title">종료 날짜</string>
+    <string name="event_edit_start_time_sheet_title">시작 시간</string>
+    <string name="event_edit_end_time_sheet_title">종료 시간</string>
     <string name="event_edit_note_label">메모</string>
     <string name="event_edit_note_placeholder">상대에게 남길 내용을 적어주세요</string>
     <string name="event_edit_notify_title">상대에게 알림 보내기</string>

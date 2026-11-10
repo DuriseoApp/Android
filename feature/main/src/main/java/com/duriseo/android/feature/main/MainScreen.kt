@@ -19,11 +19,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.duriseo.android.core.designsystem.component.DuriseoLoadingHost
+import com.duriseo.android.core.designsystem.component.DuriseoLoadingHostState
 import com.duriseo.android.core.designsystem.component.DuriseoSnackbarHost
 import com.duriseo.android.core.designsystem.component.DuriseoTopSnackbarHost
 import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 import com.duriseo.android.feature.calendar.CalendarScreen
+import com.duriseo.android.feature.calendar.CalendarStartDateSheet
 import com.duriseo.android.feature.calendar.CalendarUiState
 import com.duriseo.android.feature.couple.linkedsheet.LinkedSheetRoute
 import com.duriseo.android.feature.main.component.MainBottomBar
@@ -34,6 +37,8 @@ import com.duriseo.android.feature.main.navigation.MainNavigator
 import com.duriseo.android.feature.main.navigation.rememberMainNavigator
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.YearMonth
 
 /** 스낵바와 하단 탭(80) 사이 간격 16 (SCREENS.md 42·85행, `Calendar.dc.html` 148행: 바닥에서 96 = 탭 80 + 16) */
 private val SnackbarAboveTab = DuriseoSpacing.Space4
@@ -81,7 +86,10 @@ fun MainScreen(
     val linkedSheetVisible = linkedSheetNeeded && currentTab == MainTab.CALENDAR
     val snackbarAtTop = navigator.snackbarAtTop(linkedSheetVisible)
     // 일정 색 등 사람 색은 내 정보의 색 키에서 온다 (FR-CAL-04 AC1)
+    val loadingHost = remember { DuriseoLoadingHostState() }
     DuriseoTheme(personColors = personColors) {
+        // 로딩 덮개는 하단 탭(MainScaffold 소속)까지 덮어야 해서 가장 위층에서 그린다 (D-115 "화면 전체")
+        DuriseoLoadingHost(state = loadingHost) {
         Box {
             MainScaffold(
                 currentTab = currentTab,
@@ -106,6 +114,7 @@ fun MainScreen(
             if (linkedSheetVisible) {
                 LinkedSheetRoute()
             }
+        }
         }
     }
 }
@@ -161,6 +170,33 @@ private fun MainScreenCalendarTabPreview() {
             onTabSelected = {},
         ) { padding ->
             CalendarScreen(state = CalendarUiState(), padding = padding, onOpenMenu = {}, onAction = {})
+        }
+    }
+}
+
+/** 탭 루트(캘린더)에서 처음 만난 날 저장 중: 로딩 덮개가 하단 탭까지 덮는다 (D-115 "화면 전체") */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun MainScreenCalendarTabPreview_Loading() {
+    DuriseoTheme {
+        val host = remember { DuriseoLoadingHostState() }
+        DuriseoLoadingHost(state = host) {
+            MainScaffold(
+                currentTab = MainTab.CALENDAR,
+                showBottomBar = true,
+                snackbarHostState = remember { SnackbarHostState() },
+                onTabSelected = {},
+            ) { padding ->
+                // 화면이 요청 중이라고 알리면 호스트가 덮개를 그린다
+                CalendarScreen(
+                    state = CalendarUiState(
+                        startDateSheet = CalendarStartDateSheet(YearMonth.of(2026, 10), LocalDate.of(2026, 3, 14), saving = true),
+                    ),
+                    padding = padding,
+                    onOpenMenu = {},
+                    onAction = {},
+                )
+            }
         }
     }
 }

@@ -1,7 +1,7 @@
 package com.duriseo.android.feature.settings.menu
 
 import androidx.annotation.StringRes
-import com.duriseo.android.domain.couple.StartDateRules
+import com.duriseo.android.domain.anniversary.DayCount
 import com.duriseo.android.domain.me.Me
 import com.duriseo.android.domain.me.SocialProvider
 import com.duriseo.android.domain.me.SpaceType
@@ -31,7 +31,7 @@ sealed interface SettingsSpace {
     /**
      * @property togetherColorKey 함께 색 팔레트 키. 없거나 모르는 키면 기본 함께 색으로 그린다
      * @property startDate 처음 만난 날. 없으면 null이고 D+N과 "부터 함께하고 있어요" 줄을 숨긴다 (D-99)
-     * @property dayNumber 함께한 지 D+N의 N (처음 만난 날이 1일). [startDate]가 없으면 null
+     * @property dayNumber 함께한 지 D+N의 N (처음 만난 날이 1일, 최소 1: D-116). [startDate]가 없으면 null
      * @property linkedDate 연결한 날: `linkedAt`을 기기 시간대 날짜로 바꾼 값 (D-94). 서버가 안 주면 null
      */
     data class Couple(
@@ -55,7 +55,7 @@ internal fun Me.toSettingsSpace(today: LocalDate, zone: ZoneId): SettingsSpace {
         partner = SettingsPerson(partner.nickname, partner.color),
         togetherColorKey = space.togetherColor.orEmpty(),
         startDate = start,
-        dayNumber = start?.let { StartDateRules.dayNumber(it, today) },
+        dayNumber = start?.let { DayCount.of(it, today) },
         linkedDate = space.linkedAt?.atZone(zone)?.toLocalDate(),
     )
 }

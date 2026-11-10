@@ -153,6 +153,22 @@ NFR-TIME-02(작성일·받은 시각 표기)는 이 단위 화면에 쓰는 곳�
 26. **D-125**: 알림은 저장소가 `GET /me`를 Room에 저장한 뒤에 낸다(`resetAfterUnlink`, 다음 실행의 `refreshMe` 모두). `MainViewModel`이 알림을 받아 Room의 내 정보가 커플 공간이면 `MainEffect.SpaceRelinked`(캘린더로 이동, 시트는 `linkedSheetNeeded`가 띄움), 개인 공간이거나 내 정보가 없으면(GET /me 실패·오프라인) 기존 `SpaceUnlinked`(SCR-COUPLE-01)다. `resetAfterUnlink`는 지우기 전의 커플 공간 ID를 기억했다가 다른 커플 공간이 오면 확인한 공간 ID로 되살려 시트가 뜨게 한다(`refreshMe` 경로의 기존 규칙과 같다). `refreshMe` 경로는 "커플 X → 커플 Y"일 때 기존대로 알림을 내지 않고 시트만 뜬다(앞 단위 리드 결정, `SpaceChangeTest`). 이때 사용자가 캘린더 밖에 있으면 이동은 없다(Docs 후속).
 27. **Q-19 ①**: `lifecycle-process`는 MODULES.md 3장에 없어 쓰지 않고, `MyApp`이 `ActivityLifecycleCallbacks`로 "보이는 Activity가 0 → 1"을 앱으로 돌아온 순간으로 본다(첫 시작은 건너뜀). `SessionStartup.onForeground()`가 로그인 상태에서 `MeRepository.syncTimeZone(ZoneId.systemDefault())`를 부른다(같으면 요청 없음). 주입된 `Clock`은 `Clock.systemDefaultZone()`이라 앱이 만들어질 때의 시간대에 묶여 있어 이 경로는 `ZoneId.systemDefault()`를 직접 읽는다.
 
+**묶음 D (디자인 맞추기)**
+
+28. **SCR-CAL-02 제목 24/700**: 토큰에 24가 없어(`title-lg` 22) 보드 값(24, 행간 1.35, 자간 -0.01em)을 `EventDetailScreen`의 상수 `DetailTitleStyle`로 뒀다. design-system.md에 이 값이 없으니 Docs 후속(토큰 추가 또는 22로 정리). 정보 줄 아이콘(달력·사람)·알림 줄 종 아이콘·삭제 버튼 아래 막대(위 선 1)도 보드대로 바꿨다.
+29. **날짜 시트는 이미 공용**: `StartDatePickerSheet` 하나를 캘린더·설정·연결 완료 시트·SCR-CAL-03·SCR-ANNIV-01 처음 만난 날 시트·SCR-ANNIV-02가 쓴다. 이번에 연도·월 선택을 보드대로 다시 만들고(연도 줄 `‹ 2026년 ›` + 월 칩 3열 4줄, 연도 화살표 범위 끝 `ink-300`, 연도 목록 단계 없음), 접근성 문구를 보드대로 정리했다("연도와 월 고르기, 2026년 4월", 묶음 "연도와 월 고르기", "이전 연도"·"다음 연도"). 버튼 글자는 `confirmText`로 받는다: 처음 만난 날 "저장", 일정·기념일 날짜 "완료". SCR-ANNIV-02는 기념일용 문구가 문서에 없어 묶음 A 결정 7(제목 "날짜", 안내 줄 없음)을 그대로 두고 버튼만 [완료]로 맞췄다.
+30. **종료 날짜·시간 시트 제목**: 문서에 "시작 날짜"·"시작 시간"만 있고 종료는 "그림에 없어요"다. 시작과 짝으로 "종료 날짜"·"종료 시간"을 썼다(추측). Docs 후속에서 확정 필요.
+31. **시간 휠**: `core:designsystem`의 `DuriseoTimeWheel`(LazyColumn 3줄 + 스냅, 줄 44·5줄, 가운데 `surface-100` 띠, 가운데 `titleLarge`/`ink-900`, 첫 줄 `ink-500`, 둘째 줄 `ink-400`(D-128), 시 1~12, 분 0~59). 값 계산은 순수 `TimeWheelValues`(스크롤 → 줄, 12↔24시간)이고 `TimeWheelValuesTest`가 확인한다. 시트(제목 + 휠 + [완료])는 `EventEditScreen`의 `TimeSheet`. 휠은 끝에서 이어지지 않는다(보드에 이어짐 표시가 없음). 스크롤 도중 [완료]를 누르면 그때 가장 가까운 줄의 값이 들어간다.
+32. **내 알림 시트**: 설명 "나에게만 와요", 칩 글자 `ink-700`, 맨 아래 [완료]. 칩을 눌러도 시트가 닫히지 않고 [완료]가 닫는다(그림에 [완료]가 있어서). `EventEditViewModelTest`의 해당 테스트를 바꿨다.
+33. **비활성 [저장] 글자색**: 보드(`AddEvent.dc.html` 24행)에 비활성 모양이 없다. 지금 값(`ink-500`)은 비활성 큰 버튼·초대코드 비활성 버튼 글자와 같은 조합이라 그대로 뒀다. 범위 끝 이전·다음 달 버튼은 `ink-300`(연도 화살표와 같은 규칙)이다.
+34. **DuriseoButton 비활성 글자 `ink-600` → `ink-500`**: design-system "초대코드 만들기 코드를 받기 전 모양"(보드 95행)이 `line-100` 면 + `ink-500` 글자고 `DuriseoLargeButton` 비활성과 같다. 공용 부품이라 비활성 `DuriseoButton` 모두 바뀐다.
+35. **SCR-COUPLE-03 오류 줄**: 아이콘 16(`ic_alert_circle`) + 글자 13/18/600 `danger-600`, 칸 아래 8(design-system 글은 "아래 4"이지만 보드는 칸 사이 12에서 위 여백 -4라 8이고 그림도 8이다 → Docs 후속). 없는 코드 같은 값 오류는 채운 칸 테두리가 `danger-600`, 입력 제한(`RateLimited`)은 그대로.
+36. **SCR-COUPLE-02 코드 받는 중**: 접근성 문구를 보드대로 "초대코드"(코드 없음)로 하고, 비활성 버튼 색은 결정 34. 스낵바는 이미 위 40이라 그림과 대조만 했다.
+37. **점선 원(아직 없음 자리)**: 둘레를 정수 조각으로 나눠 점 6 : 간격 4 비율로 그린다(`ringDashIntervals`, 지름 56에 17조각, `RingDashTest`). 그림 `SCR-SET-01--couple-solo.png`와 눈으로 대조했다(맥 Preview에서 한 번 더 확인).
+38. **SCR-SET-01**: 프로필 카드 D+N은 `DayCount.of`(최소 D+1, `SettingsViewModelTest`). 처음 만난 날 없는 커플은 가운데 마크를 아바타 높이(72) 가운데에 둔다. 연결 정보는 이미 두 행을 숨기고 있었다. 게스트 ID(계정 화면)는 보드와 같아 바꾸지 않았다(보드의 `word-break: break-all`은 Compose에 없어 하이픈에서 줄바꿈). 아바타 연필 배지·[내 프로필 수정]은 단위 8(SCR-SET-04)이라 그대로 뺐다.
+39. **로딩 덮개 화면 전체(결정 23 보완)**: `DuriseoLoadingHost`(+`DuriseoLoadingHostState`, `LocalLoadingHost`)를 `MainScreen` 최상단에 두었다. `DuriseoLoadingLayer`·`DuriseoDialogLayer`는 호스트가 있으면 요청 중임을 호스트에 알리기만 하고 덮개는 호스트가 가장 위(하단 탭·연결 완료 시트 위)에 하나만 그린다. 호스트가 없으면(Preview, 단독 화면) 예전처럼 직접 그린다. `DuriseoLoadingHostStateTest`, Preview `MainScreenCalendarTabPreview_Loading`, `LoadingOverlayPreview_HostCoversBottomBar`.
+40. **시간대(Q-19 ① 보완)**: `core:common`의 `DeviceZoneClock`이 `Clock`을 대신 제공한다(시각은 시스템, 시간대는 `getZone()`을 부를 때마다 `ZoneId.systemDefault()`). 이전 `Clock.systemDefaultZone()`은 만들 때 시간대에 묶였다. `SessionStartup.syncTimeZoneIfSignedIn`의 기본 인자와 로그인 때 `syncTimeZone`이 이 시계의 `zone`을 쓴다. 표시(캘린더·상세·작성·설정)도 모두 `clock.zone`을 그때그때 읽으므로 기기 시간대를 따른다. 다만 이미 그려진 목록은 Room이 새로 내보낼 때까지 다시 계산되지 않는다(앱으로 돌아올 때 월 다시 불러오기가 Room을 갱신해 반영됨, 화면 강제 갱신은 하지 않음). `DeviceZoneClockTest`, `SessionStartupTest: Q-19 앱이 떠 있는 동안 기기 시간대가 바뀌면 바뀐 시간대를 보낸다`. Android가 시간대 변경 때 JVM 기본 시간대를 갱신한다는 점에 기댄다(맥 실기기에서 확인).
+
 ## 리뷰 기록
 
 | 회차 | Critical | Major | 비고 |
@@ -167,3 +183,5 @@ NFR-TIME-02(작성일·받은 시각 표기)는 이 단위 화면에 쓰는 곳�
 - 묶음 C: 클라우드에서 `./gradlew`를 돌릴 수 없어 눈으로만 확인했다(PR CI 확인 필요). Preview는 `LoadingOverlayPreview` 외에 로딩 상태가 있는 화면 Preview(`StartScreenLoadingPreview` 등)에 `loading`이 켜졌는지 맥에서 확인
 - 묶음 D가 알아야 할 것: SCR-CAL-03 `_Loading` Preview는 `EventEditUiState(loading = true)`로 그린다(`DuriseoDialogLayer(loading)`가 덮음). SCR-COUPLE-02 스낵바는 위 40으로 이미 옮겼고 `InviteCreatePreview_NotYet`만 그림과 대조하면 된다. 캘린더가 쓰는 `Clock`의 시간대는 앱이 만들어질 때 고정돼서(`Clock.systemDefaultZone()`) 앱이 떠 있는 동안 기기 시간대가 바뀌면 달력 표시는 앱을 다시 켤 때까지 그대로다(Q-19 ③은 "표시는 기기 시간대 유지"라 문서와는 맞지만 후속 점검 거리)
 - Docs 후속: 결정 16(기념일 카드 보조 줄·태그가 SCREENS 글에 없음), 결정 8(처음 만난 날도 직접 기념일도 없는 커플의 빈 화면), 결정 9(삭제 문구 조사), 확인 필요 1(API.md에 수정 화면의 날짜 처리)
+- 묶음 D: 클라우드에서 `./gradlew`를 돌릴 수 없어 눈으로만 확인했다(PR CI 확인 필요). 시간 휠의 스냅·스크롤 값(`rememberSnapFlingBehavior`, 콘텐츠 패딩 88)과 Preview 전반(`EventEditPreview_DatePicker/_TimePicker/_ReminderSheet/_Loading`, `EventDetailPreview_Solo/_SoloDeleteDialog`, `InviteCreatePreview_Loading/_NotYet`, `InviteEnterPreview_Error/_RateLimited`, `LinkedSheetPreview_DateSet`, `SettingsPreview_NoStartDate`, `ConnectionInfoPreview_NoStartDate`, `StartDateSheetPreview_YearMonth`)는 맥에서 그림과 대조 필요
+- Docs 후속(묶음 D): 결정 28(제목 24/700 토큰), 결정 30(종료 시트 제목), 결정 35(오류 줄 위치 4 → 8)

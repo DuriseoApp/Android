@@ -284,6 +284,18 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `D-116 프로필 카드 D+N은 처음 만난 날 당일이 D+1이고 계산값이 1보다 작으면 D+1이다`() = runTest {
+        // 오늘은 2026-10-31
+        me.me.value = coupleMe(startDate = LocalDate.of(2026, 10, 31))
+        val vm = viewModel()
+        assertEquals(1L, (vm.uiState.value.space as SettingsSpace.Couple).dayNumber)
+
+        // 시간대가 달라 처음 만난 날이 내일로 보이는 경우도 D+1
+        me.me.value = coupleMe(startDate = LocalDate.of(2026, 11, 1))
+        assertEquals(1L, (vm.uiState.value.space as SettingsSpace.Couple).dayNumber)
+    }
+
+    @Test
     fun `D-99 처음 만난 날이 없는 커플은 D+N과 함께한 날 값이 없다`() = runTest {
         me.me.value = coupleMe(startDate = null)
         val vm = viewModel()

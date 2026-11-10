@@ -152,4 +152,28 @@ class SessionStartupTest {
 
         assertEquals(0, server.requestCount)
     }
+
+    @Test
+    fun `Q-19 앱이 떠 있는 동안 기기 시간대가 바뀌면 바뀐 시간대를 보낸다`() = runTestWithTimeout {
+        val h = RepoHarness(server, tempFolder.root, initialTokens = testTokens()).also { created = it }
+        server.enqueue(jsonResponse(200, meJson(timeZone = "Asia/Seoul")))
+        // 가짜 기기 시간대: 처음엔 서울, 나중에 도쿄
+        var device = ZoneId.of("Asia/Seoul")
+        val clock = com.duriseo.android.core.common.time.DeviceZoneClock(zoneProvider = { device })
+        val startup = SessionStartup(h.authRepository, h.meRepository, h.session, clock, kotlinx.coroutines.CoroutineScope(Dispatchers.IO))
+        startup.run()
+        server.takeRequest() // GET /me
+
+        // 같은 시간대면 요청하지 않는다
+        startup.syncTimeZoneIfSignedIn()
+        assertEquals(1, server.requestCount)
+
+        device = ZoneId.of("Asia/Tokyo")
+        server.enqueue(jsonResponse(200, meJson(timeZone = "Asia/Tokyo")))
+        startup.syncTimeZoneIfSignedIn()
+
+        val patch = server.takeRequest()
+        assertEquals("PATCH", patch.method)
+        assertEquals("{\"timeZone\":\"Asia/Tokyo\"}", patch.body.readUtf8())
+    }
 }

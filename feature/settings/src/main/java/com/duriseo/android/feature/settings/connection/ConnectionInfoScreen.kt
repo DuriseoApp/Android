@@ -603,8 +603,8 @@ private fun ConnectionInfoScreenUnlinkRequestingPreview() = PreviewConnectionInf
     ),
 )
 
-/** 디자인 반영 후 맞춤(이미지 대기): 처음 만난 날 없는 커플 (`SCR-SET-01--couple-no-start-date.png` 예정, D-99). 두 행을 숨긴다 */
+/** `SCR-SET-01--couple-no-start-date.png`: 처음 만난 날 없는 커플 (D-99). "처음 만난 날"·"함께한 지" 행을 통째로 숨긴다 */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun ConnectionInfoScreenCoupleNoStartDatePreview() =
+private fun ConnectionInfoPreview_NoStartDate() =
     PreviewConnectionInfo(ConnectionInfoUiState(space = previewCouple(startDate = null)))

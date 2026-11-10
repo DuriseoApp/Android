@@ -158,7 +158,8 @@ class EventEditViewModel @Inject constructor(
             }
             EventEditAction.ReminderRowClicked -> _uiState.update { it.copy(sheet = EditSheet.Reminder) }
             is EventEditAction.ReminderSelected -> _uiState.update {
-                it.copy(reminder = action.option.takeIf { option -> option == null || option.forAllDay == it.isAllDay }, sheet = null)
+                // 칩을 눌러도 시트는 열려 있고 [완료]가 닫는다 (그림 `SCR-CAL-03--reminder-sheet.png`)
+                it.copy(reminder = action.option.takeIf { option -> option == null || option.forAllDay == it.isAllDay })
             }
 
             EventEditAction.DatePreviousMonth -> moveSheetMonth(forward = false)

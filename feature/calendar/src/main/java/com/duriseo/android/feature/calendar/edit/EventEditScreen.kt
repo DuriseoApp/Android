@@ -22,18 +22,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,15 +50,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.component.CalendarDateRange
 import com.duriseo.android.core.designsystem.component.DuriseoBottomSheetLayer
-import com.duriseo.android.core.designsystem.component.DuriseoButton
-import com.duriseo.android.core.designsystem.component.DuriseoButtonStyle
 import com.duriseo.android.core.designsystem.component.DuriseoDialogLayer
+import com.duriseo.android.core.designsystem.component.DuriseoLargeButton
 import com.duriseo.android.core.designsystem.component.DuriseoSheetPanel
+import com.duriseo.android.core.designsystem.component.DuriseoTimeWheel
 import com.duriseo.android.core.designsystem.component.StartDatePickerSheet
+import com.duriseo.android.core.designsystem.theme.Brand500
 import com.duriseo.android.core.designsystem.theme.Brand700
 import com.duriseo.android.core.designsystem.theme.Danger600
 import com.duriseo.android.core.designsystem.theme.DuriseoSize
@@ -66,6 +68,7 @@ import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 import com.duriseo.android.core.designsystem.theme.Ink500
 import com.duriseo.android.core.designsystem.theme.Ink600
+import com.duriseo.android.core.designsystem.theme.Ink700
 import com.duriseo.android.core.designsystem.theme.Ink900
 import com.duriseo.android.core.designsystem.theme.Line200
 import com.duriseo.android.core.designsystem.theme.Line300
@@ -83,7 +86,7 @@ import java.time.LocalTime
 import java.time.YearMonth
 
 // SCR-CAL-03 일정 작성·수정 (FR-CAL-02, FR-CAL-03, FR-NOTI-04). 수치는 보드 `AddEvent.dc.html`, design-system.md "입력".
-// 날짜·시간·알림 선택 시트는 디자인이 없어 임시 모양이다: 디자인 반영 후 맞춤(이미지 대기, unit-4.md 확인 필요 1·2).
+// 날짜·시간·알림 선택 시트는 그림(`SCR-CAL-03--date-picker/time-picker/reminder-sheet.png`)대로다.
 // 종류 탭 [일정 | 메모]는 메모 화면이 있는 단위 6에서 더한다 (확인 필요 5).
 
 private val ScreenPadding = DuriseoSpacing.Space5
@@ -100,6 +103,11 @@ private val NoteMinHeight = 96.dp
 private val TargetHeight = 48.dp
 private val TargetSelectedBorder = 2.dp
 private val ErrorBorder = 1.5.dp
+
+/** 시트 제목과 설명 사이 6, 설명 13/1.6, 알림 칩 안쪽 좌우 14 (보드 `AddEvent.dc.html` 164~175행) */
+private val SheetTitleGap = 6.dp
+private val SheetDescriptionLineHeight = 20.8.sp
+private val ReminderChipPadding = 14.dp
 
 @Composable
 fun EventEditRoute(
@@ -554,7 +562,7 @@ private fun ReminderRow(reminder: EventEditUiState, onClick: () -> Unit) {
     }
 }
 
-// --- 선택 시트 (디자인 반영 후 맞춤: 이미지 대기) ---
+// --- 선택 시트: 날짜(공용 날짜 시트), 시간(휠), 내 알림. 그림 `SCR-CAL-03--date-picker/time-picker/reminder-sheet.png` ---
 
 @Composable
 private fun SheetContent(sheet: EditSheet, state: EventEditUiState, onAction: (EventEditAction) -> Unit) {
@@ -569,54 +577,85 @@ private fun SheetContent(sheet: EditSheet, state: EventEditUiState, onAction: (E
             onSave = { onAction(EventEditAction.DateConfirmed) },
             onMonthSelected = { onAction(EventEditAction.DateMonthSelected(it)) },
             range = CalendarDateRange,
-            title = stringResource(if (sheet.field == EditField.Start) R.string.event_edit_start else R.string.event_edit_end),
-            // 일정용 안내 문구는 문서에 없어 넣지 않는다 (unit-4.md 확인 필요 1-A)
+            title = stringResource(
+                if (sheet.field == EditField.Start) R.string.event_edit_start_date_sheet_title else R.string.event_edit_end_date_sheet_title,
+            ),
+            // 설명·안내 줄은 없다 (SCREENS SCR-CAL-03 "날짜 선택", FR-CAL-01 AC6)
             description = null,
             rangeNote = null,
+            confirmText = stringResource(DesignR.string.action_done),
         )
-        is EditSheet.TimePicker -> TimeSheet(initial = sheet.initial, onConfirm = { onAction(EventEditAction.TimeConfirmed(it)) })
+        is EditSheet.TimePicker -> TimeSheet(
+            field = sheet.field,
+            initial = sheet.initial,
+            onConfirm = { onAction(EventEditAction.TimeConfirmed(it)) },
+        )
         EditSheet.Reminder -> ReminderSheet(
             isAllDay = state.isAllDay,
             selected = state.reminder,
             onSelect = { onAction(EventEditAction.ReminderSelected(it)) },
+            onDone = { onAction(EventEditAction.SheetDismissed) },
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** 시간 시트: 제목, 휠 3줄, 맨 아래 [완료] (design-system "시간 휠") */
 @Composable
-private fun TimeSheet(initial: LocalTime, onConfirm: (LocalTime) -> Unit) {
-    val pickerState = rememberTimePickerState(initialHour = initial.hour, initialMinute = initial.minute, is24Hour = false)
-    DuriseoSheetPanel {
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            TimePicker(state = pickerState)
-        }
-        DuriseoButton(
-            text = stringResource(R.string.event_edit_save),
-            onClick = { onConfirm(LocalTime.of(pickerState.hour, pickerState.minute)) },
-            modifier = Modifier.fillMaxWidth(),
-            style = DuriseoButtonStyle.Brand,
-        )
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ReminderSheet(isAllDay: Boolean, selected: ReminderOption?, onSelect: (ReminderOption?) -> Unit) {
+private fun TimeSheet(field: EditField, initial: LocalTime, onConfirm: (LocalTime) -> Unit) {
+    var time by remember { mutableStateOf(initial) }
+    val title = stringResource(
+        if (field == EditField.Start) R.string.event_edit_start_time_sheet_title else R.string.event_edit_end_time_sheet_title,
+    )
     DuriseoSheetPanel {
         Text(
-            text = stringResource(R.string.event_edit_reminder),
-            modifier = Modifier.semantics { heading() },
+            text = title,
+            modifier = Modifier.padding(top = DuriseoSpacing.Space1).semantics { heading() },
             style = MaterialTheme.typography.titleLarge,
             color = Ink900,
         )
+        DuriseoTimeWheel(
+            time = initial,
+            onTimeChange = { time = it },
+            description = "$title ${formatTime12(time)}",
+        )
+        DuriseoLargeButton(
+            text = stringResource(DesignR.string.action_done),
+            onClick = { onConfirm(time) },
+            container = Brand500,
+            contentColor = OnBrand,
+        )
+    }
+}
+
+/** 내 알림 시트: 제목, 설명 "나에게만 와요", 칩, [완료]. 칩은 SCR-CAL-02와 같다 (SCREENS SCR-CAL-03 "내 알림") */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ReminderSheet(isAllDay: Boolean, selected: ReminderOption?, onSelect: (ReminderOption?) -> Unit, onDone: () -> Unit) {
+    DuriseoSheetPanel {
+        Column(
+            modifier = Modifier.padding(top = DuriseoSpacing.Space1),
+            verticalArrangement = Arrangement.spacedBy(SheetTitleGap),
+        ) {
+            Text(
+                text = stringResource(R.string.event_edit_reminder),
+                modifier = Modifier.semantics { heading() },
+                style = MaterialTheme.typography.titleLarge,
+                color = Ink900,
+            )
+            Text(
+                text = stringResource(R.string.event_detail_reminder_hint),
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Normal, lineHeight = SheetDescriptionLineHeight),
+                color = Ink600,
+            )
+        }
         FlowRow(
+            modifier = Modifier.padding(top = DuriseoSpacing.Space1, bottom = DuriseoSpacing.Space2),
             horizontalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space2),
             verticalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space2),
         ) {
             (listOf<ReminderOption?>(null) + ReminderOption.optionsFor(isAllDay)).forEach { option ->
                 val isSelected = option == selected
-                // 보이는 높이 40 그대로, 터치 영역만 44로 키운다
+                // 보이는 높이 40 그대로, 터치 영역만 44로 키운다 (칸 사이 8은 보이는 칩 기준이라 44 안에서 겹치지 않게 맞춘다)
                 Box(
                     modifier = Modifier
                         .heightIn(min = DuriseoSize.Touch)
@@ -628,18 +667,25 @@ private fun ReminderSheet(isAllDay: Boolean, selected: ReminderOption?, onSelect
                             .height(40.dp)
                             .clip(CircleShape)
                             .then(if (isSelected) Modifier.background(Ink900) else Modifier.border(1.dp, Line200, CircleShape))
-                            .padding(horizontal = DuriseoSpacing.Space4),
+                            .padding(horizontal = ReminderChipPadding),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             text = reminderLabel(option),
-                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal),
-                            color = if (isSelected) OnBrand else Ink900,
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium),
+                            // 선택 안 한 칩 글자 `ink-700`, 선택은 흰 글자 (보드 `remOpts`)
+                            color = if (isSelected) OnBrand else Ink700,
                         )
                     }
                 }
             }
         }
+        DuriseoLargeButton(
+            text = stringResource(DesignR.string.action_done),
+            onClick = onDone,
+            container = Brand500,
+            contentColor = OnBrand,
+        )
     }
 }
 
@@ -713,19 +759,29 @@ private fun EventEditErrorPreview() = PreviewScreen(previewState(endError = true
 @Composable
 private fun EventEditEmptyTitlePreview() = PreviewScreen(previewState(title = ""))
 
-/** 디자인 반영 후 맞춤(이미지 대기): 날짜 선택 시트 */
+/** `SCR-CAL-03--date-picker.png`: 시작 날짜 시트 (2026년 10월, 12일 선택, 안내 줄 없음, [완료]) */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun EventEditDateSheetPreview() =
+private fun EventEditPreview_DatePicker() =
     PreviewScreen(previewState(sheet = EditSheet.DatePicker(EditField.Start, YearMonth.of(2026, 10), PreviewDay)))
 
-/** 디자인 반영 후 맞춤(이미지 대기): 시간 선택 시트 (Material3 TimePicker 임시) */
+/** `SCR-CAL-03--time-picker.png`: 시작 시간 시트 (오후 7:30 휠, [완료]) */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun EventEditTimeSheetPreview() =
+private fun EventEditPreview_TimePicker() =
     PreviewScreen(previewState(sheet = EditSheet.TimePicker(EditField.Start, LocalTime.of(19, 30))))
 
-/** 디자인 반영 후 맞춤(이미지 대기): 내 알림 선택 시트 */
+/** `SCR-CAL-03--reminder-sheet.png`: 내 알림 시트 (시간 일정 칩 5개, 없음 선택, [완료]) */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun EventEditReminderSheetPreview() = PreviewScreen(previewState(sheet = EditSheet.Reminder))
+private fun EventEditPreview_ReminderSheet() = PreviewScreen(previewState(sheet = EditSheet.Reminder))
+
+/** 종일 일정의 내 알림 시트: 칩 3개 (FR-CAL-02 AC4) */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun EventEditPreview_ReminderSheetAllDay() = PreviewScreen(previewState(allDay = true, sheet = EditSheet.Reminder))
+
+/** `SCR-CAL-03--loading.png`: [저장]을 누른 직후 로딩 덮개 (D-115) */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun EventEditPreview_Loading() = PreviewScreen(previewState().copy(saving = true, loading = true))

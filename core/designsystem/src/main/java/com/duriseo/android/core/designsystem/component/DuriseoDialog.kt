@@ -84,7 +84,7 @@ fun DuriseoDialogLayer(
             }
         }
         // 요청 중이면 다이얼로그 위까지 덮는다 (D-115)
-        if (loading) DuriseoLoadingOverlay()
+        LoadingOverlaySlot(loading)
     }
 }
 

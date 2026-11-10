@@ -51,9 +51,10 @@ class SessionStartup @Inject constructor(
     }
 
     /**
-     * [zone]은 지금 기기 시간대다. 주입된 [clock]의 시간대는 앱이 만들어질 때 정해져 앱이 떠 있는 동안 바뀐 시간대를 모른다.
+     * [zone]은 지금 기기 시간대다. 주입된 [clock]은 시간대를 부를 때마다 기기에서 읽으므로(`DeviceZoneClock`)
+     * 앱이 떠 있는 동안 바뀐 시간대도 담긴다 (Q-19 ①).
      */
-    internal suspend fun syncTimeZoneIfSignedIn(zone: ZoneId = ZoneId.systemDefault()) {
+    internal suspend fun syncTimeZoneIfSignedIn(zone: ZoneId = clock.zone) {
         if (authRepository.authState.first { it != AuthState.Unknown } != AuthState.SignedIn) return
         meRepository.syncTimeZone(zone.id)
     }

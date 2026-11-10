@@ -398,12 +398,15 @@ class EventEditViewModelTest {
     }
 
     @Test
-    fun `D-107 내 알림 행을 누르면 선택 시트가 열리고 고른 값이 반영된다`() = runTest {
+    fun `D-107 내 알림 행을 누르면 선택 시트가 열리고 고른 값이 반영되며 완료로 닫는다`() = runTest {
         val vm = create()
         vm.onAction(EventEditAction.ReminderRowClicked)
         assertEquals(EditSheet.Reminder, vm.uiState.value.sheet)
         vm.onAction(EventEditAction.ReminderSelected(ReminderOption.HOUR_1))
         assertEquals(ReminderOption.HOUR_1, vm.uiState.value.reminder)
+        // 칩을 눌러도 시트는 열려 있다. [완료]가 닫는다
+        assertEquals(EditSheet.Reminder, vm.uiState.value.sheet)
+        vm.onAction(EventEditAction.SheetDismissed)
         assertNull(vm.uiState.value.sheet)
     }
 

@@ -301,10 +301,14 @@ private fun CodePanel(state: InviteCreateUiState, onAction: (InviteCreateAction)
     ) {
         InviteCodeDisplay(
             code = state.code,
-            description = stringResource(R.string.invite_create_code_description, state.code.orEmpty()),
+            // 코드를 받기 전에는 "초대코드"만 읽는다 (보드 `InviteCreate.dc.html` `codeLabel`)
+            description = if (state.code != null) {
+                stringResource(R.string.invite_create_code_description, state.code)
+            } else {
+                stringResource(R.string.invite_create_code_description_loading)
+            },
         )
-        // 코드를 받기 전에는 남은 시간 값이 없어 줄 자체를 두지 않는다. 이미지 `SCR-COUPLE-02--loading.png`가 이 줄을
-        // 어떻게 하는지 정하면 맞춘다 (디자인 반영 후 맞춤, D-95)
+        // 코드를 받기 전에는 "N분 N초 남음" 줄을 뺀다 (D-95, `SCR-COUPLE-02--loading.png`)
         if (state.code != null) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(TimerGap),
@@ -487,10 +491,10 @@ private fun InviteCreateScreenRenewedPreview() = PreviewInviteCreate(
     InviteCreateUiState(code = "P4WM7R", remainingSeconds = 9 * 60 + 56, reissueWaitSeconds = 56, renewedNotice = true),
 )
 
-/** `SCR-COUPLE-02--not-yet.png`: 스낵바 "아직 연결되지 않았어요" (바닥에서 112) */
+/** `SCR-COUPLE-02--not-yet.png`: 스낵바 "아직 연결되지 않았어요" (위에서 40, D-126) */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun InviteCreateScreenNotYetPreview() = PreviewInviteCreate(
+private fun InviteCreatePreview_NotYet() = PreviewInviteCreate(
     state = InviteCreateUiState(code = "K7Q29X", remainingSeconds = 8 * 60 + 12),
     snackbarMessageRes = R.string.invite_create_not_yet,
 )
@@ -502,10 +506,10 @@ private fun InviteCreateScreenCopiedPreview() = PreviewInviteCreate(
     InviteCreateUiState(code = "K7Q29X", remainingSeconds = 8 * 60 + 12, copied = true),
 )
 
-/** 첫 코드를 받는 중: D-95 코드 받는 중. 디자인 반영 후 맞춤(이미지 대기): `SCR-COUPLE-02--loading.png` 예정이라 칸을 비워 두고 남은 시간 줄은 숨긴다 */
+/** `SCR-COUPLE-02--loading.png`: 코드 받는 중(D-95). 빈 칸 6개, 남은 시간 줄 없음, [코드 복사]·[공유하기] 비활성(`line-100` 면, `ink-500` 글자) */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun InviteCreateScreenLoadingPreview() = PreviewInviteCreate(InviteCreateUiState())
+private fun InviteCreatePreview_Loading() = PreviewInviteCreate(InviteCreateUiState())
 
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable

@@ -30,6 +30,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
+import com.duriseo.android.core.designsystem.theme.IbmPlexSansKr
+import com.duriseo.android.core.designsystem.theme.Ink700
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -76,22 +84,45 @@ import java.time.LocalTime
 
 // SCR-CAL-02 일정 상세 (FR-CAL-03, FR-CAL-05). 수치는 보드 `EventDetail.dc.html`, 메뉴 노출은 PRD 7장 권한 매트릭스.
 
-/** 보드의 안쪽 여백·간격: 좌우 20, 구역 사이 20 */
+/** 보드의 안쪽 여백·간격: 좌우 20, 구역 사이 20, 아래 28 */
 private val ScreenPadding = DuriseoSpacing.Space5
 private val SectionGap = DuriseoSpacing.Space5
+private val ScreenBottomPadding = 28.dp
 
-/** 누구 칩: 안쪽 5·10, 점 8, 점과 글 6 */
+/** 누구 칩 점 8, 칩과 제목 사이 10 */
 private val ChipDot = 8.dp
+private val TitleGap = 10.dp
 
-/** 정보 줄 높이 52, 라벨 폭 56 (보드 `info`) */
+/** 제목 24/700, 행간 1.35(32.4), 자간 -0.01em: 토큰에 없는 보드 값 (`EventDetail.dc.html` 28행) */
+private val DetailTitleStyle = TextStyle(
+    fontFamily = IbmPlexSansKr,
+    fontSize = 24.sp,
+    lineHeight = 32.4.sp,
+    fontWeight = FontWeight.Bold,
+    letterSpacing = (-0.01).em,
+)
+
+/** 정보 줄: 최소 52(안쪽 위아래 14), 작성 줄 최소 56(안쪽 위아래 12), 아이콘 20, 라벨 폭 52, 값 행간 22 */
 private val InfoRowHeight = 52.dp
-private val InfoLabelWidth = 56.dp
+private val InfoRowPadding = 14.dp
+private val AuthorRowHeight = 56.dp
+private val AuthorRowPadding = 12.dp
+private val InfoIconSize = 20.dp
+private val InfoLabelWidth = 52.dp
+private val InfoLineHeight = 22.sp
 
-/** 알림 칩 높이 40, 안쪽 좌우 16 */
+/** 메모 상자 안쪽 위아래 14, 안내 문구 13/1.6 */
+private val NotePaddingVertical = 14.dp
+private val NoteLineHeight = 20.8.sp
+
+/** 내 알림 줄과 칩 사이 10, 알림 칩 높이 40·안쪽 좌우 14 */
+private val ReminderGap = 10.dp
 private val ReminderChipHeight = 40.dp
+private val ReminderChipPadding = 14.dp
 
-/** 삭제 버튼 높이 52 */
+/** 삭제 막대: 버튼 높이 52, 막대 아래 여백 32 */
 private val DeleteButtonHeight = 52.dp
+private val DeleteBarBottom = 32.dp
 
 @Composable
 fun EventDetailRoute(
@@ -214,147 +245,221 @@ private fun DetailHeader(canEdit: Boolean, onBack: () -> Unit, onEdit: () -> Uni
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DetailBody(event: EventDetail, state: EventDetailUiState, onAction: (EventDetailAction) -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = ScreenPadding)
-            .padding(bottom = ScreenPadding),
-        verticalArrangement = Arrangement.spacedBy(SectionGap),
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space3)) {
-            TargetChip(event.target)
-            Text(
-                text = event.title,
-                // 보드는 24/700이지만 토큰에 24가 없어 title-lg(22)를 쓴다 (unit-4.md "토큰에 없는 값")
-                style = MaterialTheme.typography.titleLarge,
-                color = Ink900,
-            )
-        }
-
+    Column(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
+                .weight(1f)
                 .fillMaxWidth()
-                .clip(MaterialTheme.shapes.large)
-                .border(1.dp, Line100, MaterialTheme.shapes.large),
+                .verticalScroll(rememberScrollState())
+                .padding(start = ScreenPadding, end = ScreenPadding, top = DuriseoSpacing.Space1, bottom = ScreenBottomPadding),
+            verticalArrangement = Arrangement.spacedBy(SectionGap),
         ) {
-            InfoRow(stringResource(R.string.event_detail_start), dateText(event.startDate, event.startTime))
-            HorizontalDivider(color = Line100)
-            InfoRow(stringResource(R.string.event_detail_end), dateText(event.endDate, event.endTime))
-            HorizontalDivider(color = Line100)
-            InfoRow(stringResource(R.string.event_detail_author), event.authorName)
-        }
-
-        if (!event.note.isNullOrEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space2)) {
-                SectionTitle(stringResource(R.string.event_detail_note))
+            Column(
+                verticalArrangement = Arrangement.spacedBy(TitleGap),
+                horizontalAlignment = Alignment.Start,
+            ) {
+                TargetChip(event.target)
                 Text(
-                    text = event.note,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Surface50, MaterialTheme.shapes.large)
-                        .padding(DuriseoSpacing.Space4),
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = event.title,
+                    modifier = Modifier.semantics { heading() },
+                    // 보드 24/700, 행간 1.35, 자간 -0.01em. 토큰에 24가 없어 보드 값을 이 파일 상수로 둔다 (unit-5.md 결정 28)
+                    style = DetailTitleStyle,
                     color = Ink900,
                 )
             }
-        }
 
-        Column(verticalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space3)) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space2),
-                verticalAlignment = Alignment.CenterVertically,
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.large)
+                    .border(1.dp, Line100, MaterialTheme.shapes.large),
             ) {
-                SectionTitle(stringResource(R.string.event_detail_reminder))
-                Text(
-                    text = stringResource(R.string.event_detail_reminder_hint),
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Normal),
-                    color = Ink500,
+                InfoRow(
+                    iconRes = DesignR.drawable.ic_calendar,
+                    label = stringResource(R.string.event_detail_start),
+                    value = dateText(event.startDate, event.startTime),
+                    minHeight = InfoRowHeight,
+                    vertical = InfoRowPadding,
+                )
+                HorizontalDivider(color = Line100)
+                InfoRow(
+                    iconRes = null,
+                    label = stringResource(R.string.event_detail_end),
+                    value = dateText(event.endDate, event.endTime),
+                    minHeight = InfoRowHeight,
+                    vertical = InfoRowPadding,
+                )
+                HorizontalDivider(color = Line100)
+                InfoRow(
+                    iconRes = DesignR.drawable.ic_user,
+                    label = stringResource(R.string.event_detail_author),
+                    value = event.authorName,
+                    minHeight = AuthorRowHeight,
+                    vertical = AuthorRowPadding,
                 )
             }
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space2),
-                verticalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space2),
-            ) {
-                val options = listOf<ReminderOption?>(null) + ReminderOption.optionsFor(event.isAllDay)
-                options.forEach { option ->
-                    ReminderChip(
-                        text = reminderLabel(option),
-                        selected = event.myReminder == option,
-                        enabled = !state.reminderSaving,
-                        onClick = { onAction(EventDetailAction.ReminderSelected(option)) },
+
+            if (!event.note.isNullOrEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space2)) {
+                    SectionTitle(stringResource(R.string.event_detail_note))
+                    Text(
+                        text = event.note,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Surface50, MaterialTheme.shapes.medium)
+                            .padding(horizontal = DuriseoSpacing.Space4, vertical = NotePaddingVertical),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Ink900,
                     )
                 }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(ReminderGap)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            painter = painterResource(DesignR.drawable.ic_bell),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = Ink600,
+                        )
+                        SectionTitle(stringResource(R.string.event_detail_reminder))
+                    }
+                    Text(
+                        text = stringResource(R.string.event_detail_reminder_hint),
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Normal),
+                        color = Ink500,
+                    )
+                }
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space2),
+                    verticalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space2),
+                ) {
+                    val options = listOf<ReminderOption?>(null) + ReminderOption.optionsFor(event.isAllDay)
+                    options.forEach { option ->
+                        ReminderChip(
+                            text = reminderLabel(option),
+                            selected = event.myReminder == option,
+                            enabled = !state.reminderSaving,
+                            onClick = { onAction(EventDetailAction.ReminderSelected(option)) },
+                        )
+                    }
+                }
+            }
+
+            if (!event.canEdit) {
+                // 상대가 만든 "나·상대" 일정은 읽기만 된다 (PRD 7장, FR-CAL-03 AC2)
+                Text(
+                    text = stringResource(R.string.event_detail_read_only),
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Normal,
+                        lineHeight = NoteLineHeight,
+                    ),
+                    color = Ink600,
+                )
             }
         }
 
         if (event.canEdit) {
-            Box(
+            // 아래에 붙는 막대: 위 선 1 `line-100`, 안쪽 위 12·좌우 20·아래 32 (보드)
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(DeleteButtonHeight)
-                    .clip(MaterialTheme.shapes.medium)
-                    .border(1.dp, Line200, MaterialTheme.shapes.medium)
-                    .clickable(role = Role.Button) { onAction(EventDetailAction.DeleteClicked) },
-                contentAlignment = Alignment.Center,
+                    .background(Surface0)
+                    .drawTopLine()
+                    .padding(start = ScreenPadding, end = ScreenPadding, top = DuriseoSpacing.Space3, bottom = DeleteBarBottom),
             ) {
-                Text(
-                    text = stringResource(R.string.event_detail_delete),
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = Danger700,
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(DeleteButtonHeight)
+                        .clip(MaterialTheme.shapes.medium)
+                        .border(1.dp, Line200, MaterialTheme.shapes.medium)
+                        .clickable(role = Role.Button) { onAction(EventDetailAction.DeleteClicked) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = stringResource(R.string.event_detail_delete),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = Danger700,
+                    )
+                }
             }
-        } else {
-            // 상대가 만든 "나·상대" 일정은 읽기만 된다 (PRD 7장, FR-CAL-03 AC2)
-            Text(
-                text = stringResource(R.string.event_detail_read_only),
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Normal),
-                color = Ink600,
-            )
         }
     }
 }
 
+/** 막대 위 선 1 `line-100` */
+private fun Modifier.drawTopLine(): Modifier = drawBehind {
+    drawLine(color = Line100, start = Offset(0f, 0f), end = Offset(size.width, 0f), strokeWidth = 1.dp.toPx())
+}
+
+/** 섹션 제목 13/600 `ink-600` (메모·내 알림, 보드 `h3`) */
 @Composable
 private fun SectionTitle(text: String) {
-    Text(text = text, style = MaterialTheme.typography.titleSmall, color = Ink900)
+    Text(text = text, style = MaterialTheme.typography.labelLarge, color = Ink600)
 }
 
 @Composable
 private fun TargetChip(target: EventTarget) {
+    // 보드: 안쪽 위아래 3·왼 8·오른 10, 점과 글 5, 글 12/600, 테두리 1 `line-200`
     Row(
         modifier = Modifier
             .background(Surface0, CircleShape)
             .border(1.dp, Line200, CircleShape)
-            .padding(start = DuriseoSpacing.Space3, end = DuriseoSpacing.Space3, top = 5.dp, bottom = 5.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+            .padding(start = 8.dp, end = DuriseoSpacing.Space2 + 2.dp, top = 3.dp, bottom = 3.dp),
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(ChipDot).background(target.color(), CircleShape))
         Text(
             text = target.label(),
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
             color = Ink900,
         )
     }
 }
 
+/** 정보 줄: 아이콘 20 `ink-600`(종료 줄은 빈 자리), 라벨 14 `ink-600` 폭 52, 값 15/600, 줄 사이 12 (보드 `info`) */
 @Composable
-private fun InfoRow(label: String, value: String) {
+private fun InfoRow(iconRes: Int?, label: String, value: String, minHeight: Dp, vertical: Dp) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(InfoRowHeight)
-            .padding(horizontal = DuriseoSpacing.Space4),
-        verticalAlignment = Alignment.CenterVertically,
+            .heightIn(min = minHeight)
+            .padding(horizontal = DuriseoSpacing.Space4, vertical = vertical),
+        horizontalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space3),
+        verticalAlignment = Alignment.Top,
     ) {
+        if (iconRes != null) {
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = null,
+                modifier = Modifier.padding(top = 1.dp).size(InfoIconSize),
+                tint = Ink600,
+            )
+        } else {
+            Box(Modifier.size(InfoIconSize))
+        }
         Text(
             text = label,
             modifier = Modifier.width(InfoLabelWidth),
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Normal),
-            color = Ink500,
+            style = MaterialTheme.typography.bodySmall,
+            color = Ink600,
         )
-        Text(text = value, style = MaterialTheme.typography.bodyMedium, color = Ink900)
+        Text(
+            text = value,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold, lineHeight = InfoLineHeight),
+            color = Ink900,
+        )
     }
 }
 
@@ -374,13 +479,14 @@ private fun ReminderChip(text: String, selected: Boolean, enabled: Boolean, onCl
                 .then(
                     if (selected) Modifier.background(Ink900) else Modifier.border(1.dp, Line200, CircleShape),
                 )
-                .padding(horizontal = DuriseoSpacing.Space4),
+                .padding(horizontal = ReminderChipPadding),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = text,
-                style = MaterialTheme.typography.bodySmall.copy(fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal),
-                color = if (selected) OnBrand else Ink900,
+                style = MaterialTheme.typography.bodySmall.copy(fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium),
+                // 선택 안 한 칩 글자 `ink-700`, 선택은 흰 글자 (보드 `chip`)
+                color = if (selected) OnBrand else Ink700,
             )
         }
     }
@@ -399,17 +505,22 @@ private fun sample(
     allDay: Boolean = false,
     note: String? = "[식당 이름] 예약 완료 · 7시 20분 역 앞에서",
     reminder: ReminderOption? = ReminderOption.MIN_10,
+    title: String = "저녁 데이트",
+    author: String = "민지",
+    date: LocalDate = LocalDate.of(2026, 10, 12),
+    start: LocalTime = LocalTime.of(19, 30),
+    end: LocalTime = LocalTime.of(21, 0),
 ) = EventDetail(
     id = "e1",
-    title = "저녁 데이트",
+    title = title,
     note = note,
     isAllDay = allDay,
-    startDate = LocalDate.of(2026, 10, 12),
-    startTime = if (allDay) null else LocalTime.of(19, 30),
-    endDate = LocalDate.of(2026, 10, 12),
-    endTime = if (allDay) null else LocalTime.of(21, 0),
+    startDate = date,
+    startTime = if (allDay) null else start,
+    endDate = date,
+    endTime = if (allDay) null else end,
     target = target,
-    authorName = "민지",
+    authorName = author,
     myReminder = reminder,
     canEdit = canEdit,
 )
@@ -446,3 +557,26 @@ private fun EventDetailDeleteDialogPreview() =
 @Composable
 private fun EventDetailDeleteDialogPersonalPreview() =
     PreviewScreen(EventDetailUiState(event = sample(), isPersonalSpace = true, deleteDialogVisible = true))
+
+/** 개인 공간 견본 (보드 `EventDetail.dc.html`의 `solo`): 대상 "나", 작성 내 닉네임 */
+private fun soloSample() = sample(
+    target = EventTarget.ME,
+    note = "늦게 끝날 수도 있어요",
+    reminder = ReminderOption.HOUR_1,
+    title = "팀 회식",
+    author = "[내 이름]",
+    date = LocalDate.of(2026, 10, 9),
+    start = LocalTime.of(19, 0),
+    end = LocalTime.of(22, 0),
+)
+
+/** `SCR-CAL-02--solo.png`: 개인 공간 상세 (D-109) */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun EventDetailPreview_Solo() = PreviewScreen(EventDetailUiState(event = soloSample(), isPersonalSpace = true))
+
+/** `SCR-CAL-02--solo-delete-dialog.png`: 개인 공간 삭제 확인 */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun EventDetailPreview_SoloDeleteDialog() =
+    PreviewScreen(EventDetailUiState(event = soloSample(), isPersonalSpace = true, deleteDialogVisible = true))
