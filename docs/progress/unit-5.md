@@ -1,6 +1,6 @@
 # 단위 5: 기념일 — SCR-ANNIV-01~02, 캘린더 기념일 표시, 디자인 맞추기(이슈 #12·#15 단위 5분)
 
-> 브랜치: `feat/5-anniversary` · PR: (draft 때 채움) · 상태: 진행 중 (2026-11-10 범위 승인, 확인 필요 1~6 추천안대로)
+> 브랜치: `feat/5-anniversary` · PR: #16 · 상태: 진행 중 (2026-11-10 범위 승인, 확인 필요 1~6 추천안대로)
 > 기준: PRD v0.12 (FR-ANNIV, FR-CAL-01 AC2·AC3·AC8, D-115~D-122, D-125, D-126, Q-15·Q-16·Q-18·Q-19), SCREENS.md(캔버스 버전 43), API.md 1장·3.3(기념일 6개 경로, "같은 날 순서", "커서 정렬 키", 리드 보충)·5장
 > Docs 기준 커밋: DuriseoApp/Docs main `cee0885`
 
@@ -117,6 +117,22 @@ NFR-TIME-02(작성일·받은 시각 표기)는 이 단위 화면에 쓰는 곳�
 
 구현하면서 정한 것 중 문서에 없는 것. 문서에 있어야 할 결정이면 여기 적지 말고 작업을 멈추고 보고한다.
 
+**묶음 A (기념일)**
+
+1. **수정 화면이 항목을 찾는 방법**: `GET /anniversaries/{id}`가 없어서 경로에 `anniversaryId`와 누른 발생일(`date`)을 싣고, 수정 화면이 Room의 upcoming(id·날짜가 같은 것) → past(id가 같은 것) 순으로 찾는다. 없거나 내가 만든 것이 아니면 공통 오류 + 닫기. 지난 기념일은 `repeatsYearly = false`(1회성)다.
+2. **보이는 달 다시 불러오기**: 저장소가 마지막으로 성공한 캘린더 범위(`refreshRange`)를 기억하고, 쓰기 성공·403 뒤 `refreshAll`이 upcoming·past 첫 페이지와 그 범위를 다시 불러온다. 캘린더(묶음 B)는 월을 열 때 `refreshRange(calendarMonthRange(month))`를 부르면 된다.
+3. **404·403 처리는 저장소가 한다**: 404면 발생일·지난 항목을 Room에서 지우고(지난 기념일 개수도 하나 줄임), 403이면 `refreshAll`. 화면은 둘 다 닫고 공통 오류를 보인다(확인 필요 4). 화면 모델이 닫혀도 요청이 끊기지 않게 저장소 안에서 처리했다.
+4. **페이지 상태를 Room에**: `anniversary_page_state`에 다음 커서와 past `totalCount`를 저장해 `hasMore`를 Flow로 낸다. 커서는 해석하지 않는다. 다음 페이지 요청은 목록별 `Mutex`로 겹치지 않게 한다. 화면 진입 때는 첫 페이지만 교체하고(past도 첫 페이지), 스크롤 끝(마지막 3칸 안)에서 이어 붙인다.
+5. **`DayCount`**: 함께한 지 D+N(최소 1, D-116)은 `domain/anniversary/DayCount.of`다. 기존 `StartDateRules.dayNumber`(최소 1이 아님)는 캘린더 앱바·SCR-SET-01 프로필 카드가 쓰고 있어 이번에 건드리지 않았다. 묶음 B(앱바)·D(프로필 카드)가 `DayCount.of`로 바꾼다.
+6. **디자인 시스템 추가**: `DuriseoTopAppBar`에 오른쪽 행동 버튼(선택), `DuriseoButtonSize.Small`(높이 44, 14/700, 보드 `Anniversaries.dc.html`의 [처음 만난 날 입력]·[기념일 추가]), `ic_repeat`(매년 반복 아이콘, 보드 `AnniversaryEdit.dc.html`).
+7. **날짜 시트 제목**: SCR-ANNIV-02의 날짜 시트는 일정과 같은 부품이고 새 문구를 만들지 않으려고 제목을 날짜 칸 이름 "날짜"로, 안내 줄은 없앴다(묶음 D의 새 날짜 시트에서 교체).
+8. **처음 만난 날이 없는 커플이 직접 기념일도 없을 때**(문서에 없는 모서리): 안내 카드 아래에 개인 공간과 같은 빈 화면("아직 기념일이 없어요" + [기념일 추가])을 보인다. SCREENS는 개인 공간의 빈 상태만 적었다. Docs 후속에 올려 확인한다.
+9. **삭제 확인 문구의 조사**: SCREENS 그대로 "[기념일 이름]이 캘린더와 기념일 목록에서 사라져요."로 "이"를 고정했다. 받침 없는 이름("생일")은 어색할 수 있다. 문구는 문서가 정하므로 그대로 두고 Docs 후속에 올린다.
+10. **스낵바 위 40**: `MainNavigator`의 위쪽 스낵바 목록에 SCR-ANNIV-01·02를 더하고 `SnackbarPositionTest`에 두 줄을 더했다(D-126 나머지 화면은 묶음 C).
+11. **편집 화면 스크롤 없음**: SCR-ANNIV-02는 내용이 짧아 스크롤 없이 [기념일 삭제]를 화면 아래에 붙였다(보드 `margin-top: auto`).
+12. **범위 표 테스트 이름과 다른 점**: `…AC5 404면 기기에서 지우고 화면을 닫는다`·`…AC5 403이면 … 다시 불러온다`는 가짜 저장소가 저장소 계약(404면 지움, 403이면 다시 불러옴)을 흉내 내고, 진짜 동작은 `AnniversaryRepositoryTest`의 `FR-ANNIV-03 AC5 404면 기기에서 지운다`·`…403이면 목록과 달을 다시 불러온다`가 확인한다.
+13. **Room 스키마 JSON**: 버전이 4가 됐다. 클라우드에서 빌드할 수 없어 맥에서 만들어 커밋한다 (E 묶음 항목).
+
 ## 리뷰 기록
 
 | 회차 | Critical | Major | 비고 |
@@ -124,4 +140,6 @@ NFR-TIME-02(작성일·받은 시각 표기)는 이 단위 화면에 쓰는 곳�
 
 ## 남은 일
 
-- 
+- 묶음 A: 클라우드에서 `./gradlew`가 돌지 않아(Gradle 배포판을 받을 수 없음) 눈으로만 확인했다. PR #16 CI에서 `assembleDebug testDebugUnitTest` 확인 필요. Preview는 Android Studio에서 확인(맥)
+- 묶음 B가 알아야 할 것: 캘린더 월 조회는 `AnniversaryRepository.refreshRange(from, to)`와 `observeRange(from, to)`(범위는 `calendarMonthRange(month)`), SCR-ANNIV-01 이동은 `MainNavigator.navigateToAnniversaries()`(`feature:main`)이고 `calendarNavGraph`에 `onOpenAnniversaries` 콜백을 더해 연결, D+N은 `DayCount.of`·`DayCount.onDate`
+- Docs 후속: 결정 8(처음 만난 날도 직접 기념일도 없는 커플의 빈 화면), 결정 9(삭제 문구 조사), 확인 필요 1(API.md에 수정 화면의 날짜 처리)

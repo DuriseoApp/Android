@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.main
 
+import com.duriseo.android.core.common.navigation.AnniversaryRouteModel
 import com.duriseo.android.core.common.navigation.CalendarRouteModel
 import com.duriseo.android.core.common.navigation.MainRouteModel
 import com.duriseo.android.feature.main.navigation.isSnackbarAtTop
@@ -25,6 +26,16 @@ class SnackbarPositionTest {
     @Test
     fun `SCR-CAL-03 일정 작성 수정의 스낵바는 위에서 40이다`() {
         assertTrue(atTop(CalendarRouteModel.EventEdit::class))
+    }
+
+    @Test
+    fun `D-126 SCR-ANNIV-01 기념일 목록의 스낵바는 위에서 40이다`() {
+        assertTrue(atTop(AnniversaryRouteModel.Anniversaries::class))
+    }
+
+    @Test
+    fun `D-126 SCR-ANNIV-02 기념일 작성 수정의 스낵바는 위에서 40이다`() {
+        assertTrue(atTop(AnniversaryRouteModel.Edit::class))
     }
 
     @Test

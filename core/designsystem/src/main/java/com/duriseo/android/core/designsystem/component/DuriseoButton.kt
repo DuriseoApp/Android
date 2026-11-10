@@ -76,6 +76,9 @@ enum class DuriseoButtonSize(val height: Dp) {
 
     /** 높이 48(`size-button-md`), 글자 15 / 600 */
     Medium(DuriseoSize.ButtonMd),
+
+    /** 높이 44(`size-button-sm`), 글자 14 / 700. 안내 카드·빈 화면의 행동 버튼 (SCR-ANNIV-01, 보드 `Anniversaries.dc.html`) */
+    Small(DuriseoSize.ButtonSm),
 }
 
 @Immutable
@@ -105,8 +108,9 @@ private fun DuriseoButtonSize.textStyle(): TextStyle {
     val base = when (this) {
         DuriseoButtonSize.Social -> MaterialTheme.typography.bodyLarge
         DuriseoButtonSize.Medium -> MaterialTheme.typography.bodyMedium
+        DuriseoButtonSize.Small -> MaterialTheme.typography.bodySmall
     }
-    return base.copy(fontWeight = FontWeight.SemiBold)
+    return base.copy(fontWeight = if (this == DuriseoButtonSize.Small) FontWeight.Bold else FontWeight.SemiBold)
 }
 
 /**

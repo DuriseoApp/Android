@@ -53,12 +53,18 @@ private fun AppBarIconButton(
 /**
  * 하위 화면 앱바: 왼쪽 뒤로 가기 버튼(접근성 "뒤로 가기"), 가운데 제목 `title-md`(17/700). 계정 화면이 쓴다.
  * 오른쪽에 뒤로 가기와 같은 폭의 빈 자리를 둬서 제목이 화면 가운데에 온다.
+ *
+ * @param actionIconRes 오른쪽 행동 버튼 아이콘(48x48). 기념일 목록의 추가 버튼이 쓴다. null이면 빈 자리
+ * @param actionDescription 행동 버튼의 접근성 문구 (아이콘이 있으면 필수)
  */
 @Composable
 fun DuriseoTopAppBar(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    @DrawableRes actionIconRes: Int? = null,
+    actionDescription: String? = null,
+    onAction: () -> Unit = {},
 ) {
     Row(
         modifier = modifier
@@ -83,7 +89,11 @@ fun DuriseoTopAppBar(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Box(Modifier.width(DuriseoSize.ButtonMd).clearAndSetSemantics { })
+        if (actionIconRes != null && actionDescription != null) {
+            AppBarIconButton(iconRes = actionIconRes, contentDescription = actionDescription, onClick = onAction)
+        } else {
+            Box(Modifier.width(DuriseoSize.ButtonMd).clearAndSetSemantics { })
+        }
     }
 }
 

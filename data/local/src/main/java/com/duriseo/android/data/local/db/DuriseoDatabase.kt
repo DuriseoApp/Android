@@ -2,6 +2,10 @@ package com.duriseo.android.data.local.db
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import com.duriseo.android.data.local.anniversary.AnniversaryDao
+import com.duriseo.android.data.local.anniversary.AnniversaryOccurrenceEntity
+import com.duriseo.android.data.local.anniversary.AnniversaryPageStateEntity
+import com.duriseo.android.data.local.anniversary.PastAnniversaryEntity
 import com.duriseo.android.data.local.event.EventDao
 import com.duriseo.android.data.local.event.EventEntity
 import com.duriseo.android.data.local.me.MeDao
@@ -16,16 +20,27 @@ import com.duriseo.android.data.local.me.MeEntity
  * (API.md 3.1 `MeSpace.linkedAt`·`importCounts`). 출시 전이라 마이그레이션 없이 지우고 다시 만든다 (캐시, unit-3.md 결정 15).
  *
  * 버전 3 (단위 4): `event` 테이블을 더했다 (API.md 3.3 `Event`). 같은 방식으로 지우고 다시 만든다.
+ *
+ * 버전 4 (단위 5): 기념일 `anniversary_occurrence`(캘린더 범위·다가오는 목록, 응답 위치 저장)·`anniversary_past`(지난 기념일)·
+ * `anniversary_page_state`(다음 커서·지난 기념일 개수)를 더했다 (API.md 3.3 "기념일"). 같은 방식으로 지우고 다시 만든다.
  */
 @Database(
-    entities = [MeEntity::class, EventEntity::class],
-    version = 3,
+    entities = [
+        MeEntity::class,
+        EventEntity::class,
+        AnniversaryOccurrenceEntity::class,
+        PastAnniversaryEntity::class,
+        AnniversaryPageStateEntity::class,
+    ],
+    version = 4,
     exportSchema = true,
 )
 abstract class DuriseoDatabase : RoomDatabase() {
     abstract fun meDao(): MeDao
 
     abstract fun eventDao(): EventDao
+
+    abstract fun anniversaryDao(): AnniversaryDao
 
     companion object {
         const val NAME = "duriseo.db"

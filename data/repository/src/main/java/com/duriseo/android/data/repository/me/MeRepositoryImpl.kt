@@ -1,5 +1,6 @@
 package com.duriseo.android.data.repository.me
 
+import com.duriseo.android.data.local.anniversary.AnniversaryLocalDataSource
 import com.duriseo.android.data.local.event.EventLocalDataSource
 import com.duriseo.android.data.local.me.AcknowledgedSpaceLocalDataSource
 import com.duriseo.android.data.local.me.MeLocalDataSource
@@ -35,6 +36,7 @@ class MeRepositoryImpl @Inject constructor(
     private val session: SessionManager,
     private val writeLock: MeWriteLock,
     private val events: EventLocalDataSource,
+    private val anniversaries: AnniversaryLocalDataSource,
 ) : MeRepository {
 
     private val changeChannel = Channel<SpaceChange>(Channel.BUFFERED)
@@ -113,8 +115,11 @@ class MeRepositoryImpl @Inject constructor(
         val unlinked = leftCouple || (isPersonal && acknowledgedId != null && acknowledgedId != fresh.space.id)
 
         if (unlinked) session.clearUserData()
-        // 공간이 바뀌었으면(연결·복구·다른 커플 공간) 이전 공간의 일정 캐시를 비운다 (unit-4.md 확인 필요 12)
-        if (!unlinked && previous != null && previous.space.id != fresh.space.id) events.clear()
+        // 공간이 바뀌었으면(연결·복구·다른 커플 공간) 이전 공간의 일정·기념일 캐시를 비운다 (unit-4.md 확인 필요 12, 단위 5)
+        if (!unlinked && previous != null && previous.space.id != fresh.space.id) {
+            events.clear()
+            anniversaries.clear()
+        }
         local.replace(fresh.toEntity())
         when {
             // 저장 시점 1: 개인 공간을 받을 때마다 (처음 설치·로그인, 초기화 포함. 3번 "초기화 때"도 이것으로 채워진다)

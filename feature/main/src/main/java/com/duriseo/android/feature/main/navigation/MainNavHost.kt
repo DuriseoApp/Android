@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.duriseo.android.core.common.navigation.MainRouteModel
+import com.duriseo.android.feature.anniversary.navigation.anniversaryNavGraph
 import com.duriseo.android.feature.auth.navigation.authNavGraph
 import com.duriseo.android.feature.auth.start.AfterLogin
 import com.duriseo.android.feature.calendar.navigation.calendarNavGraph
@@ -71,6 +72,14 @@ fun MainNavHost(
             onBack = navigator::navigateUp,
             onShowSnackBar = onShowSnackBar,
             snackbarVisible = snackbarVisible,
+        )
+        // 기념일 (SCR-ANNIV-01·02). 캘린더에서 들어가는 길은 단위 5 묶음 B가 `MainNavigator.navigateToAnniversaries`로 연다
+        anniversaryNavGraph(
+            padding = padding,
+            onBack = navigator::navigateUp,
+            onOpenCreate = navigator::navigateToAnniversaryCreate,
+            onOpenEdit = navigator::navigateToAnniversaryEdit,
+            onShowSnackBar = onShowSnackBar,
         )
         // feature:memo(단위 6)가 생기면 그 모듈의 그래프로 바꾼다
         composable<MainRouteModel.Memo> {
