@@ -534,16 +534,17 @@ class AnniversaryRepositoryTest {
     }
 
     @Test
-    fun `past 다음 페이지에 totalCount가 없으면 저장된 값을 유지한다`() = runTestWithTimeout {
+    fun `past 다음 페이지는 목록을 이어 붙이고 그 페이지의 totalCount를 쓴다`() = runTestWithTimeout {
+        // API.md 3.3: past 응답에는 늘 totalCount가 있다(페이지와 관계없는 전체 개수). 없는 응답은 형식 오류로 실패한다
         val h = harness()
         server.enqueue(jsonResponse(200, pastPage("c1", 5, pastItem("p1", "하나", "2026-01-01"))))
         h.anniversaryRepository.refreshPast()
-        server.enqueue(jsonResponse(200, page(null).replace("\"items\":[]", "\"items\":[${pastItem("p2", "둘", "2025-01-01")}]")))
+        server.enqueue(jsonResponse(200, pastPage(null, 6, pastItem("p2", "둘", "2025-01-01"))))
 
         h.anniversaryRepository.loadMorePast()
 
         val past = h.anniversaryRepository.observePast().first()
         assertEquals(2, past.items.size)
-        assertEquals(5, past.totalCount)
+        assertEquals(6, past.totalCount)
     }
 }
