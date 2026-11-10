@@ -29,6 +29,8 @@ import com.duriseo.android.domain.me.MeSpace
 import com.duriseo.android.domain.me.SpaceChange
 import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.domain.result.DataResult
+import com.duriseo.android.domain.error.ErrorCode
+import com.duriseo.android.domain.error.hasCode
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -120,8 +122,12 @@ class FakeCoupleRepository : CoupleRepository {
     override suspend fun updateColors(change: ColorChange): DataResult<Unit> = error("캘린더는 쓰지 않아요")
     override suspend fun unlink(): DataResult<Unit> = error("캘린더는 쓰지 않아요")
 
+    /** 설정하면 updateStartDate가 이 신호를 받을 때까지 멈춘다 (요청 중 상태를 확인하려고) */
+    var startDateGate: CompletableDeferred<Unit>? = null
+
     override suspend fun updateStartDate(date: LocalDate): DataResult<Unit> {
         startDateCalls += date
+        startDateGate?.await()
         return startDateResult
     }
 }
@@ -177,19 +183,33 @@ class FakeEventRepository(initial: List<Event> = emptyList()) : EventRepository 
         return DataResult.Success(made)
     }
 
+    /** 설정하면 update가 이 신호를 받을 때까지 멈춘다 (요청 중 상태를 확인하려고) */
+    var updateGate: CompletableDeferred<Unit>? = null
+
     override suspend fun update(id: String, patch: EventPatch): DataResult<Unit> {
         patches += id to patch
+        updateGate?.await()
+        // 저장소 계약: 403 NOT_AUTHOR면 그 일정을 다시 읽는다 (D-111, D-121)
+        if ((updateResult as? DataResult.Failure)?.error?.hasCode(ErrorCode.NOT_AUTHOR) == true) refreshedIds += id
         return updateResult
     }
 
+    /** 설정하면 delete가 이 신호를 받을 때까지 멈춘다 */
+    var deleteGate: CompletableDeferred<Unit>? = null
+
     override suspend fun delete(id: String): DataResult<Unit> {
         deleted += id
+        deleteGate?.await()
         if (deleteResult is DataResult.Success) events.value = events.value.filterNot { it.id == id }
         return deleteResult
     }
 
+    /** 설정하면 setReminder가 이 신호를 받을 때까지 멈춘다 */
+    var reminderGate: CompletableDeferred<Unit>? = null
+
     override suspend fun setReminder(id: String, option: ReminderOption?): DataResult<Unit> {
         reminderCalls += id to option
+        reminderGate?.await()
         if (reminderResult is DataResult.Success) {
             events.value = events.value.map {
                 if (it.id == id) it.copy(reminder = option?.let { o -> EventReminder(o, Instant.parse("2026-10-12T10:00:00Z")) }) else it

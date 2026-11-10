@@ -176,7 +176,7 @@ class AnniversaryEditViewModel @Inject constructor(
         val name = AnniversaryRules.normalizeName(s.name)
         val before = original
         if (before == null) {
-            _uiState.update { it.copy(saving = true) }
+            _uiState.update { it.copy(saving = true, loading = true) }
             viewModelScope.launch { create(name, s) }
             return
         }
@@ -191,11 +191,11 @@ class AnniversaryEditViewModel @Inject constructor(
             effectChannel.trySend(AnniversaryEditSideEffect.Close)
             return
         }
-        _uiState.update { it.copy(saving = true) }
+        _uiState.update { it.copy(saving = true, loading = true) }
         val id = anniversaryId ?: return
         viewModelScope.launch {
             when (val result = anniversaryRepository.update(id, patch)) {
-                is DataResult.Success -> effectChannel.trySend(AnniversaryEditSideEffect.Close)
+                is DataResult.Success -> closeAfterRequest()
                 is DataResult.Failure -> fail(result.error)
             }
         }
@@ -204,20 +204,26 @@ class AnniversaryEditViewModel @Inject constructor(
     private suspend fun create(name: String, s: AnniversaryEditUiState) {
         val result = anniversaryRepository.create(NewAnniversary(name = name, date = s.date, repeatsYearly = s.repeatsYearly))
         when (result) {
-            is DataResult.Success -> effectChannel.trySend(AnniversaryEditSideEffect.Close)
+            is DataResult.Success -> closeAfterRequest()
             is DataResult.Failure -> fail(result.error)
         }
     }
 
     private fun delete() {
         val id = anniversaryId ?: return
-        _uiState.update { it.copy(saving = true) }
+        _uiState.update { it.copy(saving = true, loading = true) }
         viewModelScope.launch {
             when (val result = anniversaryRepository.delete(id)) {
-                is DataResult.Success -> effectChannel.trySend(AnniversaryEditSideEffect.Close)
+                is DataResult.Success -> closeAfterRequest()
                 is DataResult.Failure -> fail(result.error)
             }
         }
+    }
+
+    /** 요청이 성공했다: 로딩 덮개를 먼저 걷고 닫는다 (D-115). `saving`은 닫힐 때까지 켜 둬 입력을 막는다 */
+    private fun closeAfterRequest() {
+        _uiState.update { it.copy(loading = false) }
+        effectChannel.trySend(AnniversaryEditSideEffect.Close)
     }
 
     /**
@@ -226,7 +232,7 @@ class AnniversaryEditViewModel @Inject constructor(
      * 그 밖의 오류(`VALIDATION_FAILED`·`DATE_OUT_OF_RANGE`는 앱이 미리 막는다)는 화면을 그대로 둔다. 새 문구는 없다.
      */
     private fun fail(error: DataError) {
-        _uiState.update { it.copy(saving = false, deleteDialogVisible = false) }
+        _uiState.update { it.copy(saving = false, loading = false, deleteDialogVisible = false) }
         effectChannel.trySend(AnniversaryEditSideEffect.ShowMessage(error.toMessageRes()))
         if (error.hasCode(ErrorCode.NOT_FOUND) || error.hasCode(ErrorCode.NOT_AUTHOR)) {
             effectChannel.trySend(AnniversaryEditSideEffect.Close)

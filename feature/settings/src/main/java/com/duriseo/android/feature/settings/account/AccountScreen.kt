@@ -197,6 +197,7 @@ fun AccountScreen(
         dialogVisible = state.dialog != null,
         dialog = { AccountDialogs(state = state, onAction = onAction) },
         modifier = modifier.background(MaterialTheme.colorScheme.surface),
+        loading = state.loading,
     ) {
         Column(
             modifier = Modifier
@@ -572,7 +573,7 @@ private fun AccountScreenGuestPreview() {
 private fun AccountScreenGuestRequestingPreview() {
     DuriseoTheme {
         AccountScreen(
-            state = AccountUiState(content = AccountContent.Guest(SampleGuestId), requesting = true),
+            state = AccountUiState(content = AccountContent.Guest(SampleGuestId), requesting = true, loading = true),
             padding = PaddingValues(),
             onBack = {},
             onAction = {},

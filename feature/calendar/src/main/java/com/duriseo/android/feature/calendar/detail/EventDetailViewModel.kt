@@ -49,6 +49,8 @@ class EventDetailViewModel @Inject constructor(
     private data class Local(
         val deleteDialogVisible: Boolean = false,
         val deleting: Boolean = false,
+        /** 삭제 요청이 도는 동안만 true. 성공해도 `deleting`은 닫힐 때까지 켜 두지만 덮개는 먼저 걷는다 (D-115) */
+        val deleteLoading: Boolean = false,
         val reminderSaving: Boolean = false,
     )
 
@@ -68,6 +70,7 @@ class EventDetailViewModel @Inject constructor(
             EventDetailUiState(
                 deleteDialogVisible = local.deleteDialogVisible,
                 deleting = local.deleting,
+                loading = local.deleteLoading || local.reminderSaving,
                 reminderSaving = local.reminderSaving,
             )
         } else {
@@ -77,6 +80,7 @@ class EventDetailViewModel @Inject constructor(
                 isPersonalSpace = me.space.type == SpaceType.PERSONAL,
                 deleteDialogVisible = local.deleteDialogVisible,
                 deleting = local.deleting,
+                loading = local.deleteLoading || local.reminderSaving,
                 reminderSaving = local.reminderSaving,
             )
         }
@@ -142,15 +146,15 @@ class EventDetailViewModel @Inject constructor(
     private fun delete() {
         val current = local.value
         if (current.deleting || uiState.value.event?.canEdit != true) return
-        local.update { it.copy(deleting = true) }
+        local.update { it.copy(deleting = true, deleteLoading = true) }
         viewModelScope.launch {
             when (val result = eventRepository.delete(eventId)) {
                 is DataResult.Success -> {
-                    local.update { it.copy(deleteDialogVisible = false) }
+                    local.update { it.copy(deleteDialogVisible = false, deleteLoading = false) }
                     effectChannel.trySend(EventDetailSideEffect.Close)
                 }
                 is DataResult.Failure -> {
-                    local.update { it.copy(deleting = false, deleteDialogVisible = false) }
+                    local.update { it.copy(deleting = false, deleteLoading = false, deleteDialogVisible = false) }
                     showFailure(result)
                 }
             }

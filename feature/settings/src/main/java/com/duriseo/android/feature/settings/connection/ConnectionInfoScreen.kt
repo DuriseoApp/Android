@@ -190,6 +190,7 @@ fun ConnectionInfoScreen(
             }
         },
         modifier = modifier.background(MaterialTheme.colorScheme.surface),
+        loading = state.loading,
     ) {
         Column(
             modifier = Modifier

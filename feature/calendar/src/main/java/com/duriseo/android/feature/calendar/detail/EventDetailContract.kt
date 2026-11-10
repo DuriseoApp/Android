@@ -35,6 +35,8 @@ data class EventDetailUiState(
     val deleting: Boolean = false,
     /** 알림 변경 요청 중 */
     val reminderSaving: Boolean = false,
+    /** 삭제·알림 변경 요청이 도는 동안 true. 로딩 덮개를 그린다 (D-115) */
+    val loading: Boolean = false,
 )
 
 sealed interface EventDetailAction {

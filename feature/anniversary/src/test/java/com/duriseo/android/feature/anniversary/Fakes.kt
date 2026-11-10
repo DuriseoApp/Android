@@ -22,6 +22,7 @@ import com.duriseo.android.domain.me.MeSpace
 import com.duriseo.android.domain.me.SpaceChange
 import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.domain.result.DataResult
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -116,8 +117,12 @@ class FakeCoupleRepository : CoupleRepository {
     override suspend fun updateColors(change: ColorChange): DataResult<Unit> = error("기념일은 쓰지 않아요")
     override suspend fun unlink(): DataResult<Unit> = error("기념일은 쓰지 않아요")
 
+    /** 설정하면 updateStartDate가 이 신호를 받을 때까지 멈춘다 (요청 중 상태를 확인하려고) */
+    var startDateGate: CompletableDeferred<Unit>? = null
+
     override suspend fun updateStartDate(date: LocalDate): DataResult<Unit> {
         startDateCalls += date
+        startDateGate?.await()
         return startDateResult
     }
 }
@@ -199,8 +204,12 @@ class FakeAnniversaryRepository(
         return updateResult.alsoApplyServerAnswer(id)
     }
 
+    /** 설정하면 delete가 이 신호를 받을 때까지 멈춘다 */
+    var deleteGate: CompletableDeferred<Unit>? = null
+
     override suspend fun delete(id: String): DataResult<Unit> {
         deleted += id
+        deleteGate?.await()
         return deleteResult.alsoApplyServerAnswer(id)
     }
 

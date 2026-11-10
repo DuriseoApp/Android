@@ -65,12 +65,21 @@ class MeRepositoryImpl @Inject constructor(
     }
 
     override suspend fun resetAfterUnlink() = writeLock.withLock {
+        // 지우기 전의 커플 공간 ID. 그 사이 다른 커플과 연결돼 있으면 연결 완료 시트를 띄우는 데 쓴다 (D-125)
+        val previousCoupleId = local.get()?.toDomainOrNull()?.space?.takeIf { it.type == SpaceType.COUPLE }?.id
         session.clearUserData()
         // 실패(오프라인)해도 지운 채로 끝낸다. 다음 실행 때 새 개인 공간을 받는다.
         // 락 안이라 락을 잡는 refreshMe·saveFresh 대신 락 없는 버전을 쓴다
         if (networkMonitor.isOnlineNow()) {
             val fresh = remote.getMe()
-            if (fresh is DataResult.Success) saveFreshLocked(fresh.value)
+            if (fresh is DataResult.Success) {
+                saveFreshLocked(fresh.value)
+                val space = fresh.value.space
+                if (space.type == SpaceType.COUPLE && previousCoupleId != null && previousCoupleId != space.id) {
+                    // 이미 다른 사람과 연결돼 있다 (D-125): 지운 설정에 이전 공간 ID를 되살려 새 연결의 시트가 뜨게 한다
+                    acknowledged.set(previousCoupleId)
+                }
+            }
         }
         changeChannel.trySend(SpaceChange.UNLINKED)
         Unit

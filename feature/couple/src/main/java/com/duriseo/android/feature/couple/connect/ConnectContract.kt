@@ -13,7 +13,10 @@ data class ConnectUiState(
     val isGuest: Boolean = false,
     val logoutDialogVisible: Boolean = false,
     val requesting: Boolean = false,
-)
+) {
+    /** 로그아웃 요청이 도는 동안 true. 로딩 덮개를 그린다 (D-115) */
+    val loading: Boolean get() = requesting
+}
 
 sealed interface ConnectAction {
     data object MakeCodeClicked : ConnectAction

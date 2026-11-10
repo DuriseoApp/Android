@@ -48,6 +48,9 @@ data class LinkedSheetUiState(
     val requesting: Boolean = false,
     val today: LocalDate = LocalDate.of(1970, 1, 1),
 ) {
+    /** [시작하기] 요청이 도는 동안 true. 로딩 덮개를 그린다 (D-115) */
+    val loading: Boolean get() = requesting
+
     /** 기록이 없을 때만 닫을 수 있다: 제목 오른쪽 닫기 버튼, 뒤 막, 뒤로 가기 (FR-COUPLE-03 AC4) */
     val canDismiss: Boolean get() = !hasRecords && !requesting
 

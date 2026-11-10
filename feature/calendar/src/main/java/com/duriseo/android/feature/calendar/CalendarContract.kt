@@ -80,6 +80,9 @@ data class CalendarUiState(
     /** 당겨서 새로고침 중 (Q-16). 화면에 들어올 때·달을 넘길 때의 다시 불러오기에는 켜지 않는다 (D-112) */
     val refreshing: Boolean = false,
 ) {
+    /** 처음 만난 날 저장 요청이 도는 동안 true. 로딩 덮개를 그린다 (D-115). 조회와 당겨서 새로고침은 덮지 않는다 */
+    val loading: Boolean get() = startDateSheet?.saving == true
+
     /** 선택한 날의 일정 */
     val selectedEvents: List<CalendarEvent> get() = eventsByDay[selectedDate].orEmpty()
 

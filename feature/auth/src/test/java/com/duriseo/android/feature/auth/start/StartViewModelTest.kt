@@ -157,6 +157,26 @@ class StartViewModelTest {
     }
 
     @Test
+    fun `D-115 로그인 요청 중에는 loading이 true이고 끝나면 false다`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        auth.signInGate = gate
+        val vm = viewModel()
+        vm.effects.test {
+            // 소셜 SDK 창이 열려 있는 동안은 서버 요청이 아니라서 덮개가 없다
+            vm.onAction(StartAction.SocialClicked(SocialProvider.GOOGLE))
+            awaitItem()
+            assertFalse(vm.uiState.value.loading)
+
+            vm.onAction(googleToken())
+            assertTrue(vm.uiState.value.loading)
+
+            gate.complete(Unit)
+            awaitItem()
+            assertFalse(vm.uiState.value.loading)
+        }
+    }
+
+    @Test
     fun `D-88 요청 중에는 시작 버튼을 다시 눌러도 요청하지 않는다`() = runTest {
         val gate = CompletableDeferred<Unit>()
         auth.signInGate = gate

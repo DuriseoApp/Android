@@ -15,6 +15,10 @@ data class InviteEnterUiState(
     val error: InviteEnterError? = null,
     val requesting: Boolean = false,
 ) {
+    /** 연결 요청이 도는 동안 true. 로딩 덮개를 그린다 (D-115) */
+    val loading: Boolean get() = requesting
+
+
     /** 6자리가 다 차야 켜진다 (FR-COUPLE-02 AC1). 입력 제한 안내가 있는 동안은 꺼져 있다 (FR-COUPLE-02 AC4) */
     val canConnect: Boolean
         get() = InviteCodeInput.isComplete(code) && !requesting && error !is InviteEnterError.RateLimited

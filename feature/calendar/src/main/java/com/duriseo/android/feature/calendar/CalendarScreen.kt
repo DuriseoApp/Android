@@ -281,6 +281,7 @@ fun CalendarScreen(
             }
         },
         modifier = modifier,
+        loading = state.loading,
     ) {
         Box(modifier = Modifier.fillMaxSize().padding(padding).background(Surface0)) {
             Column(modifier = Modifier.fillMaxSize()) {

@@ -2,7 +2,9 @@ package com.duriseo.android.feature.main
 
 import com.duriseo.android.core.common.navigation.AnniversaryRouteModel
 import com.duriseo.android.core.common.navigation.CalendarRouteModel
+import com.duriseo.android.core.common.navigation.CoupleRouteModel
 import com.duriseo.android.core.common.navigation.MainRouteModel
+import com.duriseo.android.core.common.navigation.SettingsRouteModel
 import com.duriseo.android.feature.main.navigation.isSnackbarAtTop
 import kotlin.reflect.KClass
 import org.junit.Assert.assertFalse
@@ -11,7 +13,8 @@ import org.junit.Test
 
 class SnackbarPositionTest {
 
-    private fun atTop(current: KClass<*>): Boolean = isSnackbarAtTop { it == current }
+    private fun atTop(current: KClass<*>, linkedSheetVisible: Boolean = false): Boolean =
+        isSnackbarAtTop(linkedSheetVisible) { it == current }
 
     @Test
     fun `SCR-CAL-01 스낵바는 위에서 40이 아니라 하단 탭 위다`() {
@@ -39,7 +42,24 @@ class SnackbarPositionTest {
     }
 
     @Test
-    fun `메모 탭 같은 다른 화면은 위에서 40이 아니다`() {
+    fun `메모 탭의 스낵바는 위에서 40이 아니라 하단 탭 위다`() {
         assertFalse(atTop(MainRouteModel.Memo::class))
+    }
+
+    @Test
+    fun `D-126 탭이 없는 화면과 시트 위는 위에서 40이다`() {
+        // SCR-COUPLE-01·02·03 (바닥에 고정 버튼이 있는 SCR-COUPLE-02도 예외 없다)
+        assertTrue(atTop(CoupleRouteModel.Connect::class))
+        assertTrue(atTop(CoupleRouteModel.InviteCreate::class))
+        assertTrue(atTop(CoupleRouteModel.InviteEnter::class))
+        // 전체 메뉴와 그 하위 화면
+        assertTrue(atTop(MainRouteModel.Settings::class))
+        assertTrue(atTop(SettingsRouteModel.Account::class))
+        assertTrue(atTop(SettingsRouteModel.Colors::class))
+        assertTrue(atTop(SettingsRouteModel.ConnectionInfo::class))
+        // 연결 완료 시트(SCR-COUPLE-04)가 캘린더 위에 떠 있는 동안
+        assertTrue(atTop(MainRouteModel.Calendar::class, linkedSheetVisible = true))
+        // 시트가 없으면 탭 화면은 그대로 하단 탭 위
+        assertFalse(atTop(MainRouteModel.Calendar::class, linkedSheetVisible = false))
     }
 }

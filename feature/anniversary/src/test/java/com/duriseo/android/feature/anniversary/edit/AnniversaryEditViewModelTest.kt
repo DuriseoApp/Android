@@ -14,6 +14,7 @@ import com.duriseo.android.feature.anniversary.coupleMe
 import com.duriseo.android.feature.anniversary.custom
 import com.duriseo.android.feature.anniversary.past
 import com.duriseo.android.feature.anniversary.soloMe
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -260,6 +261,26 @@ class AnniversaryEditViewModelTest {
             assertEquals(AnniversaryEditSideEffect.Close, awaitItem())
         }
         assertEquals(listOf("a1"), repo.deleted)
+    }
+
+    @Test
+    fun `D-115 기념일 작성은 요청 중에는 loading이 true이고 끝나면 false다`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        repo.deleteGate = gate
+        val vm = edit()
+        assertFalse(vm.uiState.value.loading)
+        vm.onAction(AnniversaryEditAction.DeleteClicked)
+
+        vm.effects.test {
+            vm.onAction(AnniversaryEditAction.DeleteConfirmed)
+            assertTrue(vm.uiState.value.loading)
+
+            gate.complete(Unit)
+            assertEquals(AnniversaryEditSideEffect.Close, awaitItem())
+            // 닫기 전에 덮개는 이미 걷혔고, 닫히는 동안 입력은 계속 막혀 있다
+            assertFalse(vm.uiState.value.loading)
+            assertTrue(vm.uiState.value.saving)
+        }
     }
 
     @Test

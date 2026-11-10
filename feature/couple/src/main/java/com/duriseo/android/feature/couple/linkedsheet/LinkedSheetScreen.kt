@@ -156,6 +156,7 @@ fun LinkedSheetScreen(
         DuriseoDialogLayer(
             dialogVisible = state.dropDialogVisible,
             dialog = { DropDialog(state = state, onAction = onAction) },
+            loading = state.loading,
         ) {
             DuriseoBottomSheetLayer(
                 onDismissRequest = if (state.canDismiss) {

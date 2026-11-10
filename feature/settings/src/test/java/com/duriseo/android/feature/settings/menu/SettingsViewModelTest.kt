@@ -12,6 +12,7 @@ import com.duriseo.android.feature.settings.FakeMeRepository
 import com.duriseo.android.feature.settings.apiError
 import com.duriseo.android.feature.settings.guestMe
 import com.duriseo.android.feature.settings.memberMe
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -340,6 +341,23 @@ class SettingsViewModelTest {
 
         assertEquals(listOf(LocalDate.of(2026, 3, 14)), couple.startDateCalls)
         assertEquals(null, vm.uiState.value.startDateSheet)
+    }
+
+    @Test
+    fun `D-115 전체 메뉴는 요청 중에는 loading이 true이고 끝나면 false다`() = runTest {
+        me.me.value = coupleMe(startDate = null)
+        val gate = CompletableDeferred<Unit>()
+        couple.startDateGate = gate
+        val vm = viewModel()
+        vm.onAction(SettingsAction.StartDateEditClicked)
+        vm.onAction(SettingsAction.StartDateSelected(LocalDate.of(2026, 3, 14)))
+        assertFalse(vm.uiState.value.loading)
+
+        vm.onAction(SettingsAction.StartDateSaved)
+        assertTrue(vm.uiState.value.loading)
+
+        gate.complete(Unit)
+        assertFalse(vm.uiState.value.loading)
     }
 
     @Test

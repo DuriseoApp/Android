@@ -311,6 +311,21 @@ class SpaceChangeTest {
         }
 
     @Test
+    fun `D-125 앱 초기화 뒤 GET me가 다른 커플 공간이면 연결 완료 시트가 필요하다`() = runTestWithTimeout {
+        val h = harness()
+        h.preload(fixtureCoupleMe())
+        h.acknowledgedSpace.set(coupleId)
+        val otherCouple = "66666666-6666-6666-6666-666666666666"
+        server.enqueue(jsonResponse(200, coupleMeJson(spaceId = otherCouple)))
+
+        h.meRepository.resetAfterUnlink()
+
+        assertEquals(SpaceChange.UNLINKED, h.nextChange())
+        assertEquals(otherCouple, h.roomMe()!!.space.id)
+        assertEquals(true, h.meRepository.observeLinkedSheetNeeded().first())
+    }
+
+    @Test
     fun `FR-COUPLE-05 AC3 앱 초기화 중 오프라인이면 지운 채로 끝나고 알림은 나간다`() = runTestWithTimeout {
         val h = harness(online = false)
         h.preload(fixtureCoupleMe())

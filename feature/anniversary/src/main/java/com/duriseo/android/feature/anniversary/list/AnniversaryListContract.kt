@@ -81,6 +81,9 @@ data class AnniversaryListUiState(
     val startDateSheet: StartDateSheetState? = null,
     val today: LocalDate = LocalDate.of(2026, 1, 1),
 ) {
+    /** 처음 만난 날 저장 요청이 도는 동안 true. 로딩 덮개를 그린다 (D-115). 목록 조회·다음 페이지는 덮지 않는다 */
+    val loading: Boolean get() = startDateSheet?.saving == true
+
     /** 커플인데 처음 만난 날이 없으면 함께한 날 카드 자리에 입력 안내를 보인다 (FR-ANNIV-04 AC4) */
     val showStartDatePrompt: Boolean get() = isCouple && together == null
 

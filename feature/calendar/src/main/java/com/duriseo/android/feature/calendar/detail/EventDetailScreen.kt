@@ -151,6 +151,7 @@ fun EventDetailScreen(
             )
         },
         modifier = modifier,
+        loading = state.loading,
     ) {
         Column(modifier = Modifier.fillMaxSize().background(Surface0).padding(padding)) {
             DetailHeader(

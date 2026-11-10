@@ -170,6 +170,42 @@ class MainViewModelTest {
     }
 
     @Test
+    fun `D-125 초기화 뒤 이미 다른 사람과 연결돼 있으면 캘린더로 가서 연결 완료 시트를 띄운다`() = runTest {
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        vm.effects.test {
+            // 초기화가 GET /me로 받아 저장한 내 정보가 커플 공간이다 (시트가 필요하다고 저장소가 알린다)
+            meRepository.me.value = meWithColors("pick-orange", "pick-blue", "pick-purple")
+            meRepository.sheetNeeded.value = true
+            meRepository.changes.emit(SpaceChange.UNLINKED)
+
+            assertEquals(MainEffect.SpaceRelinked, awaitItem())
+            assertTrue(vm.linkedSheetNeeded.value)
+        }
+    }
+
+    @Test
+    fun `D-125 초기화 뒤 내 정보가 개인 공간이면 커플 연결 화면으로 간다`() = runTest {
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        vm.effects.test {
+            meRepository.me.value = meWithColors("pick-orange", null, null)
+            meRepository.changes.emit(SpaceChange.UNLINKED)
+
+            assertEquals(MainEffect.SpaceUnlinked, awaitItem())
+        }
+    }
+
+    @Test
+    fun `D-125 초기화 뒤 GET me가 실패해 내 정보가 없으면 기존처럼 커플 연결 화면으로 간다`() = runTest {
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        vm.effects.test {
+            meRepository.me.value = null
+            meRepository.changes.emit(SpaceChange.UNLINKED)
+
+            assertEquals(MainEffect.SpaceUnlinked, awaitItem())
+        }
+    }
+
+    @Test
     fun `FR-COUPLE-03 AC4 연결 완료 시트가 필요한지는 내 정보 리포지토리가 알려 준 대로다`() = runTest {
         val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
         assertFalse(vm.linkedSheetNeeded.value)

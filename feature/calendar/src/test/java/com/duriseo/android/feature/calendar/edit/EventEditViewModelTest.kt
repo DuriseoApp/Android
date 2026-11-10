@@ -22,6 +22,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -464,7 +465,7 @@ class EventEditViewModelTest {
     }
 
     @Test
-    fun `D-111 수정 저장에서 권한이 없다고 하면 공통 오류만 보이고 화면은 그대로다`() = runTest {
+    fun `D-121 수정 저장이 403이면 화면을 닫고 상세를 다시 불러온다`() = runTest {
         events.events.value = listOf(sampleEvent(title = "원래"))
         events.updateResult = apiError("NOT_AUTHOR")
         val vm = edit()
@@ -472,9 +473,31 @@ class EventEditViewModelTest {
         vm.effects.test {
             vm.onAction(EventEditAction.SaveClicked)
             assertEquals(EventEditSideEffect.ShowMessage(DesignR.string.error_common), awaitItem())
-            expectNoEvents()
+            assertEquals(EventEditSideEffect.Close, awaitItem())
         }
         assertFalse(vm.uiState.value.saving)
+        // 저장소가 403이면 그 일정을 GET /events/{id}로 다시 읽는다 (EventRepositoryTest가 확인). 가짜도 같은 계약이다
+        assertEquals(listOf("e1"), events.refreshedIds)
+    }
+
+    @Test
+    fun `D-115 일정 저장 중에는 loading이 true이고 끝나면 false다`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        events.updateGate = gate
+        events.events.value = listOf(sampleEvent(title = "원래"))
+        val vm = edit()
+        vm.fill("바꿈")
+        assertFalse(vm.uiState.value.loading)
+        vm.effects.test {
+            vm.onAction(EventEditAction.SaveClicked)
+            assertTrue(vm.uiState.value.loading)
+
+            gate.complete(Unit)
+            assertEquals(EventEditSideEffect.Close, awaitItem())
+            // 닫기 전에 덮개는 이미 걷혔고, 닫히는 동안 입력은 계속 막혀 있다
+            assertFalse(vm.uiState.value.loading)
+            assertTrue(vm.uiState.value.saving)
+        }
     }
 
     @Test

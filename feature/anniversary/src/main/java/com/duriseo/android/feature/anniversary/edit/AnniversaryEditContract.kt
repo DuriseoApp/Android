@@ -15,7 +15,8 @@ data class DateSheet(val visibleMonth: YearMonth, val selected: LocalDate)
  * @property name 입력한 그대로(앞뒤 공백 포함, 30자까지). 저장할 때 앞뒤 공백을 지운다 (D-104)
  * @property originalName 수정 화면의 저장된 이름. 삭제 확인 문구에 쓴다
  * @property date 날짜 칸. 수정 화면에서는 누른 발생일이고 등록한 날짜가 아닐 수 있다 (unit-5.md 확인 필요 1)
- * @property saving 요청 중. 중복 요청을 막는다 (로딩 덮개는 단위 5 묶음 C)
+ * @property saving 요청 중이거나 요청이 성공해 닫히는 중. 중복 요청과 입력을 막는다
+ * @property loading 저장·삭제 요청이 도는 동안만 true. 로딩 덮개를 그린다 (D-115). 성공하면 닫기 전에 false가 된다
  */
 data class AnniversaryEditUiState(
     val loaded: Boolean = false,
@@ -27,6 +28,7 @@ data class AnniversaryEditUiState(
     val repeatsYearly: Boolean = true,
     val saveEnabled: Boolean = false,
     val saving: Boolean = false,
+    val loading: Boolean = false,
     val dateSheet: DateSheet? = null,
     val deleteDialogVisible: Boolean = false,
     val today: LocalDate = LocalDate.of(2026, 1, 1),

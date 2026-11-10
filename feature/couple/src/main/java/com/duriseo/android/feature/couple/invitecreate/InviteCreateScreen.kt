@@ -129,8 +129,8 @@ private val WaitTextLineHeight = 16.sp
 private val BottomAreaTop = DuriseoSpacing.Space4
 private val BottomAreaBottom = DuriseoSpacing.Space8
 
-/** 스낵바는 바닥에서 112 (버튼 위, 94행. SCREENS.md "아직 연결 전") */
-private val SnackbarBottom = 112.dp
+/** 스낵바는 위에서 40. 바닥에 고정 버튼이 있어도 예외 없다 (D-126, SCREENS.md SCR-COUPLE-02 "스낵바") */
+private val SnackbarTop = 40.dp
 
 @Composable
 fun InviteCreateRoute(
@@ -273,10 +273,10 @@ fun InviteCreateScreen(
 
         Box(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
+                .align(Alignment.TopCenter)
                 .fillMaxWidth()
                 .padding(padding)
-                .padding(bottom = SnackbarBottom),
+                .padding(top = SnackbarTop),
         ) {
             snackbarHost()
         }

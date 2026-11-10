@@ -167,6 +167,21 @@ class ConnectViewModelTest {
     }
 
     @Test
+    fun `D-115 커플 연결 화면은 요청 중에는 loading이 true이고 끝나면 false다`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        auth.logoutGate = gate
+        val vm = viewModel()
+        vm.onAction(ConnectAction.OtherAccountClicked)
+        assertFalse(vm.uiState.value.loading)
+
+        vm.onAction(ConnectAction.LogoutConfirmed)
+        assertTrue(vm.uiState.value.loading)
+
+        gate.complete(Unit)
+        assertFalse(vm.uiState.value.loading)
+    }
+
+    @Test
     fun `NFR-OFF-02 오프라인이면 다른 계정으로 로그인의 로그아웃 실패를 인터넷 연결 안내로 보여 준다`() = runTest {
         auth.logoutResult = offline()
         val vm = viewModel()

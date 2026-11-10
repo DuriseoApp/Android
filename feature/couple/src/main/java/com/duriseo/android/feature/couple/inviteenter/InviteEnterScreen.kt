@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.couple.inviteenter
 
+import com.duriseo.android.core.designsystem.component.DuriseoLoadingLayer
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.background
@@ -155,8 +156,10 @@ fun InviteEnterScreen(
     snackbarHost: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // 연결 요청 중에는 로딩 덮개 (D-115)
+    DuriseoLoadingLayer(loading = state.loading, modifier = modifier) {
     Box(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface),
     ) {
@@ -238,6 +241,7 @@ fun InviteEnterScreen(
         ) {
             snackbarHost()
         }
+    }
     }
 }
 

@@ -13,6 +13,7 @@ import com.duriseo.android.feature.anniversary.coupleMe
 import com.duriseo.android.feature.anniversary.custom
 import com.duriseo.android.feature.anniversary.past
 import com.duriseo.android.feature.anniversary.soloMe
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -252,6 +253,23 @@ class AnniversaryListViewModelTest {
 
         assertEquals(listOf(LocalDate.of(2026, 4, 7)), couple.startDateCalls)
         assertNull(vm.uiState.value.startDateSheet)
+    }
+
+    @Test
+    fun `D-115 기념일 목록은 요청 중에는 loading이 true이고 끝나면 false다`() = runTest {
+        me.me.value = coupleMe(startDate = null)
+        val gate = CompletableDeferred<Unit>()
+        couple.startDateGate = gate
+        val vm = viewModel(FakeAnniversaryRepository())
+        vm.onAction(AnniversaryListAction.StartDateInputClicked)
+        vm.onAction(AnniversaryListAction.StartDateSelected(LocalDate.of(2026, 4, 7)))
+        assertFalse(vm.uiState.value.loading)
+
+        vm.onAction(AnniversaryListAction.StartDateSaved)
+        assertTrue(vm.uiState.value.loading)
+
+        gate.complete(Unit)
+        assertFalse(vm.uiState.value.loading)
     }
 
     @Test

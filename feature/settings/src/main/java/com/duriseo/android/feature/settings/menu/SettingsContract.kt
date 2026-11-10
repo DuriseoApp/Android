@@ -86,6 +86,9 @@ data class SettingsUiState(
     val logoutDialogVisible: Boolean = false,
     val requesting: Boolean = false,
 ) {
+    /** 서버 요청(로그아웃, 처음 만난 날 저장)이 도는 동안 true. 로딩 덮개를 그린다 (D-115) */
+    val loading: Boolean get() = requesting || startDateSheet?.saving == true
+
     /** 로그아웃은 회원에게만 보인다 (FR-AUTH-05 AC2) */
     val canLogout: Boolean get() = account is SettingsAccount.Member
 }

@@ -226,6 +226,21 @@ class InviteEnterViewModelTest {
     }
 
     @Test
+    fun `D-115 코드 입력 화면은 요청 중에는 loading이 true이고 끝나면 false다`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        couple.joinGate = gate
+        val vm = viewModel()
+        vm.type("K7Q29X")
+        assertFalse(vm.uiState.value.loading)
+
+        vm.onAction(InviteEnterAction.ConnectClicked)
+        assertTrue(vm.uiState.value.loading)
+
+        gate.complete(Unit)
+        assertFalse(vm.uiState.value.loading)
+    }
+
+    @Test
     fun `FR-COUPLE-02 AC4 입력 제한이면 올림한 분 수로 안내하고 연결 버튼이 꺼진다`() = runTest {
         // 721초 = 12분 1초 -> 13분 (올림)
         couple.joinResult = failure("INVITE_RATE_LIMITED", ErrorDetails.RetryAfter(721))

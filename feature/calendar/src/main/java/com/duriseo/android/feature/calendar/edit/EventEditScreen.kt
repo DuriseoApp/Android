@@ -142,6 +142,7 @@ fun EventEditScreen(
             }
         },
         modifier = modifier,
+        loading = state.loading,
     ) {
         Column(modifier = Modifier.fillMaxSize().background(Surface0).padding(padding)) {
             EditHeader(state = state, onAction = onAction)

@@ -158,6 +158,23 @@ class CalendarViewModelTest {
     }
 
     @Test
+    fun `D-115 캘린더는 요청 중에는 loading이 true이고 끝나면 false다`() = runTest {
+        me.me.value = coupleMe(startDate = null)
+        val gate = CompletableDeferred<Unit>()
+        couple.startDateGate = gate
+        val vm = viewModel()
+        vm.onAction(CalendarAction.StartDatePromptClicked)
+        vm.onAction(CalendarAction.StartDateSelected(LocalDate.of(2026, 4, 7)))
+        assertFalse(vm.uiState.value.loading)
+
+        vm.onAction(CalendarAction.StartDateSaved)
+        assertTrue(vm.uiState.value.loading)
+
+        gate.complete(Unit)
+        assertFalse(vm.uiState.value.loading)
+    }
+
+    @Test
     fun `NFR-OFF-02 오프라인이면 처음 만난 날 저장을 안내하고 시트를 그대로 둔다`() = runTest {
         me.me.value = coupleMe(startDate = null)
         couple.startDateResult = Offline

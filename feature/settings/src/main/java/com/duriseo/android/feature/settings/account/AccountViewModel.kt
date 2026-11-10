@@ -62,6 +62,7 @@ class AccountViewModel @Inject constructor(
     private data class Local(
         val dialog: AccountDialog? = null,
         val requesting: Boolean = false,
+        val loading: Boolean = false,
         val justLinked: Boolean = false,
     )
 
@@ -77,6 +78,7 @@ class AccountViewModel @Inject constructor(
             withdrawMessage = me?.toWithdrawMessage() ?: WithdrawMessage.Personal,
             dialog = localState.dialog,
             requesting = localState.requesting,
+            loading = localState.loading,
             justLinked = localState.justLinked,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), AccountUiState())
@@ -141,23 +143,24 @@ class AccountViewModel @Inject constructor(
     }
 
     private fun link(provider: SocialProvider, token: String) {
+        local.update { it.copy(loading = true) }
         viewModelScope.launch {
             when (val result = authRepository.link(provider, token)) {
                 // 토큰은 그대로, 내 정보가 Room에서 바뀌면 같은 화면이 회원으로 바뀐다
                 is DataResult.Success -> if (fromCouple) {
                     // 연동을 마치면 SCR-COUPLE-01로 돌아간다. 성공 안내는 보여 주지 않는다 (SCREENS.md, D-79)
-                    local.update { it.copy(requesting = false) }
+                    local.update { it.copy(requesting = false, loading = false) }
                     effectChannel.trySend(AccountSideEffect.NavigateToCoupleConnect)
                 } else {
-                    local.update { it.copy(requesting = false, justLinked = true) }
+                    local.update { it.copy(requesting = false, loading = false, justLinked = true) }
                 }
                 is DataResult.Failure -> {
                     if (result.error.isCode(ErrorCode.SOCIAL_ALREADY_USED)) {
                         // 연동은 하지 않는다. 취소하면 게스트로 계속 쓴다 (D-67)
                         pendingSwitch = PendingSocialLogin(provider, token)
-                        local.update { it.copy(requesting = false, dialog = AccountDialog.AlreadyUsed) }
+                        local.update { it.copy(requesting = false, loading = false, dialog = AccountDialog.AlreadyUsed) }
                     } else {
-                        local.update { it.copy(requesting = false) }
+                        local.update { it.copy(requesting = false, loading = false) }
                         showError(result.error)
                     }
                 }
@@ -177,23 +180,25 @@ class AccountViewModel @Inject constructor(
     }
 
     private fun runSwitch(pending: PendingSocialLogin) {
+        local.update { it.copy(loading = true) }
         viewModelScope.launch {
             when (val result = authRepository.switchAccount(pending.provider, pending.token)) {
                 is DataResult.Success -> {
                     pendingSwitch = null
-                    local.update { it.copy(requesting = false, dialog = null) }
+                    local.update { it.copy(requesting = false, loading = false, dialog = null) }
                     effectChannel.trySend(AccountSideEffect.NavigateToHome)
                 }
                 is DataResult.Failure -> {
                     if (result.error.isCode(ErrorCode.SOCIAL_TOKEN_INVALID) && !switchRetried) {
                         // 토큰이 만료됐다: 소셜 SDK에서 한 번 다시 받아 다시 보낸다 (사용자 동작 없음)
                         switchRetried = true
+                        local.update { it.copy(loading = false) } // 소셜 SDK 창이 열려 있는 동안은 덮지 않는다
                         tokenPurpose = TokenPurpose.SwitchRetry
                         effectChannel.trySend(AccountSideEffect.RequestSocialToken(pending.provider))
                     } else {
                         // `SOCIAL_NOT_REGISTERED`를 포함한 그 밖의 오류: 공통 오류를 보여 주고 다이얼로그를 닫는다. 게스트 그대로다
                         pendingSwitch = null
-                        local.update { it.copy(requesting = false, dialog = null) }
+                        local.update { it.copy(requesting = false, loading = false, dialog = null) }
                         showError(result.error)
                     }
                 }
@@ -206,17 +211,17 @@ class AccountViewModel @Inject constructor(
     private fun leave(expected: AccountDialog, call: suspend () -> DataResult<Unit>) {
         val state = local.value
         if (state.requesting || state.dialog != expected) return
-        local.update { it.copy(requesting = true) }
+        local.update { it.copy(requesting = true, loading = true) }
         viewModelScope.launch {
             when (val result = call()) {
                 is DataResult.Success -> {
-                    local.update { it.copy(requesting = false, dialog = null) }
+                    local.update { it.copy(requesting = false, loading = false, dialog = null) }
                     effectChannel.trySend(AccountSideEffect.NavigateToStart)
                 }
                 is DataResult.Failure -> {
                     // 실패하면 다이얼로그를 닫고 로그인 상태 그대로 둔다. 세션이 이미 끊겼다는 응답이면 안내 없이
                     // 세션 종료 흐름이 시작 화면으로 보낸다
-                    local.update { it.copy(requesting = false, dialog = null) }
+                    local.update { it.copy(requesting = false, loading = false, dialog = null) }
                     showError(result.error)
                 }
             }
@@ -239,7 +244,7 @@ class AccountViewModel @Inject constructor(
 
     private fun finishRequest(closeDialog: Boolean) {
         if (closeDialog) pendingSwitch = null
-        local.update { it.copy(requesting = false, dialog = if (closeDialog) null else it.dialog) }
+        local.update { it.copy(requesting = false, loading = false, dialog = if (closeDialog) null else it.dialog) }
     }
 
     private fun showError(error: DataError) {

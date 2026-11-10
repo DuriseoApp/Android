@@ -52,6 +52,8 @@ private val DialogMaxWidth = 320.dp
  * 시스템 창(Compose `Dialog`)을 쓰지 않은 이유: 창은 Preview에 그려지지 않아 "화면 상태마다 Preview"를 할 수 없고,
  * 창의 기본 뒤 막(dim)이 토큰 `scrim`과 달라서 창 속성을 따로 고쳐야 한다. 대신 이 틀이 뒤 화면 접근성을 막는다.
  *
+ * [loading]이 true면 다이얼로그 위까지 로딩 덮개([DuriseoLoadingOverlay])로 덮는다 (D-115).
+ *
  * ```
  * DuriseoDialogLayer(dialogVisible = state.dialog != null, dialog = { 다이얼로그 }) { 화면 내용 }
  * ```
@@ -61,17 +63,28 @@ fun DuriseoDialogLayer(
     dialogVisible: Boolean,
     dialog: @Composable () -> Unit,
     modifier: Modifier = Modifier,
+    loading: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .then(if (dialogVisible) Modifier.clearAndSetSemantics { } else Modifier),
+                .then(if (dialogVisible || loading) Modifier.clearAndSetSemantics { } else Modifier),
         ) {
             content()
         }
-        if (dialogVisible) dialog()
+        if (dialogVisible) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(if (loading) Modifier.clearAndSetSemantics { } else Modifier),
+            ) {
+                dialog()
+            }
+        }
+        // 요청 중이면 다이얼로그 위까지 덮는다 (D-115)
+        if (loading) DuriseoLoadingOverlay()
     }
 }
 

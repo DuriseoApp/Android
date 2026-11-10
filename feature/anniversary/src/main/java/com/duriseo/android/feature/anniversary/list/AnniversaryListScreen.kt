@@ -188,6 +188,7 @@ fun AnniversaryListScreen(
             }
         },
         modifier = modifier.background(Surface0),
+        loading = state.loading,
     ) {
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             DuriseoTopAppBar(

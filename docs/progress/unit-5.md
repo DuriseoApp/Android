@@ -143,6 +143,16 @@ NFR-TIME-02(작성일·받은 시각 표기)는 이 단위 화면에 쓰는 곳�
 19. **앱바**: 두 줄(제목 + 링크)을 하나의 버튼(최소 높이 44)으로 묶었고 접근성 라벨은 보드 aria-label("기념일 보기, 함께한 지 D+N", "나의 캘린더, 기념일 보기")이다. 처음 만난 날이 없는 커플은 그대로. 설정 프로필 카드는 `StartDateRules.dayNumber`를 계속 쓴다(묶음 D).
 20. **Preview 이름**: 캘린더 Preview를 `CalendarPreview_<상태>`로 모두 바꿨다(`_Default`, `_Anniversary`, `_AnniversaryCustom`, `_Expanded`, `_ExpandedAnniversary`, `_Solo`, `_Refresh`, `_NoStartDate`, `_EmptyDay`, `_StartDateSheet`, `_Cards`).
 
+**묶음 C (v0.12 규칙을 기존 화면에)**
+
+21. **로딩 덮개 부품**: `core:designsystem`의 `DuriseoLoadingOverlay`(덮개 + 판 84 + 원형 44/선 4, 뒤로 가기·터치 막기)와 `DuriseoLoadingLayer(loading) { 화면 }`(덮개 + 뒤 화면 접근성 가리기). `DuriseoDialogLayer`에는 `loading` 인자를 더해 다이얼로그·시트 위까지 덮는다. 84·선 4는 토큰에 없는 수치지만 design-system.md "로딩 표시" 표가 값을 직접 정해(84 = 44 + 좌우 `space-5`) 그 파일 안의 상수로 뒀다. `trackColor`는 `Line100`.
+22. **`loading` 상태**: 각 화면 상태에 `loading`을 뒀다. 이미 있는 `saving`·`requesting`이 곧 요청 중인 화면(전체 메뉴·우리 색상·연결 정보·커플 연결·코드 입력·연결 완료 시트·캘린더·기념일 목록)은 `val loading get() = …`로 읽는다. 소셜 SDK 창이 떠 있는 동안은 서버 요청이 아니라 덮지 않아야 해서 SCR-START-01·계정은 `loading`을 따로 뒀다(`requesting`은 버튼 잠금용으로 그대로). 일정 작성·수정(SCR-CAL-03)·기념일 작성·수정(SCR-ANNIV-02)·일정 상세(SCR-CAL-02)는 성공하면 화면이 닫힐 때까지 `saving`/`deleting`을 켜 둬서(중복 방지) 덮개만 닫기 직전에 걷는다. 결과 안내는 덮개를 걷은 뒤에 보낸다.
+23. **덮개 범위**: 화면 하나의 내용 영역이다. 캘린더·메모 탭 루트(처음 만난 날 저장)에서는 하단 탭까지는 덮지 않는다(탭 막대는 `MainScaffold` 소속). 요청 중 탭을 눌러도 요청은 그대로 끝나고 이동만 일어난다. 문서가 "화면 전체"라 하므로 필요하면 `MainScaffold` 위로 올린다.
+24. **D-121(SCR-CAL-03)**: 403 `NOT_AUTHOR`면 404처럼 수정 화면을 닫는다. 상세 다시 불러오기는 저장소가 이미 하고(`EventRepositoryImpl.thenRereadIfNotAuthor`, `EventRepositoryTest`가 확인) 상세도 `ON_START`에 `Shown`으로 다시 읽는다. 앞 단위의 "403이면 화면 그대로" 테스트는 D-121에 맞춰 바꿨다.
+25. **D-126**: 위치 규칙을 목록에서 뒤집었다. 탭 루트(캘린더·메모)가 아니면 모두 위에서 40, 연결 완료 시트가 떠 있는 동안은 탭 루트여도 위(`isSnackbarAtTop(linkedSheetVisible, …)`). 그래서 전체 메뉴·계정·우리 색상·연결 정보도 위로 옮겨졌다(SCREENS SCR-SET-01~03 "스낵바 위에서 40"). SCR-COUPLE-02는 자기 호스트의 바닥 112를 위 40으로 고쳤다(그림 대조는 묶음 D). 시트가 떠 있으면 FAB은 스낵바 위로 올라가지 않는다.
+26. **D-125**: 알림은 저장소가 `GET /me`를 Room에 저장한 뒤에 낸다(`resetAfterUnlink`, 다음 실행의 `refreshMe` 모두). `MainViewModel`이 알림을 받아 Room의 내 정보가 커플 공간이면 `MainEffect.SpaceRelinked`(캘린더로 이동, 시트는 `linkedSheetNeeded`가 띄움), 개인 공간이거나 내 정보가 없으면(GET /me 실패·오프라인) 기존 `SpaceUnlinked`(SCR-COUPLE-01)다. `resetAfterUnlink`는 지우기 전의 커플 공간 ID를 기억했다가 다른 커플 공간이 오면 확인한 공간 ID로 되살려 시트가 뜨게 한다(`refreshMe` 경로의 기존 규칙과 같다). `refreshMe` 경로는 "커플 X → 커플 Y"일 때 기존대로 알림을 내지 않고 시트만 뜬다(앞 단위 리드 결정, `SpaceChangeTest`). 이때 사용자가 캘린더 밖에 있으면 이동은 없다(Docs 후속).
+27. **Q-19 ①**: `lifecycle-process`는 MODULES.md 3장에 없어 쓰지 않고, `MyApp`이 `ActivityLifecycleCallbacks`로 "보이는 Activity가 0 → 1"을 앱으로 돌아온 순간으로 본다(첫 시작은 건너뜀). `SessionStartup.onForeground()`가 로그인 상태에서 `MeRepository.syncTimeZone(ZoneId.systemDefault())`를 부른다(같으면 요청 없음). 주입된 `Clock`은 `Clock.systemDefaultZone()`이라 앱이 만들어질 때의 시간대에 묶여 있어 이 경로는 `ZoneId.systemDefault()`를 직접 읽는다.
+
 ## 리뷰 기록
 
 | 회차 | Critical | Major | 비고 |
@@ -154,4 +164,6 @@ NFR-TIME-02(작성일·받은 시각 표기)는 이 단위 화면에 쓰는 곳�
 - 묶음 B가 알아야 할 것: 캘린더 월 조회는 `AnniversaryRepository.refreshRange(from, to)`와 `observeRange(from, to)`(범위는 `calendarMonthRange(month)`), SCR-ANNIV-01 이동은 `MainNavigator.navigateToAnniversaries()`(`feature:main`)이고 `calendarNavGraph`에 `onOpenAnniversaries` 콜백을 더해 연결, D+N은 `DayCount.of`·`DayCount.onDate`
 - 묶음 B: 클라우드에서 `./gradlew`를 돌릴 수 없어 눈으로만 확인했다(PR CI 확인 필요). 특히 `PullToRefreshBox`(BOM 2025.08의 material3에서 실험 API라 `@OptIn(ExperimentalMaterial3Api::class)`를 붙였다)·`CircularProgressIndicator`의 `trackColor`·`strokeCap`, 도는 호가 보드(1/4 호)와 다른지는 맥 Preview에서 확인
 - 묶음 C(로딩 덮개)가 알아야 할 것: 캘린더 처음 만난 날 시트 저장(`saveStartDate`)이 덮개 대상이다. `CalendarStartDateSheet.saving`이 이미 있어 `loading`은 거기서 읽으면 된다. 캘린더 당겨서 새로고침(Q-16)·월 조회는 덮개 제외(조회). Q-19 ②는 이 묶음에서 끝났다(C 표의 Q-16·Q-19 ② 행)
+- 묶음 C: 클라우드에서 `./gradlew`를 돌릴 수 없어 눈으로만 확인했다(PR CI 확인 필요). Preview는 `LoadingOverlayPreview` 외에 로딩 상태가 있는 화면 Preview(`StartScreenLoadingPreview` 등)에 `loading`이 켜졌는지 맥에서 확인
+- 묶음 D가 알아야 할 것: SCR-CAL-03 `_Loading` Preview는 `EventEditUiState(loading = true)`로 그린다(`DuriseoDialogLayer(loading)`가 덮음). SCR-COUPLE-02 스낵바는 위 40으로 이미 옮겼고 `InviteCreatePreview_NotYet`만 그림과 대조하면 된다. 캘린더가 쓰는 `Clock`의 시간대는 앱이 만들어질 때 고정돼서(`Clock.systemDefaultZone()`) 앱이 떠 있는 동안 기기 시간대가 바뀌면 달력 표시는 앱을 다시 켤 때까지 그대로다(Q-19 ③은 "표시는 기기 시간대 유지"라 문서와는 맞지만 후속 점검 거리)
 - Docs 후속: 결정 16(기념일 카드 보조 줄·태그가 SCREENS 글에 없음), 결정 8(처음 만난 날도 직접 기념일도 없는 커플의 빈 화면), 결정 9(삭제 문구 조사), 확인 필요 1(API.md에 수정 화면의 날짜 처리)
