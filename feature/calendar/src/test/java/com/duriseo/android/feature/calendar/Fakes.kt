@@ -1,5 +1,13 @@
 package com.duriseo.android.feature.calendar
 
+import com.duriseo.android.domain.anniversary.Anniversary
+import com.duriseo.android.domain.anniversary.AnniversaryKind
+import com.duriseo.android.domain.anniversary.AnniversaryOccurrence
+import com.duriseo.android.domain.anniversary.AnniversaryPatch
+import com.duriseo.android.domain.anniversary.AnniversaryRepository
+import com.duriseo.android.domain.anniversary.NewAnniversary
+import com.duriseo.android.domain.anniversary.PastAnniversaries
+import com.duriseo.android.domain.anniversary.UpcomingAnniversaries
 import com.duriseo.android.domain.couple.ColorChange
 import com.duriseo.android.domain.couple.CoupleJoinResult
 import com.duriseo.android.domain.couple.CoupleRepository
@@ -21,6 +29,9 @@ import com.duriseo.android.domain.me.MeSpace
 import com.duriseo.android.domain.me.SpaceChange
 import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.domain.result.DataResult
+import com.duriseo.android.domain.error.ErrorCode
+import com.duriseo.android.domain.error.hasCode
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -111,8 +122,12 @@ class FakeCoupleRepository : CoupleRepository {
     override suspend fun updateColors(change: ColorChange): DataResult<Unit> = error("캘린더는 쓰지 않아요")
     override suspend fun unlink(): DataResult<Unit> = error("캘린더는 쓰지 않아요")
 
+    /** 설정하면 updateStartDate가 이 신호를 받을 때까지 멈춘다 (요청 중 상태를 확인하려고) */
+    var startDateGate: CompletableDeferred<Unit>? = null
+
     override suspend fun updateStartDate(date: LocalDate): DataResult<Unit> {
         startDateCalls += date
+        startDateGate?.await()
         return startDateResult
     }
 }
@@ -168,19 +183,33 @@ class FakeEventRepository(initial: List<Event> = emptyList()) : EventRepository 
         return DataResult.Success(made)
     }
 
+    /** 설정하면 update가 이 신호를 받을 때까지 멈춘다 (요청 중 상태를 확인하려고) */
+    var updateGate: CompletableDeferred<Unit>? = null
+
     override suspend fun update(id: String, patch: EventPatch): DataResult<Unit> {
         patches += id to patch
+        updateGate?.await()
+        // 저장소 계약: 403 NOT_AUTHOR면 그 일정을 다시 읽는다 (D-111, D-121)
+        if ((updateResult as? DataResult.Failure)?.error?.hasCode(ErrorCode.NOT_AUTHOR) == true) refreshedIds += id
         return updateResult
     }
 
+    /** 설정하면 delete가 이 신호를 받을 때까지 멈춘다 */
+    var deleteGate: CompletableDeferred<Unit>? = null
+
     override suspend fun delete(id: String): DataResult<Unit> {
         deleted += id
+        deleteGate?.await()
         if (deleteResult is DataResult.Success) events.value = events.value.filterNot { it.id == id }
         return deleteResult
     }
 
+    /** 설정하면 setReminder가 이 신호를 받을 때까지 멈춘다 */
+    var reminderGate: CompletableDeferred<Unit>? = null
+
     override suspend fun setReminder(id: String, option: ReminderOption?): DataResult<Unit> {
         reminderCalls += id to option
+        reminderGate?.await()
         if (reminderResult is DataResult.Success) {
             events.value = events.value.map {
                 if (it.id == id) it.copy(reminder = option?.let { o -> EventReminder(o, Instant.parse("2026-10-12T10:00:00Z")) }) else it
@@ -189,3 +218,75 @@ class FakeEventRepository(initial: List<Event> = emptyList()) : EventRepository 
         return reminderResult
     }
 }
+
+/** 캘린더가 쓰는 [observeRange]·[refreshRange]만 흉내 낸다. 나머지는 SCR-ANNIV-01·02의 몫이라 부르면 실패한다 */
+class FakeAnniversaryRepository(initial: List<AnniversaryOccurrence> = emptyList()) : AnniversaryRepository {
+    /** 저장소가 기억하는 위치 순서 그대로의 발생일 목록 */
+    val occurrences = MutableStateFlow(initial)
+
+    val refreshRanges = mutableListOf<Pair<LocalDate, LocalDate>>()
+
+    /** 요청 도중 취소된 범위 */
+    val cancelledRanges = mutableListOf<Pair<LocalDate, LocalDate>>()
+    var refreshRangeResult: DataResult<Unit> = DataResult.Success(Unit)
+
+    /** 설정하면 [refreshRange]가 이 값이 끝날 때까지 기다린다 (당겨서 새로고침 중 상태를 보려고) */
+    var refreshGate: CompletableDeferred<Unit>? = null
+
+    /** [setVisibleRange]로 알려 온 범위들 (마지막이 지금 보이는 범위) */
+    val visibleRanges = mutableListOf<Pair<LocalDate, LocalDate>>()
+
+    override fun setVisibleRange(from: LocalDate, to: LocalDate) {
+        visibleRanges += from to to
+    }
+
+    override fun observeRange(from: LocalDate, to: LocalDate): Flow<List<AnniversaryOccurrence>> =
+        occurrences.map { list -> list.filter { it.date >= from && it.date <= to }.sortedBy { it.date } }
+
+    override suspend fun refreshRange(from: LocalDate, to: LocalDate): DataResult<Unit> {
+        refreshRanges += from to to
+        try {
+            refreshGate?.await()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            cancelledRanges += from to to
+            throw e
+        }
+        return refreshRangeResult
+    }
+
+    override fun observeUpcoming(): Flow<UpcomingAnniversaries> = error("캘린더는 쓰지 않아요")
+    override fun observePast(): Flow<PastAnniversaries> = error("캘린더는 쓰지 않아요")
+    override suspend fun refreshUpcoming(): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun loadMoreUpcoming(): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun refreshPast(): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun loadMorePast(): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun refreshAll(): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun create(anniversary: NewAnniversary): DataResult<Anniversary> = error("캘린더는 쓰지 않아요")
+    override suspend fun update(id: String, patch: AnniversaryPatch): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun delete(id: String): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+}
+
+fun autoAnniversary(name: String, date: LocalDate) = AnniversaryOccurrence(
+    anniversaryId = null,
+    kind = AnniversaryKind.AUTO,
+    name = name,
+    date = date,
+    daysLeft = 0,
+    repeatsYearly = false,
+    authorId = null,
+)
+
+fun customAnniversary(
+    name: String,
+    date: LocalDate,
+    authorId: String = MyId,
+    repeatsYearly: Boolean = true,
+) = AnniversaryOccurrence(
+    anniversaryId = "ann-$name",
+    kind = AnniversaryKind.CUSTOM,
+    name = name,
+    date = date,
+    daysLeft = 0,
+    repeatsYearly = repeatsYearly,
+    authorId = authorId,
+)

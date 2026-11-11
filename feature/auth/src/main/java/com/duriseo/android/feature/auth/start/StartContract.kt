@@ -21,6 +21,8 @@ enum class AfterLogin {
 /** SCR-START-01의 상태. 로그인 요청이 도는 동안은 시작 버튼 3개가 모두 비활성이다 (SCREENS.md 공통 "요청 중", D-88). */
 data class StartUiState(
     val requesting: Boolean = false,
+    /** 서버 요청(게스트 시작·로그인)이 도는 동안 true. 로딩 덮개를 그린다 (D-115). 소셜 SDK 창이 열려 있는 동안은 false */
+    val loading: Boolean = false,
 )
 
 sealed interface StartAction {

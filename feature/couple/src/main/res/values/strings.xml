@@ -19,6 +19,7 @@
     <string name="invite_create_subtitle">상대가 이 코드를 입력하면 바로 연결돼요.</string>
     <string name="invite_create_panel_description">내 초대코드</string>
     <string name="invite_create_code_description">초대코드 %1$s</string>
+    <string name="invite_create_code_description_loading">초대코드</string>
     <string name="invite_create_remaining">10분 동안 유효 · %1$d분 %2$d초 남음</string>
     <string name="invite_create_renewed">시간이 지나 새 코드를 만들었어요.\n새 코드를 다시 보내 주세요.</string>
     <string name="invite_create_copy">코드 복사</string>

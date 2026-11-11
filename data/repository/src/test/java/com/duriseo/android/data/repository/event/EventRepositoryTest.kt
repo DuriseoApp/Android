@@ -18,6 +18,8 @@ import com.duriseo.android.domain.event.NewEvent
 import com.duriseo.android.domain.event.ReminderOption
 import com.duriseo.android.domain.me.AccountType
 import com.duriseo.android.domain.result.DataResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -35,6 +37,7 @@ import org.robolectric.annotation.Config
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.concurrent.TimeUnit
 
 /** 일정 리포지토리 (API.md 3.3): Room 구독, 범위 refresh, 온라인 쓰기 */
 @RunWith(RobolectricTestRunner::class)
@@ -408,6 +411,20 @@ class EventRepositoryTest {
 
         h.coupleRepository.decideImport(true)
 
+        assertEquals(emptyList<String>(), h.titles())
+    }
+
+    @Test
+    fun `일정 범위 - 캐시를 지운 뒤 도착한 이전 응답은 저장하지 않는다`() = runTestWithTimeout {
+        val h = harness()
+        server.enqueue(jsonResponse(200, listJson(eventJson("late"))).setHeadersDelay(1500, TimeUnit.MILLISECONDS))
+
+        val stale = async(Dispatchers.Default) { h.eventRepository.refreshRange(october.first, october.second, seoul) }
+        assertTrue(server.takeRequest(5, TimeUnit.SECONDS) != null)
+        h.session.clearUserData() // 로그아웃·초기화처럼 캐시를 지운다
+        val result = stale.await()
+
+        assertTrue(result is DataResult.Success)
         assertEquals(emptyList<String>(), h.titles())
     }
 }

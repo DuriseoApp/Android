@@ -2,6 +2,7 @@ package com.duriseo.android.data.remote
 
 import com.duriseo.android.core.common.Logger
 import com.duriseo.android.core.common.config.AppConfig
+import com.duriseo.android.data.remote.anniversary.AnniversaryApi
 import com.duriseo.android.data.remote.auth.AuthApi
 import com.duriseo.android.data.remote.auth.AuthSessionApi
 import com.duriseo.android.data.remote.couple.CoupleApi
@@ -157,6 +158,10 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideEventApi(@Authed retrofit: Retrofit): EventApi = retrofit.create(EventApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideAnniversaryApi(@Authed retrofit: Retrofit): AnniversaryApi = retrofit.create(AnniversaryApi::class.java)
 }
 
 @Module

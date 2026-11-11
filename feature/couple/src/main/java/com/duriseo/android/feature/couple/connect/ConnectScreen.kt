@@ -218,6 +218,7 @@ fun ConnectScreen(
             )
         },
         modifier = modifier,
+        loading = state.loading,
     ) {
         Box(
             modifier = Modifier

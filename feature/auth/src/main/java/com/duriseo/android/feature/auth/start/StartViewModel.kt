@@ -55,6 +55,7 @@ class StartViewModel @Inject constructor(
 
     private fun startAsGuest() {
         if (!beginRequest()) return
+        mutableState.update { it.copy(loading = true) }
         viewModelScope.launch {
             when (val result = authRepository.startAsGuest()) {
                 is DataResult.Success -> {
@@ -76,7 +77,7 @@ class StartViewModel @Inject constructor(
                 effectChannel.trySend(StartSideEffect.ShowMessage(DesignR.string.error_common))
             }
             is SocialTokenResult.Success -> viewModelScope.launch {
-                mutableState.update { it.copy(requesting = true) }
+                mutableState.update { it.copy(requesting = true, loading = true) }
                 when (val login = authRepository.signIn(provider, result.token)) {
                     is DataResult.Success -> {
                         val destination = destinationAfter(login.value)
@@ -104,7 +105,7 @@ class StartViewModel @Inject constructor(
     }
 
     private fun endRequest() {
-        mutableState.update { it.copy(requesting = false) }
+        mutableState.update { it.copy(requesting = false, loading = false) }
     }
 
     /** 서버 실패: 화면과 상태는 그대로 두고 스낵바만 띄운다. 세션 종료 코드는 문구가 없다 (API.md 1장) */

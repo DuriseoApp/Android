@@ -20,6 +20,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -443,6 +444,26 @@ class AccountViewModelTest {
             assertEquals(AccountSideEffect.NavigateToStart, awaitItem())
             assertEquals(1, auth.logoutCalls)
             assertEquals(null, vm.uiState.value.dialog)
+        }
+    }
+
+    @Test
+    fun `D-115 계정 화면은 요청 중에는 loading이 true이고 끝나면 false다`() = runTest {
+        me.me.value = memberMe()
+        val gate = CompletableDeferred<Unit>()
+        auth.logoutGate = gate
+        val vm = viewModel()
+        vm.effects.test {
+            assertFalse(vm.uiState.value.loading)
+            vm.onAction(AccountAction.LogoutClicked)
+            assertFalse(vm.uiState.value.loading)
+
+            vm.onAction(AccountAction.LogoutConfirmed)
+            assertTrue(vm.uiState.value.loading)
+
+            gate.complete(Unit)
+            assertEquals(AccountSideEffect.NavigateToStart, awaitItem())
+            assertFalse(vm.uiState.value.loading)
         }
     }
 

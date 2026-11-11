@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.duriseo.android.core.designsystem.R as DesignR
+import com.duriseo.android.core.designsystem.component.DuriseoLoadingLayer
 import com.duriseo.android.core.designsystem.theme.Brand700
 import com.duriseo.android.core.designsystem.theme.Danger600
 import com.duriseo.android.core.designsystem.theme.DuriseoPickPalette
@@ -188,8 +189,10 @@ fun ColorsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // [완료]의 저장 요청 중에는 로딩 덮개 (D-115)
+    DuriseoLoadingLayer(loading = state.loading, modifier = modifier) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
             .padding(padding),
@@ -237,6 +240,7 @@ fun ColorsScreen(
                 }
             }
         }
+    }
     }
 }
 

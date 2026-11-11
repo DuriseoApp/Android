@@ -3,6 +3,11 @@ package com.duriseo.android.feature.calendar
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.duriseo.android.core.designsystem.message.toMessageRes
+import com.duriseo.android.domain.anniversary.AnniversaryKind
+import com.duriseo.android.domain.anniversary.AnniversaryOccurrence
+import com.duriseo.android.domain.anniversary.AnniversaryRepository
+import com.duriseo.android.domain.anniversary.DayCount
+import com.duriseo.android.domain.anniversary.calendarMonthRange
 import com.duriseo.android.domain.couple.CoupleRepository
 import com.duriseo.android.domain.couple.StartDateRules
 import com.duriseo.android.domain.error.ErrorCode
@@ -10,6 +15,7 @@ import com.duriseo.android.domain.error.hasCode
 import com.duriseo.android.domain.event.Event
 import com.duriseo.android.domain.event.EventRepository
 import com.duriseo.android.domain.event.EventRules
+import com.duriseo.android.domain.event.EventTarget
 import com.duriseo.android.domain.event.EventTime
 import com.duriseo.android.domain.me.Me
 import com.duriseo.android.domain.me.MeRepository
@@ -17,6 +23,7 @@ import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.domain.result.DataResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,17 +41,20 @@ import java.time.Clock
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 /**
- * SCR-CAL-01 캘린더 홈. 화면은 Room의 내 정보와 일정만 구독하고(NFR-OFF-01), 보이는 달은 화면에 들어올 때와
- * 달을 넘길 때 `GET /events`로 다시 불러온다 (NFR-SYNC-02, 오프라인이면 조용히 실패).
+ * SCR-CAL-01 캘린더 홈. 화면은 Room의 내 정보·일정·기념일만 구독하고(NFR-OFF-01), 보이는 달은 화면에 들어올 때,
+ * 달을 넘길 때, 당겨서 새로고침할 때 `GET /events`와 `GET /anniversaries`로 다시 불러온다 (NFR-SYNC-02, Q-16,
+ * 오프라인이면 조용히 실패). 월 조회는 앞뒤 하루 여유를 둔다 (Q-19 ②).
  * 쓰기(처음 만난 날 저장)는 온라인에서만 한다 (NFR-OFF-02).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
     private val eventRepository: EventRepository,
+    private val anniversaryRepository: AnniversaryRepository,
     private val meRepository: MeRepository,
     private val coupleRepository: CoupleRepository,
     private val clock: Clock,
@@ -55,6 +65,7 @@ class CalendarViewModel @Inject constructor(
         val selectedDate: LocalDate,
         val expanded: Boolean = false,
         val startDateSheet: CalendarStartDateSheet? = null,
+        val refreshing: Boolean = false,
     )
 
     private val zone: ZoneId get() = clock.zone
@@ -71,11 +82,20 @@ class CalendarViewModel @Inject constructor(
             eventRepository.observeEvents(month.atDay(1), month.atEndOfMonth(), zone)
         }
 
+    private val monthAnniversaries = local
+        .map { it.visibleMonth }
+        .distinctUntilChanged()
+        .flatMapLatest { month ->
+            val (from, to) = calendarMonthRange(month)
+            anniversaryRepository.observeRange(from, to)
+        }
+
     val uiState: StateFlow<CalendarUiState> = combine(
         local,
         meRepository.observeMe(),
         monthEvents,
-    ) { local, me, events ->
+        monthAnniversaries,
+    ) { local, me, events, anniversaries ->
         val today = LocalDate.now(clock)
         CalendarUiState(
             header = me?.toHeader(today) ?: CalendarHeader.Loading,
@@ -84,9 +104,16 @@ class CalendarViewModel @Inject constructor(
             selectedDate = local.selectedDate,
             expanded = local.expanded,
             eventsByDay = groupByDay(local.visibleMonth, events, me?.id.orEmpty(), zone),
+            anniversariesByDay = groupAnniversariesByDay(
+                local.visibleMonth,
+                anniversaries,
+                me?.id.orEmpty(),
+                me?.space?.startDate,
+            ),
             canGoPrevious = EventRules.previousMonth(local.visibleMonth) != null,
             canGoNext = EventRules.nextMonth(local.visibleMonth) != null,
             startDateSheet = local.startDateSheet,
+            refreshing = local.refreshing,
         )
     }.stateIn(
         viewModelScope,
@@ -100,6 +127,8 @@ class CalendarViewModel @Inject constructor(
     fun onAction(action: CalendarAction) {
         when (action) {
             CalendarAction.Shown -> refreshVisibleMonth()
+            CalendarAction.Refresh -> pullToRefresh()
+            CalendarAction.AnniversariesClicked -> effectChannel.trySend(CalendarSideEffect.OpenAnniversaries)
             CalendarAction.PreviousMonth -> moveMonth(forward = false)
             CalendarAction.NextMonth -> moveMonth(forward = true)
             is CalendarAction.DateSelected -> selectDate(action.date)
@@ -119,10 +148,32 @@ class CalendarViewModel @Inject constructor(
         }
     }
 
-    /** 오프라인·실패는 조용히 넘기고 Room의 값을 그대로 보여 준다 (ARCHITECTURE.md 2장) */
-    private fun refreshVisibleMonth() {
-        val month = local.value.visibleMonth
-        viewModelScope.launch { eventRepository.refreshRange(month.atDay(1), month.atEndOfMonth(), zone) }
+    /**
+     * 보이는 달의 일정과 기념일을 함께 다시 불러온다. 앞뒤 하루 여유를 두고 요청한다 (Q-19 ②, 3개월 상한 안).
+     * 오프라인·실패는 조용히 넘기고 Room의 값을 그대로 보여 준다 (ARCHITECTURE.md 2장)
+     */
+    private fun refreshVisibleMonth(): Job {
+        val (from, to) = calendarMonthRange(local.value.visibleMonth)
+        // 저장소가 쓰기 뒤에 다시 불러올 범위는 보이는 달이다 (요청이 끝나기를 기다리지 않고 바로 알린다)
+        anniversaryRepository.setVisibleRange(from, to)
+        // 달을 빨리 넘기면 이전 달 요청은 취소한다. 겹치는 이틀을 오래된 응답이 덮지 않게
+        refreshJob?.cancel()
+        return viewModelScope.launch {
+            launch { eventRepository.refreshRange(from, to, zone) }
+            launch { anniversaryRepository.refreshRange(from, to) }
+        }.also { refreshJob = it }
+    }
+
+    private var refreshJob: Job? = null
+
+    /** 당겨서 새로고침 (Q-16): 다시 불러오는 동안 표시를 켠다. 요청 중 또 당겨도 한 번만 한다 */
+    private fun pullToRefresh() {
+        if (local.value.refreshing) return
+        local.update { it.copy(refreshing = true) }
+        viewModelScope.launch {
+            refreshVisibleMonth().join()
+            local.update { it.copy(refreshing = false) }
+        }
     }
 
     private fun moveMonth(forward: Boolean) {
@@ -142,6 +193,9 @@ class CalendarViewModel @Inject constructor(
     private fun selectDate(date: LocalDate) {
         if (!EventRules.isSelectable(date)) return
         local.update { it.copy(selectedDate = date, visibleMonth = YearMonth.from(date)) }
+        // 다른 달의 날짜를 골라 보이는 달이 바뀌어도 저장소가 아는 보이는 범위는 따라간다
+        val (from, to) = calendarMonthRange(local.value.visibleMonth)
+        anniversaryRepository.setVisibleRange(from, to)
     }
 
     // --- 처음 만난 날 시트 (FR-COUPLE-04 AC2, 설정 화면 시트와 같은 규칙) ---
@@ -195,7 +249,12 @@ class CalendarViewModel @Inject constructor(
         local.update { it.copy(startDateSheet = sheet.copy(saving = true)) }
         viewModelScope.launch {
             when (val result = coupleRepository.updateStartDate(date)) {
-                is DataResult.Success -> local.update { it.copy(startDateSheet = null) }
+                is DataResult.Success -> {
+                    local.update { it.copy(startDateSheet = null) }
+                    // 자동 기념일은 처음 만난 날로 서버가 계산한다: 보이는 달의 기념일을 다시 불러온다 (FR-ANNIV-02 AC3)
+                    val (from, to) = calendarMonthRange(local.value.visibleMonth)
+                    anniversaryRepository.refreshRange(from, to)
+                }
                 is DataResult.Failure -> {
                     // 실패·오프라인이면 시트를 그대로 두고 안내한다. 상대가 먼저 해제했으면(NOT_COUPLE) 앱 초기화가 이동을 맡는다 (D-103)
                     local.update { it.copy(startDateSheet = sheet.copy(saving = false)) }
@@ -218,7 +277,7 @@ private fun Me.toHeader(today: LocalDate): CalendarHeader {
     return CalendarHeader.Couple(
         myColorKey = space.myColor,
         partnerColorKey = partner.color,
-        dayNumber = space.startDate?.let { StartDateRules.dayNumber(it, today) },
+        dayNumber = space.startDate?.let { DayCount.of(it, today) },
     )
 }
 
@@ -234,10 +293,53 @@ internal fun groupByDay(
         val date = month.atDay(day)
         val onDay = events.filter { EventRules.occursOn(it, date, zone) }
         if (onDay.isEmpty()) continue
-        result[date] = EventRules.sortForDay(onDay).map { it.toCalendarEvent(myId, zone) }
+        result[date] = sortForCalendarDay(onDay, zone).map { it.toCalendarEvent(myId, zone) }
     }
     return result
 }
+
+/**
+ * 날짜 목록의 일정 순서 (D-119): 종일(시작 날짜순) -> 시간(목록 카드에 보이는 시각순, 같으면 시작 일시순). 같으면 id순.
+ * 여러 날 일정은 걸친 날마다 시작 시각이 보이므로 그 시각으로 정렬한다 (D-113).
+ */
+internal fun sortForCalendarDay(events: List<Event>, zone: ZoneId): List<Event> {
+    val allDay = events.filter { it.isAllDay }.sortedWith(
+        compareBy<Event>({ (it.time as? EventTime.AllDay)?.start ?: LocalDate.MIN }, { it.id }),
+    )
+    val timed = events.filterNot { it.isAllDay }.sortedWith(
+        compareBy<Event>(
+            { (it.time as? EventTime.Timed)?.start?.atZone(zone)?.toLocalTime()?.truncatedTo(ChronoUnit.MINUTES) },
+            { (it.time as? EventTime.Timed)?.start },
+            { it.id },
+        ),
+    )
+    return allDay + timed
+}
+
+/**
+ * 보이는 달의 날짜마다 기념일을 모은다. 저장소의 순서(서버 응답 순서)를 그대로 쓴다 (D-119, FR-ANNIV-04 AC5).
+ * 앞뒤 하루 여유로 받은 이웃 달 날짜는 달력에 그리지 않으므로 뺀다.
+ * 자동 기념일 카드의 D+N은 날짜 − 처음 만난 날 + 1이다 (D-117).
+ */
+internal fun groupAnniversariesByDay(
+    month: YearMonth,
+    occurrences: List<AnniversaryOccurrence>,
+    myId: String,
+    startDate: LocalDate?,
+): Map<LocalDate, List<CalendarAnniversary>> =
+    occurrences
+        .filter { YearMonth.from(it.date) == month }
+        .groupBy { it.date }
+        .mapValues { (date, list) -> list.map { it.toCalendarAnniversary(myId, startDate, date) } }
+
+private fun AnniversaryOccurrence.toCalendarAnniversary(myId: String, startDate: LocalDate?, date: LocalDate) =
+    CalendarAnniversary(
+        name = name,
+        isAuto = kind == AnniversaryKind.AUTO,
+        dayNumber = if (kind == AnniversaryKind.AUTO) startDate?.let { DayCount.onDate(it, date) } else null,
+        author = if (kind == AnniversaryKind.AUTO) null else if (authorId == myId) EventTarget.ME else EventTarget.PARTNER,
+        repeatsYearly = repeatsYearly,
+    )
 
 private fun Event.toCalendarEvent(myId: String, zone: ZoneId) = CalendarEvent(
     id = id,

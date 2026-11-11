@@ -7,6 +7,7 @@ android {
 }
 
 dependencies {
+    implementation(projects.feature.anniversary)
     implementation(projects.feature.auth)
     implementation(projects.feature.calendar)
     implementation(projects.feature.couple)

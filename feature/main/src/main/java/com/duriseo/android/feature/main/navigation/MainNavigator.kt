@@ -10,8 +10,10 @@ import androidx.navigation.navOptions
 import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.NavDestination.Companion.hasRoute
 import com.duriseo.android.core.common.navigation.AuthRouteModel
-import com.duriseo.android.core.common.navigation.CalendarRouteModel
 import com.duriseo.android.core.common.navigation.MainRouteModel
+import com.duriseo.android.feature.anniversary.navigation.navigateToAnniversaries
+import com.duriseo.android.feature.anniversary.navigation.navigateToAnniversaryCreate
+import com.duriseo.android.feature.anniversary.navigation.navigateToAnniversaryEdit
 import com.duriseo.android.feature.calendar.navigation.navigateToCalendar
 import com.duriseo.android.feature.calendar.navigation.navigateToEventCreate
 import com.duriseo.android.feature.calendar.navigation.navigateToEventDetail
@@ -98,6 +100,16 @@ class MainNavigator(
     /** 일정 수정 (SCR-CAL-03) */
     fun navigateToEventEdit(eventId: String) = navController.navigateToEventEdit(eventId)
 
+    /** 기념일 목록 (SCR-ANNIV-01). 캘린더 앱바·날짜 목록의 기념일 카드가 부른다 (단위 5 묶음 B) */
+    fun navigateToAnniversaries() = navController.navigateToAnniversaries()
+
+    /** 새 직접 기념일 (SCR-ANNIV-02) */
+    fun navigateToAnniversaryCreate() = navController.navigateToAnniversaryCreate()
+
+    /** 내 직접 기념일 수정 (SCR-ANNIV-02). [date]는 누른 항목의 날짜 */
+    fun navigateToAnniversaryEdit(anniversaryId: String, date: java.time.LocalDate) =
+        navController.navigateToAnniversaryEdit(anniversaryId, date)
+
     /** 전체 메뉴(SCR-SET-01). 진입은 캘린더 앱바 */
     fun navigateToSettings() = navController.navigateToSettings()
 
@@ -118,12 +130,14 @@ class MainNavigator(
     }
 
     /**
-     * SCR-CAL-02·03에서는 스낵바를 위에서 40에 띄운다 (SCREENS.md 112·142행). SCR-CAL-01은 하단 탭 위라서 false다 (SCREENS.md 42·85행).
+     * 스낵바 위치 (D-126). 하단 탭이 있는 화면(SCR-CAL-01·메모 탭 루트)은 하단 탭 위(바닥에서 96)이고 false다.
+     * 탭이 없는 화면(SCR-CAL-02·03, SCR-ANNIV-01·02, SCR-COUPLE-01~03, SCR-SET-01~)은 위에서 40이다.
+     * 연결 완료 시트([linkedSheetVisible])가 떠 있는 동안은 탭 화면 위여도 위에서 40이다.
      */
     @Composable
-    fun snackbarAtTop(): Boolean {
+    fun snackbarAtTop(linkedSheetVisible: Boolean = false): Boolean {
         val destination = currentDestination ?: return false
-        return isSnackbarAtTop { destination.hasRoute(it) }
+        return isSnackbarAtTop(linkedSheetVisible) { destination.hasRoute(it) }
     }
 
     /** 하단 탭은 탭 화면(캘린더·메모)에서만 보인다 */
@@ -138,8 +152,15 @@ fun rememberMainNavigator(
     MainNavigator(navController)
 }
 
-/** 스낵바를 위에서 40에 띄우는 화면: 일정 상세(SCR-CAL-02)와 일정 작성·수정(SCR-CAL-03). 하단 탭이 없는 화면이다 */
-private val TopSnackbarRoutes = listOf(CalendarRouteModel.EventDetail::class, CalendarRouteModel.EventEdit::class)
+/** 하단 탭이 있는 화면(탭 루트). 스낵바가 하단 탭 위에 뜬다 (D-126) */
+private val TabRoutes = listOf(
+    MainRouteModel.Calendar::class,
+    MainRouteModel.Memo::class,
+)
 
-/** [hasRoute]가 지금 화면이 그 경로인지 알려 준다. SCR-CAL-01(캘린더 탭)은 목록에 없다 */
-internal fun isSnackbarAtTop(hasRoute: (kotlin.reflect.KClass<*>) -> Boolean): Boolean = TopSnackbarRoutes.any(hasRoute)
+/**
+ * 스낵바를 위에서 40에 띄우는가 (D-126): 탭 화면이 아니면 항상, 탭 화면이어도 연결 완료 시트가 떠 있으면.
+ * [hasRoute]가 지금 화면이 그 경로인지 알려 준다.
+ */
+internal fun isSnackbarAtTop(linkedSheetVisible: Boolean, hasRoute: (kotlin.reflect.KClass<*>) -> Boolean): Boolean =
+    linkedSheetVisible || TabRoutes.none(hasRoute)

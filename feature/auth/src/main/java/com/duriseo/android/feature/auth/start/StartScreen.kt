@@ -56,6 +56,7 @@ import com.duriseo.android.core.designsystem.component.DuriseoButtonStyle
 import com.duriseo.android.core.common.social.SocialTokenResult
 import com.duriseo.android.core.common.social.findActivity
 import com.duriseo.android.core.common.social.socialTokenProvider
+import com.duriseo.android.core.designsystem.component.DuriseoLoadingLayer
 import com.duriseo.android.core.designsystem.component.DuriseoSnackbar
 import com.duriseo.android.core.designsystem.component.DuriseoSnackbarHost
 import com.duriseo.android.core.designsystem.theme.DuriseoShapes
@@ -178,8 +179,10 @@ fun StartScreen(
     snackbarHost: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // 서버 요청(게스트 시작·로그인)이 도는 동안 로딩 덮개 (D-115)
+    DuriseoLoadingLayer(loading = state.loading, modifier = modifier) {
     Box(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface),
     ) {
@@ -298,6 +301,7 @@ fun StartScreen(
             snackbarHost()
         }
     }
+    }
 }
 
 @Composable
@@ -403,7 +407,7 @@ private fun StartScreenSessionReplacedPreview() = PreviewStartScreen(messageRes 
 
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun StartScreenLoadingPreview() = PreviewStartScreen(state = StartUiState(requesting = true))
+private fun StartScreenLoadingPreview() = PreviewStartScreen(state = StartUiState(requesting = true, loading = true))
 
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable

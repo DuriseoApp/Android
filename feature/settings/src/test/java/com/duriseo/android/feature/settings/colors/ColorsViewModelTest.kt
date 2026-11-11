@@ -13,6 +13,7 @@ import com.duriseo.android.feature.settings.apiError
 import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.feature.settings.FakeMeRepository
 import com.duriseo.android.feature.settings.memberMe
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -149,6 +150,22 @@ class ColorsViewModelTest {
             listOf(ColorChange(members = listOf(MemberColor(GuestId, "pick-rose")), together = "pick-green")),
             couple.colorCalls,
         )
+    }
+
+    @Test
+    fun `D-115 우리 색상은 요청 중에는 loading이 true이고 끝나면 false다`() = runTest {
+        me.me.value = coupleMe()
+        val gate = CompletableDeferred<Unit>()
+        couple.colorGate = gate
+        val vm = viewModel()
+        vm.onAction(ColorsAction.ColorPicked("pick-rose"))
+        assertFalse(vm.uiState.value.loading)
+
+        vm.onAction(ColorsAction.DoneClicked)
+        assertTrue(vm.uiState.value.loading)
+
+        gate.complete(Unit)
+        assertFalse(vm.uiState.value.loading)
     }
 
     @Test

@@ -12,6 +12,7 @@ import com.duriseo.android.feature.settings.FakeMeRepository
 import com.duriseo.android.feature.settings.apiError
 import com.duriseo.android.feature.settings.guestMe
 import com.duriseo.android.feature.settings.memberMe
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -283,6 +284,18 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `D-116 프로필 카드 D+N은 처음 만난 날 당일이 D+1이고 계산값이 1보다 작으면 D+1이다`() = runTest {
+        // 오늘은 2026-10-31
+        me.me.value = coupleMe(startDate = LocalDate.of(2026, 10, 31))
+        val vm = viewModel()
+        assertEquals(1L, (vm.uiState.value.space as SettingsSpace.Couple).dayNumber)
+
+        // 시간대가 달라 처음 만난 날이 내일로 보이는 경우도 D+1
+        me.me.value = coupleMe(startDate = LocalDate.of(2026, 11, 1))
+        assertEquals(1L, (vm.uiState.value.space as SettingsSpace.Couple).dayNumber)
+    }
+
+    @Test
     fun `D-99 처음 만난 날이 없는 커플은 D+N과 함께한 날 값이 없다`() = runTest {
         me.me.value = coupleMe(startDate = null)
         val vm = viewModel()
@@ -340,6 +353,23 @@ class SettingsViewModelTest {
 
         assertEquals(listOf(LocalDate.of(2026, 3, 14)), couple.startDateCalls)
         assertEquals(null, vm.uiState.value.startDateSheet)
+    }
+
+    @Test
+    fun `D-115 전체 메뉴는 요청 중에는 loading이 true이고 끝나면 false다`() = runTest {
+        me.me.value = coupleMe(startDate = null)
+        val gate = CompletableDeferred<Unit>()
+        couple.startDateGate = gate
+        val vm = viewModel()
+        vm.onAction(SettingsAction.StartDateEditClicked)
+        vm.onAction(SettingsAction.StartDateSelected(LocalDate.of(2026, 3, 14)))
+        assertFalse(vm.uiState.value.loading)
+
+        vm.onAction(SettingsAction.StartDateSaved)
+        assertTrue(vm.uiState.value.loading)
+
+        gate.complete(Unit)
+        assertFalse(vm.uiState.value.loading)
     }
 
     @Test

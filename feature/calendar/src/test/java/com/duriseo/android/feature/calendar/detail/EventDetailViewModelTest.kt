@@ -20,6 +20,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -252,6 +253,33 @@ class EventDetailViewModelTest {
     fun `D-109 커플 공간은 개인 공간 표시가 꺼져 있다`() = runTest {
         events.events.value = listOf(sampleEvent())
         assertFalse(viewModel().uiState.value.isPersonalSpace)
+    }
+
+    @Test
+    fun `D-115 일정 상세는 요청 중에는 loading이 true이고 끝나면 false다`() = runTest {
+        events.events.value = listOf(sampleEvent())
+        val deleteGate = CompletableDeferred<Unit>()
+        val reminderGate = CompletableDeferred<Unit>()
+        events.deleteGate = deleteGate
+        events.reminderGate = reminderGate
+        val vm = viewModel()
+        vm.effects.test {
+            assertFalse(vm.uiState.value.loading)
+
+            // 내 알림 설정
+            vm.onAction(EventDetailAction.ReminderSelected(ReminderOption.MIN_10))
+            assertTrue(vm.uiState.value.loading)
+            reminderGate.complete(Unit)
+            assertFalse(vm.uiState.value.loading)
+
+            // 삭제
+            vm.onAction(EventDetailAction.DeleteClicked)
+            vm.onAction(EventDetailAction.DeleteConfirmed)
+            assertTrue(vm.uiState.value.loading)
+            deleteGate.complete(Unit)
+            assertEquals(EventDetailSideEffect.Close, awaitItem())
+            assertFalse(vm.uiState.value.loading)
+        }
     }
 
     @Test

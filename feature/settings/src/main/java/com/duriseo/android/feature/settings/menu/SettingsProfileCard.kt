@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -85,9 +86,7 @@ private val OutlineWidth = 1.dp
 
 /**
  * 커플이면 두 사람과 D+N, 혼자면 나와 "아직 없음". [startDate]가 없으면 D+N과 "부터 함께하고 있어요" 줄은 숨긴다 (D-99).
- *
- * **디자인 반영 후 맞춤(이미지 대기)**: 처음 만난 날 없는 커플 (`SCR-SET-01--no-start-date.png` 예정). 지금은 D+N 글자와
- * "부터 함께하고 있어요" 줄만 빼고 "함께" 마크와 나머지는 그대로 둔다.
+ * 처음 만난 날 없는 커플은 `SCR-SET-01--no-start-date.png`대로 두 줄을 빼고 마크를 아바타 높이 가운데에 둔다.
  */
 @Composable
 internal fun SettingsProfileCard(
@@ -158,19 +157,14 @@ private fun CoupleBody(space: SettingsSpace.Couple, onEditStartDate: () -> Unit,
     )
 }
 
-/** 가운데 칸: "함께" 마크 + D+N. 읽는 이름은 "함께한 지 D+N" 하나다 (SCREENS.md 접근성 문구) */
+/**
+ * 가운데 칸: "함께" 마크 + D+N. 읽는 이름은 "함께한 지 D+N" 하나다 (SCREENS.md 접근성 문구).
+ * 처음 만난 날이 없으면 D+N 없이 마크만 아바타 높이(72) 가운데에 둔다 (D-99, `SCR-SET-01--no-start-date.png`, 보드 `noStartDate`).
+ */
 @Composable
 private fun TogetherColumn(space: SettingsSpace.Couple) {
     val days = space.dayNumber
-    val description = days?.let { stringResource(R.string.profile_days_together_description, it) }
-    Column(
-        modifier = Modifier
-            .padding(top = CenterTop)
-            .widthIn(min = CenterMinWidth)
-            .then(if (description != null) Modifier.semantics { contentDescription = description } else Modifier),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(CenterGap),
-    ) {
+    val mark: @Composable () -> Unit = {
         DuriseoTogetherMark(
             width = MarkWidth,
             height = MarkHeight,
@@ -178,13 +172,32 @@ private fun TogetherColumn(space: SettingsSpace.Couple) {
             partnerColorKey = space.partner.colorKey,
             togetherColorKey = space.togetherColorKey,
         )
-        if (days != null) {
-            Text(
-                text = stringResource(R.string.profile_days_together, days),
-                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                color = Brand700,
-            )
-        }
+    }
+    if (days == null) {
+        Box(
+            modifier = Modifier
+                .widthIn(min = CenterMinWidth)
+                .height(DuriseoAvatarSize.Large.diameter)
+                .clearAndSetSemantics { },
+            contentAlignment = Alignment.Center,
+        ) { mark() }
+        return
+    }
+    val description = stringResource(R.string.profile_days_together_description, days)
+    Column(
+        modifier = Modifier
+            .padding(top = CenterTop)
+            .widthIn(min = CenterMinWidth)
+            .semantics { contentDescription = description },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(CenterGap),
+    ) {
+        mark()
+        Text(
+            text = stringResource(R.string.profile_days_together, days),
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+            color = Brand700,
+        )
     }
 }
 

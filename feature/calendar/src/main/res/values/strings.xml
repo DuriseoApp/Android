@@ -7,6 +7,10 @@
     <string name="calendar_avatar_me">나</string>
     <string name="calendar_avatar_partner">너</string>
     <string name="calendar_dday">함께한 지 D+%1$d</string>
+    <string name="calendar_dday_description">기념일 보기, 함께한 지 D+%1$d</string>
+    <string name="calendar_solo_title_description">나의 캘린더, 기념일 보기</string>
+    <!-- 개인 공간 앱바의 링크 "기념일 ›" (FR-CAL-01 AC5) -->
+    <string name="calendar_anniversary_link">기념일</string>
     <string name="calendar_start_date_prompt">처음 만난 날 입력하기</string>
     <string name="calendar_month_title">%1$d년 %2$d월</string>
     <string name="calendar_previous_month">이전 달</string>
@@ -17,13 +21,23 @@
     <string name="calendar_selected_day_title">%1$d월 %2$d일 (%3$s)</string>
     <string name="calendar_count">%1$d개</string>
     <string name="calendar_day_description">%1$d월 %2$d일</string>
-    <string name="calendar_day_description_with_events">%1$s, 일정·메모 %2$d개: %3$s</string>
+    <!-- 날짜 칸 읽기 라벨: "10월 12일, 기념일 …, 일정·메모 3개: …" (보드 Calendar.dc.html 318행의 label) -->
+    <string name="calendar_day_anniversary_part">, 기념일 %1$s</string>
+    <string name="calendar_day_events_part">, 일정·메모 %1$d개: %2$s</string>
     <string name="calendar_day_event_summary">%1$s %2$s</string>
     <string name="calendar_empty_day">아직 일정이나 메모가 없어요</string>
     <string name="calendar_add_on_day">+ 이 날에 추가하기</string>
     <string name="calendar_fab_description">일정 또는 메모 추가</string>
     <string name="calendar_all_day">종일</string>
     <string name="calendar_bar_more">+%1$d</string>
+
+    <!-- 날짜 목록의 기념일 카드 (SCR-CAL-01, 보드 Calendar.dc.html 276~277행, SCR-CAL-01 anniversary 상태 이미지) -->
+    <string name="calendar_anniversary_mark">기념일</string>
+    <string name="calendar_anniversary_day_number">D+%1$d</string>
+    <string name="calendar_anniversary_sub_auto">자동 기념일</string>
+    <string name="calendar_anniversary_sub_mine">내가 만든 기념일</string>
+    <string name="calendar_anniversary_sub_partner">상대가 만든 기념일</string>
+    <string name="calendar_anniversary_sub_yearly">%1$s · 매년</string>
 
     <!-- 대상 라벨: 보는 사람 기준 나·상대·함께 (FR-CAL-04 AC6) -->
     <string name="event_target_me">나</string>
@@ -77,6 +91,10 @@
     <string name="event_edit_end_time_description">종료 시간 %1$s</string>
     <string name="event_edit_end_error">종료는 시작보다 뒤여야 해요.</string>
     <string name="event_edit_reminder">내 알림</string>
+    <string name="event_edit_start_date_sheet_title">시작 날짜</string>
+    <string name="event_edit_end_date_sheet_title">종료 날짜</string>
+    <string name="event_edit_start_time_sheet_title">시작 시간</string>
+    <string name="event_edit_end_time_sheet_title">종료 시간</string>
     <string name="event_edit_note_label">메모</string>
     <string name="event_edit_note_placeholder">상대에게 남길 내용을 적어주세요</string>
     <string name="event_edit_notify_title">상대에게 알림 보내기</string>

@@ -103,7 +103,7 @@ private val CardPaddingHorizontal = DuriseoSpacing.Space4
 private val CardBorderWidth = 1.dp
 private val CardSelectedBorderWidth = 2.dp
 
-/** 스낵바는 위에서 40 (SCREENS.md에 이 시트의 위치가 없어 시작 화면과 같게 둔다. 디자인 반영 후 맞춤) */
+/** 스낵바는 위에서 40 (D-126) */
 private val SnackbarTop = 40.dp
 
 /**
@@ -156,6 +156,7 @@ fun LinkedSheetScreen(
         DuriseoDialogLayer(
             dialogVisible = state.dropDialogVisible,
             dialog = { DropDialog(state = state, onAction = onAction) },
+            loading = state.loading,
         ) {
             DuriseoBottomSheetLayer(
                 onDismissRequest = if (state.canDismiss) {
@@ -493,7 +494,7 @@ private fun LinkedSheetDropDialogPreview() = PreviewLinkedSheet(
     ),
 )
 
-/** 처음 만난 날을 골랐다 (아직 서버에 저장 전이라 [나중에 하기]가 있다). 이미지 대기 */
+/** 처음 만난 날을 골랐다 (아직 서버에 저장 전이라 [나중에 하기]가 있다) */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun LinkedSheetDatePickedPreview() = PreviewLinkedSheet(
@@ -507,12 +508,12 @@ private fun LinkedSheetDatePickedPreview() = PreviewLinkedSheet(
 )
 
 /**
- * `SCR-COUPLE-04--date-set.png`(이미지 대기, 디자인 반영 후 맞춤): 처음 만난 날이 이미 서버에 있다.
- * 칸에 날짜가 보이고 [나중에 하기]가 없다 (D-98).
+ * `SCR-COUPLE-04--date-set.png`: 처음 만난 날이 이미 서버에 있다.
+ * 칸에 날짜가 `ink-900` 글자로 보이고 [나중에 하기]가 없다 (D-98, 샘플 2026년 3월 14일).
  */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun LinkedSheetDateSetPreview() = PreviewLinkedSheet(
+private fun LinkedSheetPreview_DateSet() = PreviewLinkedSheet(
     LinkedSheetUiState(
         partnerName = "지우",
         startDate = LocalDate.of(2026, 3, 14),

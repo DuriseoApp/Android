@@ -53,7 +53,7 @@ import com.duriseo.android.domain.me.SocialProvider
 import com.duriseo.android.feature.settings.R
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.temporal.ChronoUnit
+import com.duriseo.android.domain.anniversary.DayCount
 
 // SCR-SET-01 전체 메뉴 (FR-SET-01, FR-AUTH-04, FR-AUTH-05, FR-COUPLE-04). 앱바, 게스트 배너, 우리 프로필 카드(단위 3),
 // 꾸미기 › 우리 색상(단위 3), "설정" 섹션의 연결 정보(단위 3)·계정 행, 로그아웃. 알림 설정은 단위 7,
@@ -156,6 +156,7 @@ fun SettingsScreen(
             }
         },
         modifier = modifier.background(MaterialTheme.colorScheme.surface),
+        loading = state.loading,
     ) {
         Column(
             modifier = Modifier
@@ -454,7 +455,7 @@ private fun previewCouple(startDate: LocalDate?) = SettingsSpace.Couple(
     partner = PreviewPartner,
     togetherColorKey = "pick-purple",
     startDate = startDate,
-    dayNumber = startDate?.let { ChronoUnit.DAYS.between(it, PreviewToday) + 1 },
+    dayNumber = startDate?.let { DayCount.of(it, PreviewToday) },
     linkedDate = LocalDate.of(2026, 10, 12),
 )
 
@@ -527,10 +528,10 @@ private fun SettingsScreenGuestProfilePreview() {
     }
 }
 
-/** 디자인 반영 후 맞춤(이미지 대기): 처음 만난 날 없는 커플 (`SCR-SET-01--no-start-date.png` 예정, D-99). D+N·"부터 함께하고 있어요" 줄 없음 */
+/** `SCR-SET-01--no-start-date.png`: 처음 만난 날 없는 커플 (D-99). D+N·"부터 함께하고 있어요" 줄 없음, 마크는 아바타 높이 가운데 */
 @Preview(showBackground = true, widthDp = 390, heightDp = 1000)
 @Composable
-private fun SettingsScreenCoupleNoStartDatePreview() {
+private fun SettingsPreview_NoStartDate() {
     DuriseoTheme {
         SettingsScreen(
             state = SettingsUiState(
@@ -553,7 +554,7 @@ private fun SettingsScreenCoupleNoStartDatePreview() {
 /** [처음 만난 날 수정]으로 연 선택 시트 (`SCR-SET-01--start-date-sheet.png`) */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun SettingsScreenStartDateSheetPreview() {
+private fun SettingsPreview_StartDateSheet() {
     DuriseoTheme {
         SettingsScreen(
             state = SettingsUiState(
@@ -574,5 +575,47 @@ private fun SettingsScreenStartDateSheetPreview() {
             onOpenConnectionInfo = {},
             onAction = {},
         )
+    }
+}
+
+/**
+ * `SCR-SET-01--start-date-sheet-year-month.png`: 전체 메뉴 위의 처음 만난 날 시트에서 월 제목(⌃)을 눌러 연도·월 선택이 열린 모습.
+ * 2026년 4월 선택, 오늘은 2026-04-30이라 5~12월은 비활성 (이전·다음 달 버튼은 숨겨진다)
+ */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun StartDateSheetPreview_YearMonth() {
+    val today = LocalDate.of(2026, 4, 30)
+    DuriseoTheme {
+        Box(modifier = Modifier.fillMaxSize()) {
+            SettingsScreen(
+                state = SettingsUiState(
+                    account = SettingsAccount.Member(SocialProvider.GOOGLE),
+                    space = previewCouple(LocalDate.of(2026, 4, 7)),
+                    colorKeys = listOf("pick-orange", "pick-blue", "pick-purple"),
+                    today = today,
+                ),
+                padding = PaddingValues(),
+                onClose = {},
+                onOpenAccount = {},
+                onOpenColors = {},
+                onOpenConnect = {},
+                onOpenConnectionInfo = {},
+                onAction = {},
+            )
+            DuriseoBottomSheetLayer(onDismissRequest = null) {
+                StartDatePickerSheet(
+                    visibleMonth = YearMonth.of(2026, 4),
+                    selectedDate = LocalDate.of(2026, 4, 7),
+                    today = today,
+                    onPreviousMonth = {},
+                    onNextMonth = {},
+                    onDateSelected = {},
+                    onSave = {},
+                    onMonthSelected = {},
+                    pickerInitiallyOpen = true,
+                )
+            }
+        }
     }
 }

@@ -20,6 +20,7 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.time.ZoneId
 
 /** 앱 시작 때 하는 일 (FR-AUTH-01 AC2·AC3, NFR-TIME-01) */
 @RunWith(RobolectricTestRunner::class)
@@ -118,5 +119,61 @@ class SessionStartupTest {
         startup(h).run()
 
         assertEquals("저장된 설정", h.settingValue())
+    }
+
+    @Test
+    fun `Q-19 앱으로 돌아올 때 시간대가 다르면 다시 알린다`() = runTestWithTimeout {
+        val h = RepoHarness(server, tempFolder.root, initialTokens = testTokens()).also { created = it }
+        server.enqueue(jsonResponse(200, meJson(timeZone = "Asia/Seoul")))
+        val startup = startup(h)
+        startup.run()
+        server.takeRequest() // GET /me
+
+        // 앱이 떠 있는 동안 기기 시간대가 바뀌었다. 같은 시간대로 돌아오면 요청하지 않는다
+        startup.syncTimeZoneIfSignedIn(ZoneId.of("Asia/Seoul"))
+        assertEquals(1, server.requestCount)
+
+        server.enqueue(jsonResponse(200, meJson(timeZone = "Asia/Tokyo")))
+        startup.syncTimeZoneIfSignedIn(ZoneId.of("Asia/Tokyo"))
+
+        val patch = server.takeRequest()
+        assertEquals("PATCH", patch.method)
+        assertEquals("{\"timeZone\":\"Asia/Tokyo\"}", patch.body.readUtf8())
+        assertEquals("Asia/Tokyo", h.roomMe()?.timeZone)
+    }
+
+    @Test
+    fun `Q-19 로그인 상태가 아니면 앱으로 돌아와도 시간대를 알리지 않는다`() = runTestWithTimeout {
+        val h = RepoHarness(server, tempFolder.root, initialTokens = null).also { created = it }
+        val startup = startup(h)
+        startup.run()
+
+        startup.syncTimeZoneIfSignedIn(ZoneId.of("Asia/Tokyo"))
+
+        assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun `Q-19 앱이 떠 있는 동안 기기 시간대가 바뀌면 바뀐 시간대를 보낸다`() = runTestWithTimeout {
+        val h = RepoHarness(server, tempFolder.root, initialTokens = testTokens()).also { created = it }
+        server.enqueue(jsonResponse(200, meJson(timeZone = "Asia/Seoul")))
+        // 가짜 기기 시간대: 처음엔 서울, 나중에 도쿄
+        var device = ZoneId.of("Asia/Seoul")
+        val clock = com.duriseo.android.core.common.time.DeviceZoneClock(zoneProvider = { device })
+        val startup = SessionStartup(h.authRepository, h.meRepository, h.session, clock, kotlinx.coroutines.CoroutineScope(Dispatchers.IO))
+        startup.run()
+        server.takeRequest() // GET /me
+
+        // 같은 시간대면 요청하지 않는다
+        startup.syncTimeZoneIfSignedIn()
+        assertEquals(1, server.requestCount)
+
+        device = ZoneId.of("Asia/Tokyo")
+        server.enqueue(jsonResponse(200, meJson(timeZone = "Asia/Tokyo")))
+        startup.syncTimeZoneIfSignedIn()
+
+        val patch = server.takeRequest()
+        assertEquals("PATCH", patch.method)
+        assertEquals("{\"timeZone\":\"Asia/Tokyo\"}", patch.body.readUtf8())
     }
 }

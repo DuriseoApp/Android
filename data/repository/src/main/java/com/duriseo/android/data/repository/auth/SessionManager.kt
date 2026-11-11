@@ -3,6 +3,7 @@ package com.duriseo.android.data.repository.auth
 import com.duriseo.android.core.common.Logger
 import com.duriseo.android.core.common.coroutines.ApplicationScope
 import com.duriseo.android.data.local.cleanup.LocalDataCleaner
+import com.duriseo.android.data.repository.cache.LocalCacheGeneration
 import com.duriseo.android.domain.auth.SessionEndNotifier
 import com.duriseo.android.domain.auth.SessionEndReason
 import com.duriseo.android.domain.auth.SocialSessionCleaner
@@ -32,6 +33,7 @@ class SessionManager @Inject constructor(
     private val localData: LocalDataCleaner,
     private val social: SocialSessionCleaner,
     @ApplicationScope private val scope: CoroutineScope,
+    private val cache: LocalCacheGeneration,
 ) : SessionEndNotifier {
 
     private val eventChannel = Channel<SessionEndReason>(Channel.BUFFERED)
@@ -70,7 +72,7 @@ class SessionManager @Inject constructor(
      * 실패하면 false다: 이전 사용자 데이터가 남은 채 새 계정으로 들어가면 안 되므로 호출한 쪽이 로그인을 실패로 처리한다.
      */
     suspend fun clearUserDataOrFail(): Boolean = try {
-        localData.clearUserData()
+        cache.clearing { localData.clearUserData() }
         true
     } catch (e: CancellationException) {
         throw e
@@ -81,7 +83,7 @@ class SessionManager @Inject constructor(
 
     /** Room과 설정만 지운다. 토큰과 소셜 SDK 상태는 그대로 둔다. */
     suspend fun clearUserData() {
-        attempt("로컬 데이터") { localData.clearUserData() }
+        attempt("로컬 데이터") { cache.clearing { localData.clearUserData() } }
     }
 
     private suspend fun attempt(what: String, block: suspend () -> Unit) {

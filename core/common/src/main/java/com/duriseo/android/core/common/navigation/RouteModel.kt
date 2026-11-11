@@ -34,6 +34,23 @@ sealed interface CalendarRouteModel : RouteModel {
     data class EventEdit(val eventId: String? = null, val date: String? = null) : CalendarRouteModel
 }
 
+/** 기념일 화면 (`feature:anniversary`). 하단 탭이 없다. 진입은 캘린더 (SCR-CAL-01 앱바·기념일 카드, 단위 5 묶음 B) */
+sealed interface AnniversaryRouteModel : RouteModel {
+    /** 기념일 목록 (SCR-ANNIV-01) */
+    @Serializable
+    data object Anniversaries : AnniversaryRouteModel
+
+    /**
+     * 직접 기념일 작성·수정 (SCR-ANNIV-02).
+     *
+     * @property anniversaryId 있으면 수정, 없으면 새로 추가
+     * @property date 수정할 때 누른 항목의 날짜 (`YYYY-MM-DD`). 매년 반복 기념일은 그 해의 발생일이고, 등록한 날짜가 아니다
+     *   (unit-5.md 확인 필요 1: 날짜 칸이 이 값을 보여 주고, 사용자가 바꾼 때만 `PATCH`에 날짜를 보낸다)
+     */
+    @Serializable
+    data class Edit(val anniversaryId: String? = null, val date: String? = null) : AnniversaryRouteModel
+}
+
 /** 로그인 전 화면 (`feature:auth`). 하단 탭이 없다. */
 sealed interface AuthRouteModel : RouteModel {
     /**

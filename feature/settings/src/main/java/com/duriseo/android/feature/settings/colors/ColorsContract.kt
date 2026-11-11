@@ -33,6 +33,9 @@ data class ColorsUiState(
     val weekDays: List<LocalDate> = emptyList(),
     val saving: Boolean = false,
 ) {
+    /** 저장 요청이 도는 동안 true. 로딩 덮개를 그린다 (D-115) */
+    val loading: Boolean get() = saving
+
     fun colorKeyOf(target: ColorTarget): String = when (target) {
         ColorTarget.Me -> myColor
         ColorTarget.Partner -> partnerColor

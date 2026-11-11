@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.couple.inviteenter
 
+import com.duriseo.android.core.designsystem.component.DuriseoLoadingLayer
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.background
@@ -81,6 +82,12 @@ private val SectionGap = 28.dp
 
 /** 칸 묶음: 라벨·칸·붙여넣기 사이 12 (29행), 입력 칸 높이 58 (InviteCodeInputBoxes) */
 private val FieldGap = DuriseoSpacing.Space3
+
+/** 오류 줄: 칸 아래 8(간격 12 - 위 여백 4), 아이콘 16과 글자 사이 6, 아이콘은 첫 줄 높이에 맞춰 위 1 (38행) */
+private val ErrorTop = 8.dp
+private val ErrorIconSize = 16.dp
+private val ErrorGap = 6.dp
+private val ErrorIconTop = 1.dp
 private val InputHeight = 58.dp
 
 /** [붙여넣기]: 높이 44, 안쪽 왼쪽 10·오른쪽 14, 모서리 12, 테두리 1, 아이콘 18, 사이 6 (36행) */
@@ -95,7 +102,7 @@ private val PasteGap = 6.dp
 private val BottomAreaTop = DuriseoSpacing.Space4
 private val BottomAreaBottom = DuriseoSpacing.Space8
 
-/** 스낵바는 위에서 40 (SCREENS.md에 이 화면의 위치가 없어 시작 화면과 같게 둔다) */
+/** 스낵바는 위에서 40 (D-126) */
 private val SnackbarTop = 40.dp
 
 @Composable
@@ -155,8 +162,10 @@ fun InviteEnterScreen(
     snackbarHost: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // 연결 요청 중에는 로딩 덮개 (D-115)
+    DuriseoLoadingLayer(loading = state.loading, modifier = modifier) {
     Box(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface),
     ) {
@@ -193,20 +202,22 @@ fun InviteEnterScreen(
                         style = MaterialTheme.typography.labelLarge,
                         color = Ink600,
                     )
-                    CodeField(
-                        code = state.code,
-                        label = label,
-                        enabled = !state.requesting,
-                        onCodeChange = { onAction(InviteEnterAction.CodeChanged(it)) },
-                    )
-                    // 오류는 코드 칸 아래 한 줄, `danger-600` 글자 (D-95). 크기와 간격은 디자인 반영 후 맞춘다 (이미지 대기)
-                    state.error?.let { error ->
-                        Text(
-                            text = error.message(),
-                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Danger600,
+                    Column {
+                        CodeField(
+                            code = state.code,
+                            label = label,
+                            enabled = !state.requesting,
+                            onCodeChange = { onAction(InviteEnterAction.CodeChanged(it)) },
+                            // 입력 제한은 값이 틀린 게 아니라서 칸 테두리는 그대로다 (design-system "초대코드 입력 오류 줄")
+                            valueError = state.error != null && state.error !is InviteEnterError.RateLimited,
                         )
+                        // 오류는 코드 칸 아래 한 줄 (D-95). 보드는 칸 사이 간격 12에서 위 여백 -4라 칸에서 8 아래다
+                        state.error?.let { error ->
+                            ErrorLine(
+                                text = error.message(),
+                                modifier = Modifier.padding(top = ErrorTop),
+                            )
+                        }
                     }
                     PasteButton(onClick = onPasteClicked, enabled = !state.requesting)
                 }
@@ -239,6 +250,31 @@ fun InviteEnterScreen(
             snackbarHost()
         }
     }
+    }
+}
+
+/** 오류 줄: 아이콘 16 + 글자 13/18/600 `danger-600`, `role="alert"`라 바뀌면 읽는다 (design-system "초대코드 입력 오류 줄") */
+@Composable
+private fun ErrorLine(text: String, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Assertive },
+        horizontalArrangement = Arrangement.spacedBy(ErrorGap),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_alert_circle),
+            contentDescription = null,
+            modifier = Modifier.padding(top = ErrorIconTop).size(ErrorIconSize),
+            tint = Danger600,
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            color = Danger600,
+        )
+    }
 }
 
 /** 오류 한 줄 문구 (SCREENS.md SCR-COUPLE-03 표) */
@@ -262,9 +298,10 @@ private fun CodeField(
     label: String,
     enabled: Boolean,
     onCodeChange: (String) -> Unit,
+    valueError: Boolean,
 ) {
     Box(modifier = Modifier.fillMaxWidth()) {
-        InviteCodeInputBoxes(code = code)
+        InviteCodeInputBoxes(code = code, error = valueError)
         BasicTextField(
             value = code,
             onValueChange = onCodeChange,
@@ -349,13 +386,10 @@ private fun InviteEnterScreenTypingPreview() = PreviewInviteEnter(InviteEnterUiS
 @Composable
 private fun InviteEnterScreenFilledPreview() = PreviewInviteEnter(InviteEnterUiState(code = "K7Q29X"))
 
-/**
- * 코드 오류 한 줄 (D-95). 이미지 `SCR-COUPLE-03--error.png`가 아직 없어 문구는 SCREENS.md 표, 모양은 기존 토큰만 썼다
- * (디자인 반영 후 맞춤). 코드 칸 테두리는 바꾸지 않았다.
- */
+/** `SCR-COUPLE-03--error.png`: K7Q29X 입력, 버튼 활성, "없는 코드예요. 코드를 다시 확인해 주세요." (채운 칸 테두리 `danger-600`) */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun InviteEnterScreenErrorPreview() =
+private fun InviteEnterPreview_Error() =
     PreviewInviteEnter(InviteEnterUiState(code = "K7Q29X", error = InviteEnterError.NotFound))
 
 /** 만료된 코드 */
@@ -364,10 +398,10 @@ private fun InviteEnterScreenErrorPreview() =
 private fun InviteEnterScreenExpiredPreview() =
     PreviewInviteEnter(InviteEnterUiState(code = "K7Q29X", error = InviteEnterError.Expired))
 
-/** 입력 제한: 버튼 비활성, 문구는 풀릴 때까지 남는다. 이미지 `SCR-COUPLE-03--rate-limited.png` 대기 (디자인 반영 후 맞춤) */
+/** `SCR-COUPLE-03--rate-limited.png`: 입력 제한. 칸 테두리는 그대로, [연결하고 시작하기] 비활성, 12분은 샘플 */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun InviteEnterScreenRateLimitedPreview() =
+private fun InviteEnterPreview_RateLimited() =
     PreviewInviteEnter(InviteEnterUiState(code = "K7Q29X", error = InviteEnterError.RateLimited(minutes = 12)))
 
 /** 요청 중: 연결 버튼 비활성 (SCREENS 공통 "요청 중") */

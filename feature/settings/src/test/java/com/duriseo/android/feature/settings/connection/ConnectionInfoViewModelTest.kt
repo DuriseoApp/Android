@@ -10,6 +10,7 @@ import com.duriseo.android.feature.settings.apiError
 import com.duriseo.android.feature.settings.coupleMe
 import com.duriseo.android.feature.settings.memberMe
 import com.duriseo.android.feature.settings.menu.SettingsSpace
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -154,6 +155,22 @@ class ConnectionInfoViewModelTest {
         assertEquals(1, couple.unlinkCalls)
         assertFalse(vm.uiState.value.unlinkDialogVisible)
         assertFalse(vm.uiState.value.requesting)
+    }
+
+    @Test
+    fun `D-115 연결 정보는 요청 중에는 loading이 true이고 끝나면 false다`() = runTest {
+        me.me.value = coupleMe()
+        val gate = CompletableDeferred<Unit>()
+        couple.unlinkGate = gate
+        val vm = viewModel()
+        vm.onAction(ConnectionInfoAction.UnlinkClicked)
+        assertFalse(vm.uiState.value.loading)
+
+        vm.onAction(ConnectionInfoAction.UnlinkConfirmed)
+        assertTrue(vm.uiState.value.loading)
+
+        gate.complete(Unit)
+        assertFalse(vm.uiState.value.loading)
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.duriseo.android.data.repository.event
 
 import com.duriseo.android.data.local.event.EventLocalDataSource
 import com.duriseo.android.data.remote.event.EventRemoteDataSource
+import com.duriseo.android.data.repository.cache.LocalCacheGeneration
 import com.duriseo.android.data.repository.online.runOnlineWrite
 import com.duriseo.android.domain.error.DataError
 import com.duriseo.android.domain.error.ErrorCode
@@ -30,6 +31,7 @@ class EventRepositoryImpl @Inject constructor(
     private val remote: EventRemoteDataSource,
     private val local: EventLocalDataSource,
     private val networkMonitor: NetworkMonitor,
+    private val cache: LocalCacheGeneration,
 ) : EventRepository {
 
     override fun observeEvents(from: LocalDate, to: LocalDate, zone: ZoneId): Flow<List<Event>> =
@@ -44,9 +46,11 @@ class EventRepositoryImpl @Inject constructor(
         if (start.isAfter(end)) return DataResult.Success(Unit)
         // 읽기라서 쓰기 규칙은 아니지만 오프라인이면 요청 없이 조용히 실패한다 (NFR-OFF-01)
         if (!networkMonitor.isOnlineNow()) return DataResult.Failure(DataError.Offline)
+        // 요청 전에 캐시 세대를 적어 두고, 응답이 오기 전에 캐시가 지워졌으면 저장하지 않는다
+        val generation = cache.current()
         return when (val result = remote.list(start, end)) {
             is DataResult.Success -> {
-                local.replaceRange(start, end, zone, result.value.map { it.toEntity() })
+                cache.saveIfCurrent(generation) { local.replaceRange(start, end, zone, result.value.map { it.toEntity() }) }
                 DataResult.Success(Unit)
             }
 

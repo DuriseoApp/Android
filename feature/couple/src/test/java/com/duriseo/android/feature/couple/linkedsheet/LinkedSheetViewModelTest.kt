@@ -407,6 +407,20 @@ class LinkedSheetViewModelTest {
     }
 
     @Test
+    fun `D-115 연결 완료 시트는 요청 중에는 loading이 true이고 끝나면 false다`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        couple.importGate = gate
+        val vm = viewModel(FakeMeRepository(meWithRecords()))
+        assertFalse(vm.uiState.value.loading)
+
+        vm.onAction(LinkedSheetAction.StartClicked)
+        assertTrue(vm.uiState.value.loading)
+
+        gate.complete(Unit)
+        assertFalse(vm.uiState.value.loading)
+    }
+
+    @Test
     fun `FR-COUPLE-03 AC4 요청 중에는 개수와 기록 영역이 그대로 보인다`() = runTest {
         val gate = CompletableDeferred<Unit>()
         couple.importGate = gate

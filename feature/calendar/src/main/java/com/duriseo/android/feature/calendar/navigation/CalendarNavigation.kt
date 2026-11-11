@@ -33,6 +33,7 @@ fun NavController.navigateToEventEdit(eventId: String) {
 
 /**
  * @param onOpenMenu 캘린더 앱바의 [전체 메뉴]
+ * @param onOpenAnniversaries 앱바 "함께한 지 D+N ›"·"기념일 ›"와 날짜 목록의 기념일 카드 -> SCR-ANNIV-01
  * @param onOpenColors 작성 화면의 "색상 변경" 링크. 화면 모듈끼리는 서로 모르므로 앱 쪽 이동에 맡긴다
  */
 fun NavGraphBuilder.calendarNavGraph(
@@ -41,6 +42,7 @@ fun NavGraphBuilder.calendarNavGraph(
     onOpenEvent: (String) -> Unit,
     onOpenCreate: (LocalDate) -> Unit,
     onOpenEdit: (String) -> Unit,
+    onOpenAnniversaries: () -> Unit,
     onOpenColors: () -> Unit,
     onBack: () -> Unit,
     onShowSnackBar: (Int) -> Unit,
@@ -53,6 +55,7 @@ fun NavGraphBuilder.calendarNavGraph(
             onOpenMenu = onOpenMenu,
             onOpenEvent = onOpenEvent,
             onOpenCreate = onOpenCreate,
+            onOpenAnniversaries = onOpenAnniversaries,
             onShowSnackBar = onShowSnackBar,
             snackbarVisible = snackbarVisible,
         )

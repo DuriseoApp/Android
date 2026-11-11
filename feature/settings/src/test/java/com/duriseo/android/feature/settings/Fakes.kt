@@ -19,6 +19,7 @@ import com.duriseo.android.domain.me.MeSpace
 import com.duriseo.android.domain.me.SocialProvider
 import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.domain.result.DataResult
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -101,8 +102,12 @@ class FakeAuthRepository(private val meRepository: FakeMeRepository) : AuthRepos
         return switchResults.removeFirstOrNull() ?: DataResult.Success(LoginResult(isNewUser = false))
     }
 
+    /** 설정하면 logout이 이 신호를 받을 때까지 멈춘다 (요청 중 상태를 확인하려고) */
+    var logoutGate: CompletableDeferred<Unit>? = null
+
     override suspend fun logout(): DataResult<Unit> {
         logoutCalls++
+        logoutGate?.await()
         return logoutResult
     }
 
@@ -186,18 +191,26 @@ class FakeCoupleRepository : CoupleRepository {
     override suspend fun join(code: String): DataResult<CoupleJoinResult> = error("설정 화면은 쓰지 않아요")
     override suspend fun decideImport(import: Boolean): DataResult<Unit> = error("설정 화면은 쓰지 않아요")
 
+    /** 설정하면 해당 요청이 이 신호를 받을 때까지 멈춘다 (요청 중 상태를 확인하려고) */
+    var startDateGate: CompletableDeferred<Unit>? = null
+    var colorGate: CompletableDeferred<Unit>? = null
+    var unlinkGate: CompletableDeferred<Unit>? = null
+
     override suspend fun updateStartDate(date: LocalDate): DataResult<Unit> {
         startDateCalls += date
+        startDateGate?.await()
         return startDateResult
     }
 
     override suspend fun updateColors(change: ColorChange): DataResult<Unit> {
         colorCalls += change
+        colorGate?.await()
         return colorResult
     }
 
     override suspend fun unlink(): DataResult<Unit> {
         unlinkCalls++
+        unlinkGate?.await()
         return unlinkResult
     }
 }

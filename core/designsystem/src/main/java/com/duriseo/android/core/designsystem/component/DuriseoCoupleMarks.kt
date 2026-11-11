@@ -50,7 +50,10 @@ private val DashStrokeWidth = 2.5.dp
 private val DashOn = 2.dp
 private val DashOff = 8.dp
 
-/** 점선 원 테두리 두께 2. 보드는 CSS `dashed`(브라우저가 정하는 간격)라 점 6 · 간격 4로 비슷하게 그린다 (이미지와 맞는지는 확인 필요) */
+/**
+ * 점선 원 테두리 두께 2. 보드는 CSS `dashed`(브라우저가 둘레에 맞춰 간격을 고름)라 점 6 · 간격 4를 기준으로 하되,
+ * 둘레를 정수 개로 나눠 이음매 없이 이어지게 그린다 (이미지 `SCR-SET-01--couple-solo.png`와 대조: 지름 56에 17조각).
+ */
 private val RingStrokeWidth = 2.dp
 private val RingDash = 6.dp
 /** 점선의 빈 간격 4. 레이아웃 간격이 아니라 그리기 값이라 `space-1` 토큰을 쓰지 않는다 */
@@ -129,13 +132,16 @@ fun DuriseoEmptyPartnerSlot(size: DuriseoAvatarSize, modifier: Modifier = Modifi
             .size(size.diameter)
             .drawBehind {
                 val stroke = RingStrokeWidth.toPx()
+                val radius = (this.size.minDimension - stroke) / 2f
+                val intervals = ringDashIntervals(
+                    circumference = 2f * Math.PI.toFloat() * radius,
+                    dash = RingDash.toPx(),
+                    gap = RingGap.toPx(),
+                )
                 drawCircle(
                     color = Ink300,
-                    radius = (this.size.minDimension - stroke) / 2f,
-                    style = Stroke(
-                        width = stroke,
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(RingDash.toPx(), RingGap.toPx())),
-                    ),
+                    radius = radius,
+                    style = Stroke(width = stroke, pathEffect = PathEffect.dashPathEffect(intervals)),
                 )
             }
             .clearAndSetSemantics { },
@@ -148,6 +154,17 @@ fun DuriseoEmptyPartnerSlot(size: DuriseoAvatarSize, modifier: Modifier = Modifi
             tint = Ink400,
         )
     }
+}
+
+/**
+ * 둘레를 (점 + 간격) 조각 정수 개로 나누고 점 : 간격 비율은 [dash] : [gap]으로 둔 점선 간격 [점, 간격].
+ * 조각 수는 둘레 / (점 + 간격)을 반올림하고 최소 1이다.
+ */
+internal fun ringDashIntervals(circumference: Float, dash: Float, gap: Float): FloatArray {
+    val unit = dash + gap
+    val count = maxOf(1, Math.round(circumference / unit))
+    val piece = circumference / count
+    return floatArrayOf(piece * dash / unit, piece * gap / unit)
 }
 
 @Preview(showBackground = true)

@@ -10,6 +10,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
 import java.time.ZoneId
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -33,6 +34,7 @@ class CalendarViewModelTest {
     private val me = FakeMeRepository(coupleMe())
     private val couple = FakeCoupleRepository()
     private val events = FakeEventRepository()
+    private val anniversaries = FakeAnniversaryRepository()
 
     /** 2026-10-12(월) 오전 10:20, 서울 */
     private val clock = Clock.fixed(Instant.parse("2026-10-12T01:20:00Z"), ZoneId.of("Asia/Seoul"))
@@ -49,7 +51,7 @@ class CalendarViewModelTest {
     }
 
     private fun TestScope.viewModel(): CalendarViewModel {
-        val vm = CalendarViewModel(events, me, couple, clock)
+        val vm = CalendarViewModel(events, anniversaries, me, couple, clock)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect { } }
         return vm
     }
@@ -156,6 +158,23 @@ class CalendarViewModelTest {
     }
 
     @Test
+    fun `D-115 캘린더는 요청 중에는 loading이 true이고 끝나면 false다`() = runTest {
+        me.me.value = coupleMe(startDate = null)
+        val gate = CompletableDeferred<Unit>()
+        couple.startDateGate = gate
+        val vm = viewModel()
+        vm.onAction(CalendarAction.StartDatePromptClicked)
+        vm.onAction(CalendarAction.StartDateSelected(LocalDate.of(2026, 4, 7)))
+        assertFalse(vm.uiState.value.loading)
+
+        vm.onAction(CalendarAction.StartDateSaved)
+        assertTrue(vm.uiState.value.loading)
+
+        gate.complete(Unit)
+        assertFalse(vm.uiState.value.loading)
+    }
+
+    @Test
     fun `NFR-OFF-02 오프라인이면 처음 만난 날 저장을 안내하고 시트를 그대로 둔다`() = runTest {
         me.me.value = coupleMe(startDate = null)
         couple.startDateResult = Offline
@@ -186,7 +205,9 @@ class CalendarViewModelTest {
     fun `D-112 화면에 들어오면 보이는 달을 다시 불러온다`() = runTest {
         val vm = viewModel()
         vm.onAction(CalendarAction.Shown)
-        assertEquals(listOf(LocalDate.of(2026, 10, 1) to LocalDate.of(2026, 10, 31)), events.refreshRanges)
+        // 앞뒤 하루 여유 (Q-19 ②)
+        assertEquals(listOf(LocalDate.of(2026, 9, 30) to LocalDate.of(2026, 11, 1)), events.refreshRanges)
+        assertEquals(listOf(LocalDate.of(2026, 9, 30) to LocalDate.of(2026, 11, 1)), anniversaries.refreshRanges)
     }
 
     @Test
@@ -220,12 +241,30 @@ class CalendarViewModelTest {
         vm.onAction(CalendarAction.NextMonth)
         assertEquals(
             listOf(
-                LocalDate.of(2026, 10, 1) to LocalDate.of(2026, 10, 31),
-                LocalDate.of(2026, 11, 1) to LocalDate.of(2026, 11, 30),
+                LocalDate.of(2026, 9, 30) to LocalDate.of(2026, 11, 1),
+                LocalDate.of(2026, 10, 31) to LocalDate.of(2026, 12, 1),
             ),
             events.refreshRanges,
         )
+        assertEquals(events.refreshRanges, anniversaries.refreshRanges)
         assertEquals(YearMonth.of(2026, 11), vm.uiState.value.visibleMonth)
+    }
+
+    @Test
+    fun `달을 빨리 넘기면 이전 달 새로고침을 취소하고 보이는 달을 기억한다`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        anniversaries.refreshGate = gate // 새로고침이 끝나지 않은 채로 달을 넘긴다
+        val vm = viewModel()
+        val october = LocalDate.of(2026, 9, 30) to LocalDate.of(2026, 11, 1)
+        val november = LocalDate.of(2026, 10, 31) to LocalDate.of(2026, 12, 1)
+
+        vm.onAction(CalendarAction.Shown)
+        vm.onAction(CalendarAction.NextMonth)
+
+        assertEquals(listOf(october), anniversaries.cancelledRanges)
+        assertEquals(listOf(october, november), anniversaries.visibleRanges)
+        assertEquals(listOf(october, november), anniversaries.refreshRanges)
+        gate.complete(Unit)
     }
 
     @Test
@@ -253,6 +292,175 @@ class CalendarViewModelTest {
         assertTrue(vm.uiState.value.expanded)
         vm.onAction(CalendarAction.ToggleExpanded)
         assertFalse(vm.uiState.value.expanded)
+    }
+
+    // --- 단위 5 묶음 B: 기념일 표시 ---
+
+    @Test
+    fun `FR-CAL-01 AC2 날짜 목록은 기념일 종일 시간 순이다`() = runTest {
+        val day = LocalDate.of(2026, 10, 14)
+        anniversaries.occurrences.value = listOf(
+            customAnniversary("내 기념일", day),
+            autoAnniversary("100일", day),
+        )
+        events.events.value = listOf(
+            sampleEvent(id = "late", time = timed("2026-10-14T11:00:00Z", "2026-10-14T12:00:00Z")),
+            sampleEvent(id = "early", time = timed("2026-10-14T01:00:00Z", "2026-10-14T02:00:00Z")),
+            sampleEvent(id = "all-b", time = allDay(day)),
+            // 10-13 오후 6시(서울)에 시작해 14일로 이어지는 일정: 14일 목록에는 18:00으로 보이므로 early·late 사이에 온다
+            sampleEvent(id = "trip", time = timed("2026-10-13T09:00:00Z", "2026-10-14T12:00:00Z")),
+            sampleEvent(id = "all-a", time = allDay(LocalDate.of(2026, 10, 13), day)),
+        )
+        val vm = viewModel()
+        vm.onAction(CalendarAction.DateSelected(day))
+        val keys = vm.uiState.value.selectedItems.map {
+            when (it) {
+                is CalendarListItem.Anniversary -> "기념일:${it.value.name}"
+                is CalendarListItem.Event -> it.value.id
+            }
+        }
+        // 기념일은 저장소 순서 그대로(앱이 다시 정렬하지 않는다), 종일은 시작 날짜순, 시간은 보이는 시각순
+        assertEquals(listOf("기념일:내 기념일", "기념일:100일", "all-a", "all-b", "early", "trip", "late"), keys)
+    }
+
+    @Test
+    fun `FR-CAL-01 AC2 자동 기념일 카드는 그날의 D+N이다`() = runTest {
+        // 처음 만난 날 2026-04-07: 2026-10-23은 199일 뒤라 D+200 (D-117, 오늘 기준이 아니다)
+        me.me.value = coupleMe(startDate = LocalDate.of(2026, 4, 7))
+        anniversaries.occurrences.value = listOf(
+            autoAnniversary("200일", LocalDate.of(2026, 10, 23)),
+            customAnniversary("처음 손잡은 날", LocalDate.of(2026, 10, 23), authorId = PartnerId),
+        )
+        val vm = viewModel()
+        vm.onAction(CalendarAction.DateSelected(LocalDate.of(2026, 10, 23)))
+        val (auto, custom) = vm.uiState.value.selectedAnniversaries
+        assertTrue(auto.isAuto)
+        assertEquals(200L, auto.dayNumber)
+        assertNull(auto.author)
+        assertFalse(custom.isAuto)
+        assertNull(custom.dayNumber)
+        assertEquals(EventTarget.PARTNER, custom.author)
+    }
+
+    @Test
+    fun `FR-CAL-01 AC2 직접 기념일은 내가 만들었으면 나 상대가 만들었으면 상대 색이다`() = runTest {
+        val day = LocalDate.of(2026, 10, 20)
+        anniversaries.occurrences.value = listOf(
+            customAnniversary("내 것", day, authorId = MyId),
+            customAnniversary("상대 것", day, authorId = PartnerId),
+        )
+        val vm = viewModel()
+        vm.onAction(CalendarAction.DateSelected(day))
+        assertEquals(listOf(EventTarget.ME, EventTarget.PARTNER), vm.uiState.value.selectedAnniversaries.map { it.author })
+    }
+
+    @Test
+    fun `FR-CAL-01 AC2 앞뒤 하루 여유로 받은 이웃 달 기념일은 달력에 넣지 않는다`() = runTest {
+        anniversaries.occurrences.value = listOf(
+            customAnniversary("전달 말일", LocalDate.of(2026, 9, 30)),
+            customAnniversary("이번 달", LocalDate.of(2026, 10, 1)),
+            customAnniversary("다음 달 1일", LocalDate.of(2026, 11, 1)),
+        )
+        val byDay = viewModel().uiState.value.anniversariesByDay
+        assertEquals(listOf(LocalDate.of(2026, 10, 1)), byDay.keys.toList())
+    }
+
+    @Test
+    fun `FR-CAL-01 AC2 기념일 카드를 누르면 기념일 화면을 연다`() = runTest {
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(CalendarAction.AnniversariesClicked)
+            assertEquals(CalendarSideEffect.OpenAnniversaries, awaitItem())
+        }
+    }
+
+    @Test
+    fun `FR-ANNIV-01 AC3 앱바 D+N은 최소 D+1이다`() = runTest {
+        // 시간대가 달라 처음 만난 날이 오늘보다 하루 뒤로 계산되는 경우: 계산값 0이 아니라 1
+        me.me.value = coupleMe(startDate = today.plusDays(1))
+        val header = viewModel().uiState.value.header as CalendarHeader.Couple
+        assertEquals(1L, header.dayNumber)
+    }
+
+    @Test
+    fun `FR-ANNIV-02 AC3 처음 만난 날 저장 뒤 기념일을 다시 불러온다`() = runTest {
+        me.me.value = coupleMe(startDate = null)
+        val vm = viewModel()
+        vm.onAction(CalendarAction.StartDatePromptClicked)
+        vm.onAction(CalendarAction.StartDateSelected(LocalDate.of(2026, 4, 7)))
+        assertTrue(anniversaries.refreshRanges.isEmpty())
+        vm.onAction(CalendarAction.StartDateSaved)
+        assertEquals(listOf(LocalDate.of(2026, 9, 30) to LocalDate.of(2026, 11, 1)), anniversaries.refreshRanges)
+    }
+
+    @Test
+    fun `FR-ANNIV-02 AC3 처음 만난 날 저장이 실패하면 기념일을 다시 불러오지 않는다`() = runTest {
+        me.me.value = coupleMe(startDate = null)
+        couple.startDateResult = Offline
+        val vm = viewModel()
+        vm.onAction(CalendarAction.StartDatePromptClicked)
+        vm.onAction(CalendarAction.StartDateSelected(LocalDate.of(2026, 4, 7)))
+        vm.onAction(CalendarAction.StartDateSaved)
+        assertTrue(anniversaries.refreshRanges.isEmpty())
+    }
+
+    @Test
+    fun `NFR-SYNC-02 당겨서 새로고침하면 보이는 달을 다시 불러온다`() = runTest {
+        val vm = viewModel()
+        vm.onAction(CalendarAction.Refresh)
+        val range = LocalDate.of(2026, 9, 30) to LocalDate.of(2026, 11, 1)
+        assertEquals(listOf(range), events.refreshRanges)
+        assertEquals(listOf(range), anniversaries.refreshRanges)
+        assertFalse(vm.uiState.value.refreshing)
+    }
+
+    @Test
+    fun `Q-16 당겨서 새로고침하는 동안에만 refreshing이 true다`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        anniversaries.refreshGate = gate
+        val vm = viewModel()
+        vm.onAction(CalendarAction.Refresh)
+        assertTrue(vm.uiState.value.refreshing)
+        // 요청 중에 또 당겨도 다시 요청하지 않는다
+        vm.onAction(CalendarAction.Refresh)
+        assertEquals(1, anniversaries.refreshRanges.size)
+        gate.complete(Unit)
+        assertFalse(vm.uiState.value.refreshing)
+    }
+
+    @Test
+    fun `Q-16 화면에 들어올 때와 달을 넘길 때의 다시 불러오기는 새로고침 표시를 켜지 않는다`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        anniversaries.refreshGate = gate
+        val vm = viewModel()
+        vm.onAction(CalendarAction.Shown)
+        vm.onAction(CalendarAction.NextMonth)
+        assertFalse(vm.uiState.value.refreshing)
+        gate.complete(Unit)
+    }
+
+    @Test
+    fun `Q-16 오프라인이어도 당겨서 새로고침은 안내 없이 끝난다`() = runTest {
+        events.refreshRangeResult = Offline
+        anniversaries.refreshRangeResult = Offline
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(CalendarAction.Refresh)
+            expectNoEvents()
+        }
+        assertFalse(vm.uiState.value.refreshing)
+    }
+
+    @Test
+    fun `Q-19 월 조회는 앞뒤 하루를 더해 요청한다`() = runTest {
+        val vm = viewModel()
+        vm.onAction(CalendarAction.Shown)
+        // 10월: 9월 30일 ~ 11월 1일, 일정(GET events)과 기념일(GET anniversaries) 모두
+        assertEquals(listOf(LocalDate.of(2026, 9, 30) to LocalDate.of(2026, 11, 1)), events.refreshRanges)
+        assertEquals(events.refreshRanges, anniversaries.refreshRanges)
+        // 3개월 상한 안이다
+        val (from, to) = events.refreshRanges.single()
+        assertTrue(java.time.Period.between(from, to).toTotalMonths() < 3)
     }
 
     private fun timed(start: String, end: String) =

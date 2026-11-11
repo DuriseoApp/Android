@@ -41,6 +41,8 @@ data class EventEditUiState(
     val endError: Boolean = false,
     val saveEnabled: Boolean = false,
     val saving: Boolean = false,
+    /** 저장 요청(일정과 알림 설정)이 도는 동안 true. 로딩 덮개를 그린다 (D-115). 성공하면 닫기 전에 false가 된다 */
+    val loading: Boolean = false,
     val sheet: EditSheet? = null,
     val today: LocalDate = LocalDate.of(2026, 1, 1),
 ) {

@@ -158,7 +158,8 @@ class EventEditViewModel @Inject constructor(
             }
             EventEditAction.ReminderRowClicked -> _uiState.update { it.copy(sheet = EditSheet.Reminder) }
             is EventEditAction.ReminderSelected -> _uiState.update {
-                it.copy(reminder = action.option.takeIf { option -> option == null || option.forAllDay == it.isAllDay }, sheet = null)
+                // 칩을 눌러도 시트는 열려 있고 [완료]가 닫는다 (그림 `SCR-CAL-03--reminder-sheet.png`)
+                it.copy(reminder = action.option.takeIf { option -> option == null || option.forAllDay == it.isAllDay })
             }
 
             EventEditAction.DatePreviousMonth -> moveSheetMonth(forward = false)
@@ -246,7 +247,7 @@ class EventEditViewModel @Inject constructor(
     private fun save() {
         val s = _uiState.value
         if (!s.saveEnabled) return
-        _uiState.update { it.copy(saving = true) }
+        _uiState.update { it.copy(saving = true, loading = true) }
         viewModelScope.launch {
             val before = original
             if (before == null) create(s) else edit(s, before)
@@ -267,12 +268,12 @@ class EventEditViewModel @Inject constructor(
         when (result) {
             is DataResult.Failure -> fail(result)
             is DataResult.Success -> {
-                if (s.reminder != null) {
-                    val reminderResult = eventRepository.setReminder(result.value.id, s.reminder)
-                    if (reminderResult is DataResult.Failure) {
-                        // 일정은 이미 저장됐다. 남기고 공통 오류 안내만 한 뒤 닫는다 (D-108)
-                        effectChannel.trySend(EventEditSideEffect.ShowMessage(reminderResult.error.toMessageRes()))
-                    }
+                val reminderResult = s.reminder?.let { eventRepository.setReminder(result.value.id, it) }
+                // 덮개를 먼저 걷고 안내한다 (D-115)
+                finishLoading()
+                if (reminderResult is DataResult.Failure) {
+                    // 일정은 이미 저장됐다. 남기고 공통 오류 안내만 한 뒤 닫는다 (D-108)
+                    effectChannel.trySend(EventEditSideEffect.ShowMessage(reminderResult.error.toMessageRes()))
                 }
                 effectChannel.trySend(EventEditSideEffect.Close)
             }
@@ -300,23 +301,34 @@ class EventEditViewModel @Inject constructor(
         }
         // 종일을 바꿔 저장하면 서버가 알림을 없음으로 돌린다 (FR-CAL-05 AC4, D-91)
         val serverReminder = if (time.isAllDay != before.isAllDay) null else before.reminder?.option
-        if (s.reminder != serverReminder) {
-            val reminderResult = eventRepository.setReminder(before.id, s.reminder)
-            if (reminderResult is DataResult.Failure) {
-                effectChannel.trySend(EventEditSideEffect.ShowMessage(reminderResult.error.toMessageRes()))
-            }
+        val reminderResult = if (s.reminder != serverReminder) eventRepository.setReminder(before.id, s.reminder) else null
+        // 덮개를 먼저 걷고 안내한다 (D-115)
+        finishLoading()
+        if (reminderResult is DataResult.Failure) {
+            effectChannel.trySend(EventEditSideEffect.ShowMessage(reminderResult.error.toMessageRes()))
         }
         effectChannel.trySend(EventEditSideEffect.Close)
     }
 
     /**
-     * 저장 실패 (D-111): 어떤 코드든 공통 오류 안내. 일정이 없다고 하면(404) 저장소가 Room에서 지웠으므로 화면을 닫고,
-     * 권한이 없다고 하면(403 NOT_AUTHOR) 저장소가 그 일정을 다시 불러온다. 문구는 모두 공통 오류다 (새 문구 없음)
+     * 요청이 끝났다: 로딩 덮개를 걷는다 (D-115). 결과 안내와 닫기는 그 뒤에 보낸다.
+     * `saving`은 화면이 닫힐 때까지 켜 두어 닫히는 동안 입력과 [저장]을 막는다.
+     */
+    private fun finishLoading() {
+        _uiState.update { it.copy(loading = false) }
+    }
+
+    /**
+     * 저장 실패 (D-111, D-121): 어떤 코드든 공통 오류 안내. 일정이 없다고 하면(404) 저장소가 Room에서 지웠으므로 화면을 닫고,
+     * 권한이 없다고 하면(403 NOT_AUTHOR) 저장소가 그 일정을 `GET /events/{id}`로 다시 불러오고 이 수정 화면을 닫아 상세로
+     * 돌아간다. 문구는 모두 공통 오류다 (새 문구 없음)
      */
     private fun fail(result: DataResult.Failure) {
-        _uiState.update { it.copy(saving = false) }
+        _uiState.update { it.copy(saving = false, loading = false) }
         effectChannel.trySend(EventEditSideEffect.ShowMessage(result.error.toMessageRes()))
-        if (result.error.hasCode(ErrorCode.NOT_FOUND)) effectChannel.trySend(EventEditSideEffect.Close)
+        if (result.error.hasCode(ErrorCode.NOT_FOUND) || result.error.hasCode(ErrorCode.NOT_AUTHOR)) {
+            effectChannel.trySend(EventEditSideEffect.Close)
+        }
     }
 }
 

@@ -13,18 +13,25 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -36,6 +43,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalContext
@@ -62,6 +72,7 @@ import com.duriseo.android.core.designsystem.component.DuriseoAvatarSize
 import com.duriseo.android.core.designsystem.component.DuriseoBottomSheetLayer
 import com.duriseo.android.core.designsystem.component.DuriseoDialogLayer
 import com.duriseo.android.core.designsystem.component.StartDatePickerSheet
+import com.duriseo.android.core.designsystem.theme.Brand50
 import com.duriseo.android.core.designsystem.theme.Brand500
 import com.duriseo.android.core.designsystem.theme.Brand700
 import com.duriseo.android.core.designsystem.theme.Danger600
@@ -94,8 +105,8 @@ import java.time.YearMonth
 
 // SCR-CAL-01 캘린더 홈 (FR-CAL-01, FR-COUPLE-04 AC2). 수치는 보드 `Calendar.dc.html`, `CalendarExpanded.dc.html`.
 // 토큰에 없는 수치는 이름 붙인 상수로 두고 보드 행을 적는다. 하단 탭(80)과 FAB(오른쪽 20, 탭 위 20)는 SCREENS.md 공통 표.
-// 알림 버튼·개인 공간 "기념일 ›" 링크·"함께한 지 D+N ›"의 화살표는 가는 화면이 단위 5·7에 있어 그리지 않는다
-// (PRD v0.10 반영 대기, unit-4.md 확인 필요 4). 기념일·메모 카드는 단위 5·6.
+// 알림 버튼은 가는 화면이 단위 7에 있어 그리지 않는다. 메모 카드·메모 점은 단위 6.
+// 기념일(단위 5): 앱바 "함께한 지 D+N ›"·"기념일 ›" → SCR-ANNIV-01, 기념일 카드, 달력의 `brand-500` 고리·막대 (D-65·D-118·D-119).
 
 /** 앱바 높이는 `DuriseoSize.Appbar`(64). 좌 20·우 8 (14행) */
 private val AppBarStart = DuriseoSpacing.Space5
@@ -118,17 +129,23 @@ private val ExpandedCellHeight = 88.dp
 private val CollapsedDaySize = 34.dp
 private val ExpandedDaySize = 26.dp
 
-/** 사람 색 점 지름 5, 점 사이 3, 점 줄 높이 6 (소스 `dots`). 최대 3개 */
+/** 사람 색 점 지름 5, 점 사이 3, 점 줄 높이 6 (소스 `dots`). 고리를 포함해 최대 3개 (`MAX_DAY_MARKS`) */
 private val DotSize = 5.dp
 private val DotGap = 3.dp
 private val DotRowHeight = 6.dp
+
+/** 기념일 고리: 지름 6, 선 1.5, `brand-500` (소스 `ringStyle`, design-system.md "날짜 칸 점 규칙") */
+private val RingSize = 6.dp
+private val RingStroke = 1.5.dp
+
+/** 기념일 막대의 `brand-500` 테두리 1 (소스 `annBarStyle`의 `inset 0 0 0 1px`) */
+private val AnnBarBorder = 1.dp
 
 /** 펼친 칸의 일정 막대: 높이 16, 모서리 4, 글자 10/600, 막대 사이 2, 칸에 최대 2개 + "+N" (소스 `barStyle`) */
 private val BarHeight = 16.dp
 private val BarRadius = 4.dp
 private val BarGap = 2.dp
 private const val MAX_BARS = 2
-private const val MAX_DOTS = 3
 private val BarFontSize = 10.sp
 private val BarLineHeight = 16.sp
 private val MoreLineHeight = 12.sp
@@ -192,6 +209,7 @@ fun CalendarRoute(
     onOpenMenu: () -> Unit,
     onOpenEvent: (String) -> Unit,
     onOpenCreate: (LocalDate) -> Unit,
+    onOpenAnniversaries: () -> Unit,
     onShowSnackBar: (Int) -> Unit,
     modifier: Modifier = Modifier,
     snackbarVisible: Boolean = false,
@@ -213,6 +231,7 @@ fun CalendarRoute(
             when (effect) {
                 is CalendarSideEffect.OpenEvent -> onOpenEvent(effect.id)
                 is CalendarSideEffect.OpenCreate -> onOpenCreate(effect.date)
+                CalendarSideEffect.OpenAnniversaries -> onOpenAnniversaries()
                 is CalendarSideEffect.ShowMessage -> onShowSnackBar(effect.messageRes)
             }
         }
@@ -262,12 +281,14 @@ fun CalendarScreen(
             }
         },
         modifier = modifier,
+        loading = state.loading,
     ) {
         Box(modifier = Modifier.fillMaxSize().padding(padding).background(Surface0)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 CalendarAppBar(
                     header = state.header,
                     onOpenMenu = onOpenMenu,
+                    onAnniversariesClick = { onAction(CalendarAction.AnniversariesClicked) },
                     onStartDatePromptClick = { onAction(CalendarAction.StartDatePromptClicked) },
                 )
                 MonthRow(state = state, onAction = onAction)
@@ -289,6 +310,7 @@ fun CalendarScreen(
 private fun CalendarAppBar(
     header: CalendarHeader,
     onOpenMenu: () -> Unit,
+    onAnniversariesClick: () -> Unit,
     onStartDatePromptClick: () -> Unit,
 ) {
     Row(
@@ -307,11 +329,13 @@ private fun CalendarAppBar(
                 CalendarHeader.Loading -> Unit
                 is CalendarHeader.Solo -> {
                     RingedAvatar(label = stringResource(R.string.calendar_avatar_me), colorKey = header.myColorKey)
-                    Text(
-                        text = stringResource(R.string.calendar_title_solo),
-                        modifier = Modifier.semantics { heading() },
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                        color = Ink900,
+                    // 개인 공간: "나의 캘린더" + "기념일 ›" → SCR-ANNIV-01 (FR-CAL-01 AC5, D-54)
+                    val description = stringResource(R.string.calendar_solo_title_description)
+                    AppBarLink(
+                        title = stringResource(R.string.calendar_title_solo),
+                        link = stringResource(R.string.calendar_anniversary_link),
+                        description = description,
+                        onClick = onAnniversariesClick,
                     )
                 }
 
@@ -320,7 +344,11 @@ private fun CalendarAppBar(
                         RingedAvatar(label = stringResource(R.string.calendar_avatar_me), colorKey = header.myColorKey)
                         RingedAvatar(label = stringResource(R.string.calendar_avatar_partner), colorKey = header.partnerColorKey)
                     }
-                    CoupleTitle(dayNumber = header.dayNumber, onStartDatePromptClick = onStartDatePromptClick)
+                    CoupleTitle(
+                        dayNumber = header.dayNumber,
+                        onAnniversariesClick = onAnniversariesClick,
+                        onStartDatePromptClick = onStartDatePromptClick,
+                    )
                 }
             }
         }
@@ -343,7 +371,17 @@ private fun RingedAvatar(label: String, colorKey: String) {
 }
 
 @Composable
-private fun CoupleTitle(dayNumber: Long?, onStartDatePromptClick: () -> Unit) {
+private fun CoupleTitle(dayNumber: Long?, onAnniversariesClick: () -> Unit, onStartDatePromptClick: () -> Unit) {
+    if (dayNumber != null) {
+        // 처음 만난 날이 있으면 "함께한 지 D+N ›" → SCR-ANNIV-01. N은 최소 1이다 (D-116)
+        AppBarLink(
+            title = stringResource(R.string.calendar_title_couple),
+            link = stringResource(R.string.calendar_dday, dayNumber),
+            description = stringResource(R.string.calendar_dday_description, dayNumber),
+            onClick = onAnniversariesClick,
+        )
+        return
+    }
     Column {
         Text(
             text = stringResource(R.string.calendar_title_couple),
@@ -351,36 +389,70 @@ private fun CoupleTitle(dayNumber: Long?, onStartDatePromptClick: () -> Unit) {
             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
             color = Ink900,
         )
-        if (dayNumber != null) {
-            // 처음 만난 날이 있으면 "함께한 지 D+N". 기념일 목록(단위 5)으로 가는 화살표는 그때 더한다
+        // 커플 + 처음 만난 날 없음: "처음 만난 날 입력하기 ›" → 시트 (FR-COUPLE-04 AC2)
+        Row(
+            modifier = Modifier
+                .height(DuriseoSize.Touch)
+                .clickable(role = Role.Button, onClick = onStartDatePromptClick),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
-                text = stringResource(R.string.calendar_dday, dayNumber),
+                text = stringResource(R.string.calendar_start_date_prompt),
                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = Brand700,
             )
-        } else {
-            // 커플 + 처음 만난 날 없음: "처음 만난 날 입력하기 ›" → 시트 (FR-COUPLE-04 AC2)
-            Row(
-                modifier = Modifier
-                    .height(DuriseoSize.Touch)
-                    .clickable(role = Role.Button, onClick = onStartDatePromptClick),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.calendar_start_date_prompt),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = Brand700,
-                )
-                Icon(
-                    painter = painterResource(DesignR.drawable.ic_chevron_right),
-                    contentDescription = null,
-                    modifier = Modifier.size(PromptChevron),
-                    tint = Brand700,
-                )
-            }
+            Icon(
+                painter = painterResource(DesignR.drawable.ic_chevron_right),
+                contentDescription = null,
+                modifier = Modifier.size(PromptChevron),
+                tint = Brand700,
+            )
         }
     }
 }
+
+/**
+ * 앱바의 제목 + 링크 줄 "[link] ›". 두 줄 전체가 하나의 버튼이고 SCR-ANNIV-01로 간다 (보드 `<a>`가 두 줄을 감싼다, 28·37행).
+ * 높이는 터치 영역 44 이상으로 둔다.
+ */
+@Composable
+private fun AppBarLink(title: String, link: String, description: String, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .heightIn(min = DuriseoSize.Touch)
+            .clickable(role = Role.Button, onClick = onClick)
+            .semantics(mergeDescendants = true) {
+                contentDescription = description
+                heading()
+            },
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+            color = Ink900,
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(LinkGap),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = link,
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = Brand700,
+            )
+            Icon(
+                painter = painterResource(DesignR.drawable.ic_chevron_right),
+                contentDescription = null,
+                modifier = Modifier.size(PromptChevron),
+                tint = Brand700,
+            )
+        }
+    }
+}
+
+/** 링크 글자와 "›" 사이 2 (`Calendar.dc.html` 28행 `gap: 2px`) */
+private val LinkGap = 2.dp
 
 /** "›" 아이콘 14, 글자와 사이 2 (`Calendar.dc.html` 28행) */
 private val PromptChevron = 14.dp
@@ -533,6 +605,7 @@ private fun DayCell(
 ) {
     val expanded = state.expanded
     val events = if (inMonth) state.eventsByDay[date].orEmpty() else emptyList()
+    val anniversaries = if (inMonth) state.anniversariesByDay[date].orEmpty() else emptyList()
     val selected = inMonth && date == state.selectedDate
     val isToday = inMonth && date == state.today
     val circle = if (expanded) ExpandedDaySize else CollapsedDaySize
@@ -544,13 +617,18 @@ private fun DayCell(
         EventTarget.PARTNER to EventTarget.PARTNER.label(),
         EventTarget.TOGETHER to EventTarget.TOGETHER.label(),
     )
-    val label = if (events.isEmpty()) {
-        description
-    } else {
-        val summary = events.joinToString(", ") {
-            resources.getString(R.string.calendar_day_event_summary, targetLabels.getValue(it.target), it.title)
+    // "10월 12일, 기념일 200일, 일정·메모 2개: 상대 치과 예약, 함께 저녁 데이트" (보드 318행)
+    val label = buildString {
+        append(description)
+        if (anniversaries.isNotEmpty()) {
+            append(resources.getString(R.string.calendar_day_anniversary_part, anniversaries.joinToString(", ") { it.name }))
         }
-        stringResource(R.string.calendar_day_description_with_events, description, events.size, summary)
+        if (events.isNotEmpty()) {
+            val summary = events.joinToString(", ") {
+                resources.getString(R.string.calendar_day_event_summary, targetLabels.getValue(it.target), it.title)
+            }
+            append(resources.getString(R.string.calendar_day_events_part, events.size, summary))
+        }
     }
     Column(
         modifier = modifier
@@ -590,8 +668,12 @@ private fun DayCell(
                 color = numberColor,
             )
         }
-        if (inMonth && events.isNotEmpty()) {
-            if (expanded) EventBars(events) else EventDots(events)
+        if (inMonth && (events.isNotEmpty() || anniversaries.isNotEmpty())) {
+            if (expanded) {
+                DayBars(anniversaries, events)
+            } else {
+                DayMarks(calendarDayMarks(hasAnniversary = anniversaries.isNotEmpty(), events = events))
+            }
         }
     }
 }
@@ -607,43 +689,69 @@ private val DayNumberLineHeight = 20.sp
 /** 일정 카드 메모 행간 19.5 (보드 값) */
 private val NoteLineHeight = 19.5.sp
 
+/** 접힌 칸의 표시: 기념일 고리 하나 + 사람 색 점, 합쳐서 최대 3개 (D-65·D-118). 규칙은 [calendarDayMarks] */
 @Composable
-private fun EventDots(events: List<CalendarEvent>) {
+private fun DayMarks(marks: CalendarDayMarks) {
     Row(
         modifier = Modifier.height(DotRowHeight).clearAndSetSemantics { },
         horizontalArrangement = Arrangement.spacedBy(DotGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        events.take(MAX_DOTS).forEach { event ->
-            Box(Modifier.size(DotSize).background(event.target.color(), CircleShape))
+        if (marks.hasAnniversary) {
+            Box(Modifier.size(RingSize).border(RingStroke, Brand500, CircleShape))
+        }
+        marks.dots.forEach { target ->
+            Box(Modifier.size(DotSize).background(target.color(), CircleShape))
         }
     }
 }
 
+/**
+ * 펼친 칸의 막대: 기념일 막대(`brand-50` 면 + `brand-500` 테두리) 먼저, 그다음 일정. 최대 2개 + "+N" (소스 `bars`·`hasMore`).
+ * 막대 안 글자는 기념일이 `brand-700` 700, 일정은 사람 색 위 글자 (`annBarStyle`·`barStyle`)
+ */
 @Composable
-private fun EventBars(events: List<CalendarEvent>) {
+private fun DayBars(anniversaries: List<CalendarAnniversary>, events: List<CalendarEvent>) {
+    val total = anniversaries.size + events.size
     Column(
         modifier = Modifier.fillMaxWidth().clearAndSetSemantics { },
         verticalArrangement = Arrangement.spacedBy(BarGap),
     ) {
-        events.take(MAX_BARS).forEach { event ->
+        val shape = RoundedCornerShape(BarRadius)
+        val barStyle = MaterialTheme.typography.labelSmall.copy(fontSize = BarFontSize, lineHeight = BarLineHeight)
+        anniversaries.take(MAX_BARS).forEach { anniversary ->
+            Text(
+                text = anniversary.name,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(BarHeight)
+                    .background(Brand50, shape)
+                    .border(AnnBarBorder, Brand500, shape)
+                    .padding(horizontal = BarPadding),
+                style = barStyle.copy(fontWeight = FontWeight.Bold),
+                color = Brand700,
+                maxLines = 1,
+                overflow = TextOverflow.Clip,
+            )
+        }
+        events.take(MAX_BARS - minOf(anniversaries.size, MAX_BARS)).forEach { event ->
             val color = event.target.color()
             Text(
                 text = event.title,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(BarHeight)
-                    .background(color, RoundedCornerShape(BarRadius))
+                    .background(color, shape)
                     .padding(horizontal = BarPadding),
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = BarFontSize, lineHeight = BarLineHeight),
+                style = barStyle,
                 color = onPersonColor(color),
                 maxLines = 1,
                 overflow = TextOverflow.Clip,
             )
         }
-        if (events.size > MAX_BARS) {
+        if (total > MAX_BARS) {
             Text(
-                text = stringResource(R.string.calendar_bar_more, events.size - MAX_BARS),
+                text = stringResource(R.string.calendar_bar_more, total - MAX_BARS),
                 modifier = Modifier.padding(horizontal = BarPadding),
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = BarFontSize, lineHeight = MoreLineHeight),
                 color = Ink600,
@@ -657,8 +765,62 @@ private val BarPadding = 3.dp
 
 // --- 선택한 날 ---
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DaySection(
+    state: CalendarUiState,
+    onAction: (CalendarAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val pullState = rememberPullToRefreshState()
+    // 당겨서 새로고침 (Q-16): 날짜 목록을 당기면 목록 영역 위에서 64에 원판이 뜬다 (design-system.md "당겨서 새로고침")
+    PullToRefreshBox(
+        isRefreshing = state.refreshing,
+        onRefresh = { onAction(CalendarAction.Refresh) },
+        modifier = modifier.fillMaxWidth(),
+        state = pullState,
+        indicator = {
+            RefreshIndicator(
+                refreshing = state.refreshing,
+                fraction = pullState.distanceFraction,
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
+        },
+    ) {
+        DayContent(state = state, onAction = onAction)
+    }
+}
+
+/** 당겨서 새로고침 표시: 원판 지름 44(`size-touch`, `surface-0`, `shadow-sm`) + 원형 표시 24(`size-icon`) / 선 2 (보드 131행) */
+private val RefreshTop = 64.dp
+private val RefreshStroke = 2.dp
+
+@Composable
+private fun RefreshIndicator(refreshing: Boolean, fraction: Float, modifier: Modifier = Modifier) {
+    if (!refreshing && fraction <= 0f) return
+    // 당기는 동안의 모양은 보드에 없어서, 끄는 만큼 나타나게만 한다 (새로고침 중에는 보드 그대로)
+    val alpha = if (refreshing) 1f else fraction.coerceIn(0f, 1f)
+    Box(
+        modifier = modifier
+            .padding(top = RefreshTop)
+            .graphicsLayer { this.alpha = alpha }
+            .size(DuriseoSize.Touch)
+            .duriseoShadow(CircleShape, DuriseoShadows.Sm)
+            .background(Surface0, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(DuriseoSize.Icon),
+            color = Brand500,
+            strokeWidth = RefreshStroke,
+            trackColor = Line100,
+            strokeCap = StrokeCap.Round,
+        )
+    }
+}
+
+@Composable
+private fun DayContent(
     state: CalendarUiState,
     onAction: (CalendarAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -666,7 +828,7 @@ private fun DaySection(
     val toggleLabel = stringResource(if (state.expanded) R.string.calendar_collapse else R.string.calendar_expand)
     val dragged = remember { mutableFloatStateOf(0f) }
     val thresholdPx = with(androidx.compose.ui.platform.LocalDensity.current) { DRAG_THRESHOLD.dp.toPx() }
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxSize()) {
         HorizontalDivider(color = Line100)
         Box(
             modifier = Modifier
@@ -689,7 +851,7 @@ private fun DaySection(
         ) {
             Box(Modifier.size(width = HandleWidth, height = HandleHeight).background(Line300, RoundedCornerShape(HandleHeight / 2)))
         }
-        val events = state.selectedEvents
+        val listItems = state.selectedItems
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -723,15 +885,15 @@ private fun DaySection(
                     )
                 }
             }
-            if (events.isNotEmpty()) {
+            if (listItems.isNotEmpty()) {
                 Text(
-                    text = stringResource(R.string.calendar_count, events.size),
+                    text = stringResource(R.string.calendar_count, listItems.size),
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Normal),
                     color = Ink500,
                 )
             }
         }
-        if (events.isEmpty()) {
+        if (listItems.isEmpty()) {
             EmptyDay(onAddClick = { onAction(CalendarAction.AddClicked) })
         } else {
             LazyColumn(
@@ -743,11 +905,25 @@ private fun DaySection(
                 ),
                 verticalArrangement = Arrangement.spacedBy(if (state.expanded) CardRowGap else DuriseoSpacing.Space2),
             ) {
-                items(events, key = { it.id }) { event ->
-                    if (state.expanded) {
-                        EventRow(event = event, onClick = { onAction(CalendarAction.EventClicked(event.id)) })
-                    } else {
-                        EventCard(event = event, onClick = { onAction(CalendarAction.EventClicked(event.id)) })
+                items(listItems, key = { it.key }) { item ->
+                    when (item) {
+                        is CalendarListItem.Anniversary -> {
+                            val onClick = { onAction(CalendarAction.AnniversariesClicked) }
+                            if (state.expanded) {
+                                AnniversaryRow(anniversary = item.value, onClick = onClick)
+                            } else {
+                                AnniversaryCard(anniversary = item.value, onClick = onClick)
+                            }
+                        }
+
+                        is CalendarListItem.Event -> {
+                            val event = item.value
+                            if (state.expanded) {
+                                EventRow(event = event, onClick = { onAction(CalendarAction.EventClicked(event.id)) })
+                            } else {
+                                EventCard(event = event, onClick = { onAction(CalendarAction.EventClicked(event.id)) })
+                            }
+                        }
                     }
                 }
             }
@@ -755,13 +931,21 @@ private fun DaySection(
     }
 }
 
+/** 목록 키: 기념일은 그날 안의 위치, 일정은 id */
+private val CalendarListItem.key: String
+    get() = when (this) {
+        is CalendarListItem.Anniversary -> "anniversary-$index"
+        is CalendarListItem.Event -> "event-${value.id}"
+    }
+
 /** 펼친 행 사이 6 (소스 `ul` gap) */
 private val CardRowGap = 6.dp
 
 @Composable
 private fun EmptyDay(onAddClick: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = DuriseoSpacing.Space4),
+        // 비어 있어도 당겨서 새로고침이 되도록 스크롤 영역으로 둔다 (Q-16)
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = DuriseoSpacing.Space4),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space1),
     ) {
@@ -828,7 +1012,11 @@ private fun EventCard(event: CalendarEvent, onClick: () -> Unit) {
 }
 
 @Composable
-private fun TargetTag(target: EventTarget) {
+private fun TargetTag(target: EventTarget) = PillTag(text = target.label(), dotColor = target.color())
+
+/** 사람 태그 알약. [dotColor]가 null이면 점 없이 글만 (자동 기념일의 "D+N") */
+@Composable
+private fun PillTag(text: String, dotColor: Color?) {
     Row(
         modifier = Modifier
             .background(Surface0, CircleShape)
@@ -837,12 +1025,70 @@ private fun TargetTag(target: EventTarget) {
         horizontalArrangement = Arrangement.spacedBy(TagGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(TagDot).background(target.color(), CircleShape))
+        if (dotColor != null) Box(Modifier.size(TagDot).background(dotColor, CircleShape))
         Text(
-            text = target.label(),
+            text = text,
             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
             color = Ink900,
         )
+    }
+}
+
+/** 기념일 카드의 보조 줄: "자동 기념일", "내가 만든 기념일 · 매년" (SCR-CAL-01--anniversary.png, 보드 `sub`) */
+@Composable
+private fun CalendarAnniversary.subText(): String {
+    if (isAuto) return stringResource(R.string.calendar_anniversary_sub_auto)
+    val base = stringResource(
+        if (author == EventTarget.ME) R.string.calendar_anniversary_sub_mine else R.string.calendar_anniversary_sub_partner,
+    )
+    return if (repeatsYearly) stringResource(R.string.calendar_anniversary_sub_yearly, base) else base
+}
+
+/** 기념일 카드 (D-65·D-117): `brand-50` 면, "기념일"(`brand-700`), 이름, 자동은 그날의 D+N, 직접은 만든 사람 색 점 + 나·상대 */
+@Composable
+private fun AnniversaryCard(anniversary: CalendarAnniversary, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .background(Brand50)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = DuriseoSpacing.Space4, vertical = CardPaddingV),
+        horizontalArrangement = Arrangement.spacedBy(CardGap),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Text(
+            text = stringResource(R.string.calendar_anniversary_mark),
+            modifier = Modifier.width(TimeColumnWidth),
+            style = MaterialTheme.typography.labelLarge,
+            color = Brand700,
+            maxLines = 1,
+            softWrap = false,
+        )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(CardTextGap)) {
+            Text(
+                text = anniversary.name,
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = Ink900,
+            )
+            Text(
+                text = anniversary.subText(),
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Normal, lineHeight = NoteLineHeight),
+                color = Ink600,
+            )
+        }
+        AnniversaryTag(anniversary)
+    }
+}
+
+@Composable
+private fun AnniversaryTag(anniversary: CalendarAnniversary) {
+    val author = anniversary.author
+    when {
+        anniversary.isAuto && anniversary.dayNumber != null ->
+            PillTag(text = stringResource(R.string.calendar_anniversary_day_number, anniversary.dayNumber), dotColor = null)
+
+        author != null -> TargetTag(author)
     }
 }
 
@@ -883,6 +1129,54 @@ private fun EventRow(event: CalendarEvent, onClick: () -> Unit) {
     }
 }
 
+/** 펼친 기념일 행: `brand-50` 면, 8짜리 `brand-500` 고리(선 2), "기념일", 이름, D+N 또는 나·상대 (보드 `annItems`) */
+@Composable
+private fun AnniversaryRow(anniversary: CalendarAnniversary, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(RowHeight)
+            .clip(RoundedCornerShape(RowRadius))
+            .background(Brand50)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = RowPadding),
+        horizontalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space3 - 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(TagDot).border(MarkRingStroke, Brand500, CircleShape))
+        Text(
+            text = stringResource(R.string.calendar_anniversary_mark),
+            modifier = Modifier.width(RowTimeWidth),
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = Ink600,
+            maxLines = 1,
+            softWrap = false,
+        )
+        Text(
+            text = anniversary.name,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+            color = Ink900,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        val right = when {
+            anniversary.isAuto -> anniversary.dayNumber?.let { stringResource(R.string.calendar_anniversary_day_number, it) }
+            else -> anniversary.author?.label()
+        }
+        if (right != null) {
+            Text(
+                text = right,
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = Ink600,
+            )
+        }
+    }
+}
+
+/** 펼친 기념일 행의 고리 선 2 (`markStyle`의 `border: 2px`) */
+private val MarkRingStroke = 2.dp
+
 /** 펼친 행 안쪽 좌우 14 (소스 `rowBase`) */
 private val RowPadding = 14.dp
 
@@ -921,12 +1215,24 @@ private fun sampleEvents(): Map<LocalDate, List<CalendarEvent>> = mapOf(
     LocalDate.of(2026, 10, 18) to listOf(CalendarEvent("5", "1박 2일 여행", null, true, null, EventTarget.TOGETHER)),
 )
 
+private fun sampleAnniversaries(): Map<LocalDate, List<CalendarAnniversary>> = mapOf(
+    LocalDate.of(2026, 10, 5) to listOf(CalendarAnniversary("처음 손잡은 날", false, null, EventTarget.PARTNER, true)),
+    LocalDate.of(2026, 10, 23) to listOf(CalendarAnniversary("200일", true, 200, null, false)),
+)
+
+private fun soloAnniversaries(): Map<LocalDate, List<CalendarAnniversary>> = mapOf(
+    PreviewToday to listOf(CalendarAnniversary("엄마 생신", false, null, EventTarget.ME, true)),
+    LocalDate.of(2026, 10, 28) to listOf(CalendarAnniversary("이사한 날", false, null, EventTarget.ME, false)),
+)
+
 private fun previewState(
     header: CalendarHeader = CalendarHeader.Couple("pick-orange", "pick-blue", 189),
     selected: LocalDate = PreviewToday,
     expanded: Boolean = false,
     events: Map<LocalDate, List<CalendarEvent>> = sampleEvents(),
+    anniversaries: Map<LocalDate, List<CalendarAnniversary>> = sampleAnniversaries(),
     startDateSheet: CalendarStartDateSheet? = null,
+    refreshing: Boolean = false,
 ) = CalendarUiState(
     header = header,
     today = PreviewToday,
@@ -934,7 +1240,9 @@ private fun previewState(
     selectedDate = selected,
     expanded = expanded,
     eventsByDay = events,
+    anniversariesByDay = anniversaries,
     startDateSheet = startDateSheet,
+    refreshing = refreshing,
 )
 
 @Composable
@@ -944,55 +1252,86 @@ private fun PreviewScreen(state: CalendarUiState) {
     }
 }
 
-/** `SCR-CAL-01.png` */
+/** `SCR-CAL-01.png`: 기념일 고리(5일·23일)가 달력에 보인다 */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun CalendarScreenPreview() = PreviewScreen(previewState())
+private fun CalendarPreview_Default() = PreviewScreen(previewState())
 
-/** `SCR-CAL-01--expanded.png`: 날짜 칸에 일정 막대 */
+/** `SCR-CAL-01--anniversary.png`: 기념일이 있는 날(자동 200일, D+200)을 골랐다 */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun CalendarScreenExpandedPreview() = PreviewScreen(previewState(expanded = true))
+private fun CalendarPreview_Anniversary() = PreviewScreen(previewState(selected = LocalDate.of(2026, 10, 23)))
 
-/** `SCR-CAL-01--solo.png`: 개인 공간, 나 일정만 */
+/** 직접 기념일(상대가 만든 매년 반복)을 고른 날: 만든 사람 색 점 + "상대" */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun CalendarScreenSoloPreview() = PreviewScreen(
+private fun CalendarPreview_AnniversaryCustom() = PreviewScreen(previewState(selected = LocalDate.of(2026, 10, 5)))
+
+/** `SCR-CAL-01--expanded.png`: 날짜 칸에 일정 막대, 기념일은 `brand-50` 면 + `brand-500` 테두리 막대 */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun CalendarPreview_Expanded() = PreviewScreen(previewState(expanded = true))
+
+/** 펼친 상태에서 기념일 행이 보이는 날 */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun CalendarPreview_ExpandedAnniversary() = PreviewScreen(previewState(expanded = true, selected = LocalDate.of(2026, 10, 23)))
+
+/** `SCR-CAL-01--solo.png`: 개인 공간 앱바 "나의 캘린더 / 기념일 ›", 직접 기념일과 나 일정만 */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun CalendarPreview_Solo() = PreviewScreen(
     previewState(
         header = CalendarHeader.Solo("pick-orange"),
         events = mapOf(
             PreviewToday to listOf(CalendarEvent("1", "필라테스", null, false, LocalTime.of(7, 30), EventTarget.ME)),
+            LocalDate.of(2026, 10, 9) to listOf(CalendarEvent("2", "팀 회식", null, false, LocalTime.of(19, 0), EventTarget.ME)),
         ),
+        anniversaries = soloAnniversaries(),
     ),
 )
 
-/** `SCR-CAL-01--no-start-date.png`: 커플 + 처음 만난 날 없음 */
+/** `SCR-CAL-01--refresh.png`: 당겨서 새로고침 중 (목록 위 64, 가로 가운데 원판) */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun CalendarScreenNoStartDatePreview() = PreviewScreen(previewState(header = CalendarHeader.Couple("pick-orange", "pick-blue", null)))
+private fun CalendarPreview_Refresh() = PreviewScreen(previewState(refreshing = true))
+
+/** `SCR-CAL-01--no-start-date.png`: 커플 + 처음 만난 날 없음 (자동 기념일 없음) */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun CalendarPreview_NoStartDate() = PreviewScreen(
+    previewState(
+        header = CalendarHeader.Couple("pick-orange", "pick-blue", null),
+        anniversaries = sampleAnniversaries().filterValues { list -> list.none { it.isAuto } },
+    ),
+)
 
 /** 선택한 날 비어 있음: 보드 문구 "아직 일정이나 메모가 없어요" (이미지 없음) */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun CalendarScreenEmptyDayPreview() = PreviewScreen(previewState(selected = LocalDate.of(2026, 10, 14)))
+private fun CalendarPreview_EmptyDay() = PreviewScreen(previewState(selected = LocalDate.of(2026, 10, 14)))
 
 /** 처음 만난 날 선택 시트 (SCR-CAL-01 앱바 "처음 만난 날 입력하기") */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun CalendarScreenStartDateSheetPreview() = PreviewScreen(
+private fun CalendarPreview_StartDateSheet() = PreviewScreen(
     previewState(
         header = CalendarHeader.Couple("pick-orange", "pick-blue", null),
         startDateSheet = CalendarStartDateSheet(YearMonth.of(2026, 10), null),
     ),
 )
 
-/** 선택한 날의 머리글: 오늘 배지 (빈 일정이 아닌 경우의 개수 표시는 기본 Preview) */
+/** 날짜 목록 카드: 일정, 기념일(자동·직접)과 펼친 행 */
 @Preview(showBackground = true, widthDp = 390)
 @Composable
-private fun CalendarEventCardPreview() {
+private fun CalendarPreview_Cards() {
     DuriseoTheme {
         Column(Modifier.padding(DuriseoSpacing.Space4), verticalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space2)) {
+            AnniversaryCard(CalendarAnniversary("200일", true, 200, null, false), {})
+            AnniversaryCard(CalendarAnniversary("엄마 생신", false, null, EventTarget.ME, true), {})
             EventCard(CalendarEvent("1", "저녁 데이트", "예약 완료", false, LocalTime.of(19, 30), EventTarget.TOGETHER), {})
+            AnniversaryRow(CalendarAnniversary("200일", true, 200, null, false), {})
+            AnniversaryRow(CalendarAnniversary("처음 손잡은 날", false, null, EventTarget.PARTNER, true), {})
             EventRow(CalendarEvent("2", "1박 2일 여행", null, true, null, EventTarget.PARTNER), {})
         }
     }

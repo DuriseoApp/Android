@@ -51,7 +51,7 @@ class PersonColorsTest {
             "green" to "초록", "teal" to "청록", "blue" to "파랑", "purple" to "보라",
             "magenta" to "자주", "brown" to "브라운", "gray" to "회색", "ink" to "먹색",
         )
-        val xml = File("src/main/res/values/strings.xml").readText(Charsets.UTF_8)
+        val xml = stringsXml().readText(Charsets.UTF_8)
 
         expected.forEach { (name, label) ->
             assertTrue(xml.contains("<string name=\"pick_label_$name\">$label</string>"))
@@ -98,5 +98,18 @@ class PersonColorsTest {
         val colors = personColorsOf("pick-new-color", "orange", "")
 
         assertEquals(DefaultPersonColors, colors)
+    }
+
+    /**
+     * 작업 디렉터리가 모듈(Gradle 기본)이든 레포 루트(IDE 설정에 따라)든 같은 파일을 찾는다.
+     * 둘 다 없으면 어디를 찾았는지 알려 주며 실패한다.
+     */
+    private fun stringsXml(): File {
+        val candidates = listOf(
+            File("src/main/res/values/strings.xml"),
+            File("core/designsystem/src/main/res/values/strings.xml"),
+        )
+        return candidates.firstOrNull { it.isFile }
+            ?: error("strings.xml을 찾지 못했어요. 작업 디렉터리 ${File(".").absoluteFile.normalize()}, 찾은 곳 $candidates")
     }
 }

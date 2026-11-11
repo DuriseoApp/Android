@@ -18,6 +18,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.duriseo.android.core.designsystem.theme.Brand500
+import com.duriseo.android.core.designsystem.theme.Danger600
 import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
 import com.duriseo.android.core.designsystem.theme.DuriseoTextStyles
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
@@ -72,9 +73,10 @@ fun InviteCodeDisplay(code: String?, description: String, modifier: Modifier = M
 /**
  * SCR-COUPLE-03: 입력한 글자를 칸에 보여 준다. 글자가 있는 칸은 흰 면 + `line-300` 1, 빈 칸은 `surface-100` 면,
  * 다음에 쓸 칸(6자리가 차기 전)은 `brand-500` 2 (InviteEnter.dc.html 70~73행).
+ * [error]면 채운 칸 테두리가 1 `danger-600`이다 (없는 코드 같은 값 오류. 입력 제한은 켜지 않는다).
  */
 @Composable
-fun InviteCodeInputBoxes(code: String, modifier: Modifier = Modifier) {
+fun InviteCodeInputBoxes(code: String, modifier: Modifier = Modifier, error: Boolean = false) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -92,7 +94,7 @@ fun InviteCodeInputBoxes(code: String, modifier: Modifier = Modifier) {
                 .let { base ->
                     when {
                         active -> base.border(ActiveBorderWidth, Brand500, shape)
-                        char != null -> base.border(BoxBorderWidth, Line300, shape)
+                        char != null -> base.border(BoxBorderWidth, if (error) Danger600 else Line300, shape)
                         else -> base.border(BoxBorderWidth, Surface100, shape)
                     }
                 }
@@ -120,5 +122,13 @@ private fun InviteCodeDisplayPreview() {
 private fun InviteCodeInputBoxesPreview() {
     DuriseoTheme {
         InviteCodeInputBoxes(code = "K7Q")
+    }
+}
+
+@Preview(showBackground = true, widthDp = 390)
+@Composable
+private fun InviteCodeInputBoxesErrorPreview() {
+    DuriseoTheme {
+        InviteCodeInputBoxes(code = "K7Q29X", error = true)
     }
 }

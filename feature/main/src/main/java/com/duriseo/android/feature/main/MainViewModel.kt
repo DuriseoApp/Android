@@ -10,6 +10,7 @@ import com.duriseo.android.domain.auth.AuthState
 import com.duriseo.android.domain.auth.SessionEndReason
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.me.SpaceChange
+import com.duriseo.android.domain.me.SpaceType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
@@ -46,6 +47,12 @@ sealed interface MainEffect {
      * 로그인 정보를 뺀 로컬 데이터는 이미 지웠다. 화면 이동 기록을 SCR-COUPLE-01 하나로 다시 만든다 (앞 화면이 없어 뒤로 버튼 없음, D-96)
      */
     data object SpaceUnlinked : MainEffect
+
+    /**
+     * 연결 해제를 알고 초기화한 뒤 내 정보를 읽었더니 그 사이 이미 다른 사람과 연결돼 있다 (D-125).
+     * SCR-COUPLE-01 대신 캘린더(SCR-CAL-01)로 가고, 연결 완료 시트(SCR-COUPLE-04)는 [MainViewModel.linkedSheetNeeded]가 띄운다
+     */
+    data object SpaceRelinked : MainEffect
 }
 
 /**
@@ -92,7 +99,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             meRepository.spaceChanges.collect { change ->
                 when (change) {
-                    SpaceChange.UNLINKED -> effectChannel.trySend(MainEffect.SpaceUnlinked)
+                    SpaceChange.UNLINKED -> effectChannel.trySend(destinationAfterUnlink(meRepository))
                 }
             }
         }
@@ -101,5 +108,15 @@ class MainViewModel @Inject constructor(
                 effectChannel.trySend(MainEffect.SessionEnded(replaced = reason == SessionEndReason.REPLACED))
             }
         }
+    }
+
+    /**
+     * 초기화(`MeRepository.resetAfterUnlink`·`refreshMe`)는 `GET /me`를 받아 Room에 저장한 뒤 알림을 낸다 (D-125).
+     * 저장된 내 정보의 공간이 커플이면 이미 다른 사람과 연결된 것이라 캘린더로 가고, 개인 공간이면 SCR-COUPLE-01이다.
+     * `GET /me`가 실패했거나 오프라인이면 Room이 비어 있어 기존처럼 SCR-COUPLE-01이다.
+     */
+    private suspend fun destinationAfterUnlink(meRepository: MeRepository): MainEffect {
+        val me = meRepository.observeMe().first()
+        return if (me?.space?.type == SpaceType.COUPLE) MainEffect.SpaceRelinked else MainEffect.SpaceUnlinked
     }
 }

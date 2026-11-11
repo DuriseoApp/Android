@@ -35,7 +35,7 @@ import com.duriseo.android.core.designsystem.theme.Danger700
 import com.duriseo.android.core.designsystem.theme.DuriseoSize
 import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
-import com.duriseo.android.core.designsystem.theme.Ink600
+import com.duriseo.android.core.designsystem.theme.Ink500
 import com.duriseo.android.core.designsystem.theme.Line100
 import com.duriseo.android.core.designsystem.theme.OnBrand
 
@@ -76,6 +76,9 @@ enum class DuriseoButtonSize(val height: Dp) {
 
     /** 높이 48(`size-button-md`), 글자 15 / 600 */
     Medium(DuriseoSize.ButtonMd),
+
+    /** 높이 44(`size-button-sm`), 글자 14 / 700. 안내 카드·빈 화면의 행동 버튼 (SCR-ANNIV-01, 보드 `Anniversaries.dc.html`) */
+    Small(DuriseoSize.ButtonSm),
 }
 
 @Immutable
@@ -87,9 +90,9 @@ private data class ButtonColors(
 
 @Composable
 private fun DuriseoButtonStyle.colors(enabled: Boolean): ButtonColors {
-    // 비활성: 면은 `line-100`("비활성 버튼·입력 채움", tokens.json). 글자색은 문서에 없어 `ink-600`을 쓴다
-    // (ink-500은 surface-0 밖에서 대비가 모자라다, tokens.json `ink-500` usage).
-    if (!enabled) return ButtonColors(container = Line100, content = Ink600, border = null)
+    // 비활성: 면 `line-100`, 글자 `ink-500` (design-system "초대코드 만들기 코드를 받기 전 모양", 보드 `InviteCreate.dc.html` 95행.
+    // `DuriseoLargeButton`의 비활성과 같은 조합). 테두리는 면과 같은 `line-100`이라 보이지 않아 그리지 않는다
+    if (!enabled) return ButtonColors(container = Line100, content = Ink500, border = null)
     val scheme = MaterialTheme.colorScheme
     return when (this) {
         DuriseoButtonStyle.Filled -> ButtonColors(scheme.secondary, scheme.onSecondary, null)
@@ -105,8 +108,9 @@ private fun DuriseoButtonSize.textStyle(): TextStyle {
     val base = when (this) {
         DuriseoButtonSize.Social -> MaterialTheme.typography.bodyLarge
         DuriseoButtonSize.Medium -> MaterialTheme.typography.bodyMedium
+        DuriseoButtonSize.Small -> MaterialTheme.typography.bodySmall
     }
-    return base.copy(fontWeight = FontWeight.SemiBold)
+    return base.copy(fontWeight = if (this == DuriseoButtonSize.Small) FontWeight.Bold else FontWeight.SemiBold)
 }
 
 /**

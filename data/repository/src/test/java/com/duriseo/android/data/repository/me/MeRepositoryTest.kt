@@ -9,7 +9,13 @@ import com.duriseo.android.data.repository.runTestWithTimeout
 import com.duriseo.android.domain.error.DataError
 import com.duriseo.android.domain.me.AccountType
 import com.duriseo.android.domain.result.DataResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import okhttp3.mockwebserver.MockWebServer
+import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -163,6 +169,61 @@ class MeRepositoryTest {
         val result = h.meRepository.syncTimeZone("Nowhere/City")
 
         assertEquals(true, result is DataResult.Failure)
+        assertEquals("Asia/Seoul", h.roomMe()?.timeZone)
+    }
+
+    @Test
+    fun `acknowledgeSpace는 MeWriteLock 아래에서 읽고 저장한다`() = runTestWithTimeout {
+        val h = harness()
+        h.preload(fixtureMe())
+        val spaceId = h.roomMe()!!.space.id
+
+        // 테스트가 락을 쥐고 있는 동안에는 읽기도 저장도 일어나지 않아야 한다
+        h.writeLock.withLock {
+            val job = launch(Dispatchers.Default) { h.meRepository.acknowledgeSpace() }
+            delay(500)
+            assertNull(h.acknowledgedSpace.get())
+            assertEquals(false, job.isCompleted)
+        }
+        // 락을 놓으면 이어서 읽고 저장한다
+        withTimeout(5_000) {
+            while (h.acknowledgedSpace.get() == null) delay(20)
+        }
+        assertEquals(spaceId, h.acknowledgedSpace.get())
+    }
+
+    @Test
+    fun `초기화 전에 시작한 GET me 응답은 저장하지 않는다`() = runTestWithTimeout {
+        val h = harness()
+        h.preload(fixtureMe(id = "cached-user"))
+        // 첫 요청(초기화 전에 시작한 refreshMe)은 응답이 늦게 온다
+        server.enqueue(jsonResponse(200, meJson(id = "stale-user")).setHeadersDelay(1500, TimeUnit.MILLISECONDS))
+        server.enqueue(jsonResponse(200, meJson(id = "fresh-user")))
+
+        val stale = async(Dispatchers.Default) { h.meRepository.refreshMe() }
+        assertEquals("/api/v1/me", server.takeRequest(5, TimeUnit.SECONDS)?.path)
+        h.meRepository.resetAfterUnlink()
+        val staleResult = stale.await()
+
+        assertEquals(DataResult.Success(Unit), staleResult)
+        assertEquals("fresh-user", h.roomMe()?.id)
+    }
+
+    @Test
+    fun `초기화 전에 시작한 PATCH me 응답은 저장하지 않는다`() = runTestWithTimeout {
+        val h = harness()
+        h.preload(fixtureMe(id = "cached-user", timeZone = "Asia/Seoul"))
+        // 첫 요청(초기화 전에 시작한 PATCH)은 응답이 늦게 온다
+        server.enqueue(jsonResponse(200, meJson(id = "stale-user", timeZone = "Asia/Tokyo")).setHeadersDelay(1500, TimeUnit.MILLISECONDS))
+        server.enqueue(jsonResponse(200, meJson(id = "fresh-user")))
+
+        val stale = async(Dispatchers.Default) { h.meRepository.syncTimeZone("Asia/Tokyo") }
+        assertEquals("PATCH", server.takeRequest(5, TimeUnit.SECONDS)?.method)
+        h.meRepository.resetAfterUnlink()
+        val staleResult = stale.await()
+
+        assertEquals(DataResult.Success(Unit), staleResult)
+        assertEquals("fresh-user", h.roomMe()?.id)
         assertEquals("Asia/Seoul", h.roomMe()?.timeZone)
     }
 }

@@ -45,6 +45,7 @@ enum class AccountDialog {
 /**
  * @property content 내 정보를 아직 못 받았으면 null (앱바만 그린다)
  * @property requesting 연동·switch·로그아웃·탈퇴 요청이 도는 중. 같은 화면의 시작 버튼이 모두 비활성이다 (D-88)
+ * @property loading 서버 요청(연동·switch·로그아웃·탈퇴)이 도는 동안 true. 로딩 덮개를 그린다 (D-115). 소셜 SDK 창이 열려 있는 동안은 false
  * @property justLinked 연동 직후 "로그인했어요. 게스트 기록을 계정으로 옮겼어요." 안내를 보인다. 화면을 떠나면 사라진다
  */
 data class AccountUiState(
@@ -52,6 +53,7 @@ data class AccountUiState(
     val withdrawMessage: WithdrawMessage = WithdrawMessage.Personal,
     val dialog: AccountDialog? = null,
     val requesting: Boolean = false,
+    val loading: Boolean = false,
     val justLinked: Boolean = false,
 )
 
