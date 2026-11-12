@@ -23,6 +23,9 @@ interface MemoRepository {
     /** 고정 메모 전체, 최근 고정순 (서버 순서). 핀 N = 길이. 4개 이상이면 앞의 3개만 보이고 더보기 (FR-MEMO-05) */
     fun observePinned(): Flow<List<Memo>>
 
+    /** 고정 목록을 한 번이라도 받아 저장했다. false인 빈 [observePinned]는 "고정 없음"이 아니라 "아직 안 받음"이다 (SCR-MEMO-01 점선 상자) */
+    fun observePinnedLoaded(): Flow<Boolean>
+
     /** [from]~[to](포함)에 메모 날짜가 있는 메모. 캘린더용이고 메모 날짜 → 위치 순서다 */
     fun observeDated(from: LocalDate, to: LocalDate): Flow<List<Memo>>
 

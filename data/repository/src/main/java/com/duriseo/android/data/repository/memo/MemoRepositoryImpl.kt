@@ -5,6 +5,7 @@ import com.duriseo.android.data.local.memo.MEMO_LIST_DATED
 import com.duriseo.android.data.local.memo.MEMO_LIST_DETAIL
 import com.duriseo.android.data.local.memo.MEMO_LIST_PINNED
 import com.duriseo.android.data.local.memo.MEMO_STATE_COUNTS
+import com.duriseo.android.data.local.memo.MEMO_STATE_PINNED
 import com.duriseo.android.data.local.memo.MemoLocalDataSource
 import com.duriseo.android.data.remote.memo.MemoRemoteDataSource
 import com.duriseo.android.data.repository.cache.LocalCacheGeneration
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.LocalDate
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -70,6 +72,14 @@ class MemoRepositoryImpl @Inject constructor(
     private val viewLocks: Map<MemoView, Mutex> = MemoView.entries.associateWith { Mutex() }
     private val pinnedLock = Mutex()
 
+    /**
+     * 상세 응답과 삭제가 엇갈리지 않게 한다: 삭제·404로 지운 시점의 번호를 [goneAt]에 적고, 그보다 먼저 요청한 상세 응답은 저장하지 않는다.
+     * 삭제 성공 뒤 늦게 도착한 이전 응답이 DETAIL 행을 되살리지 않게 하려는 것이다. 락 순서: [detailLock] -> `LocalCacheGeneration`.
+     */
+    private val detailLock = Mutex()
+    private val detailSeq = AtomicLong(0)
+    private val goneAt = ConcurrentHashMap<String, Long>()
+
     override fun setVisibleRange(from: LocalDate, to: LocalDate) {
         visibleRange = VisibleRange(from, to, cache.current())
     }
@@ -89,6 +99,8 @@ class MemoRepositoryImpl @Inject constructor(
 
     override fun observePinned(): Flow<List<Memo>> =
         local.observeList(MEMO_LIST_PINNED).map { rows -> rows.mapNotNull { it.toDomainOrNull() } }
+
+    override fun observePinnedLoaded(): Flow<Boolean> = local.observeState(MEMO_STATE_PINNED).map { it != null }
 
     override fun observeDated(from: LocalDate, to: LocalDate): Flow<List<Memo>> =
         local.observeDated(from, to).map { rows -> rows.mapNotNull { it.toDomainOrNull() } }
@@ -203,9 +215,15 @@ class MemoRepositoryImpl @Inject constructor(
     override suspend fun refreshMemo(id: String): DataResult<Unit> {
         if (!networkMonitor.isOnlineNow()) return DataResult.Failure(DataError.Offline)
         val generation = cache.current()
+        val seq = detailSeq.incrementAndGet() // 요청 전에 적는다
         return when (val result = remote.get(id)) {
             is DataResult.Success -> {
-                cache.saveIfCurrent(generation) { local.replaceDetail(result.value.toEntity(MEMO_LIST_DETAIL, 0)) }
+                detailLock.withLock {
+                    // 이 요청 뒤에 그 메모를 지웠으면 늦게 온 응답은 버린다
+                    if ((goneAt[id] ?: 0L) < seq) {
+                        cache.saveIfCurrent(generation) { local.replaceDetail(result.value.toEntity(MEMO_LIST_DETAIL, 0)) }
+                    }
+                }
                 DataResult.Success(Unit)
             }
 
@@ -245,8 +263,9 @@ class MemoRepositoryImpl @Inject constructor(
 
     override suspend fun delete(id: String): DataResult<Unit> {
         val result = networkMonitor.runOnlineWrite { remote.delete(id) }
-        // 서버가 지웠으니 기기에서도 지운다 (낙관적 갱신이 아니라 성공 응답의 반영). 다시 불러오기가 개수를 맞춘다
-        if (result is DataResult.Success) local.delete(id)
+        // 서버가 지웠으니 기기에서도 지운다 (낙관적 갱신이 아니라 성공 응답의 반영). 다시 불러오기가 개수를 맞춘다.
+        // 서버가 성공했으면 Room 반영이 실패해도 결과는 성공이다
+        if (result is DataResult.Success) quietly { forgetLocally(id) }
         return result
             .thenRefreshAll(detailId = null)
             .thenForgetIfGone(id)
@@ -263,12 +282,24 @@ class MemoRepositoryImpl @Inject constructor(
             .thenRefreshAll(detailId = id)
             .thenForgetIfGone(id)
 
-    /** 생성·수정 응답의 메모를 상세로 저장한다 (성공 응답의 반영). 요청 전에 적은 [generation]이 지금도 같을 때만 */
+    /**
+     * 생성·수정 응답의 메모를 상세로 저장한다 (성공 응답의 반영). 요청 전에 적은 [generation]이 지금도 같을 때만.
+     * 서버가 성공했으면 Room 반영이 실패해도(예외) 삼키고 결과는 성공 그대로다.
+     */
     private suspend fun DataResult<Memo>.thenSaveDetail(generation: Long): DataResult<Memo> {
         if (this is DataResult.Success) {
-            cache.saveIfCurrent(generation) { local.replaceDetail(value.toEntity(MEMO_LIST_DETAIL, 0)) }
+            val memo = value
+            quietly { cache.saveIfCurrent(generation) { local.replaceDetail(memo.toEntity(MEMO_LIST_DETAIL, 0)) } }
         }
         return this
+    }
+
+    /** 그 메모를 기기에서 지운다. 지운 시점을 적어 두어 그 전에 요청한 상세 응답이 되살리지 못하게 한다 */
+    private suspend fun forgetLocally(id: String) {
+        detailLock.withLock {
+            goneAt[id] = detailSeq.incrementAndGet()
+            local.delete(id)
+        }
     }
 
     /**
@@ -289,14 +320,14 @@ class MemoRepositoryImpl @Inject constructor(
         return this
     }
 
-    /** 다시 불러오다 예외가 나도 삼킨다 (이미 끝난 쓰기 결과를 실패로 바꾸지 않는다). 취소는 그대로 던진다 */
+    /** 서버 성공 뒤의 기기 반영·다시 불러오기에서 예외가 나도 삼킨다 (이미 끝난 쓰기 결과를 실패로 바꾸지 않는다). 취소는 그대로 던진다 */
     private suspend fun quietly(block: suspend () -> Unit) {
         try {
             block()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Logger.w(TAG, "쓰기 뒤 다시 불러오기에 실패했어요: ${e.javaClass.simpleName}")
+            Logger.w(TAG, "쓰기 뒤 기기 반영·다시 불러오기에 실패했어요: ${e.javaClass.simpleName}")
         }
     }
 
@@ -307,7 +338,7 @@ class MemoRepositoryImpl @Inject constructor(
 
     /** 404 `NOT_FOUND`: 없거나 다른 공간의 메모다. Room에서도 지운다 (ARCHITECTURE.md 5장, R-01, D-121) */
     private suspend fun <T> DataResult<T>.thenForgetIfGone(id: String): DataResult<T> {
-        if (this is DataResult.Failure && error.hasCode(ErrorCode.NOT_FOUND)) local.delete(id)
+        if (this is DataResult.Failure && error.hasCode(ErrorCode.NOT_FOUND)) quietly { forgetLocally(id) }
         return this
     }
 

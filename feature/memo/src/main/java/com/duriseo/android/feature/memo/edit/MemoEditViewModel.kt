@@ -15,11 +15,13 @@ import com.duriseo.android.domain.memo.MemoRepository
 import com.duriseo.android.domain.memo.MemoRules
 import com.duriseo.android.domain.memo.NewMemo
 import com.duriseo.android.domain.result.DataResult
+import com.duriseo.android.feature.memo.component.guardedWrite
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
@@ -70,15 +72,22 @@ class MemoEditViewModel @Inject constructor(
     }
 
     private suspend fun initialize() {
-        val me = meRepository.observeMe().first()
-        if (me == null) {
-            effectChannel.trySend(MemoEditSideEffect.Close)
-            return
+        var current = meRepository.observeMe().first()
+        if (current == null) {
+            if (memoId != null) {
+                // 단독 수정 화면: 내 정보가 없으면 닫는다
+                effectChannel.trySend(MemoEditSideEffect.Close)
+                return
+            }
+            // 새 메모(SCR-CAL-03의 [메모] 탭 안): 작성 화면 전체를 닫지 않고 이 탭의 저장만 막는다. 내 정보를 받으면 풀린다
+            _uiState.update { it.copy(loaded = true, meMissing = true) }
+            current = meRepository.observeMe().filterNotNull().first()
         }
+        val me = checkNotNull(current)
         val isCouple = me.space.type == SpaceType.COUPLE && me.space.partner != null
         if (memoId == null) {
             // 새 메모: 날짜는 비어 있고, 커플이면 알림 스위치가 켜져 있다
-            _uiState.update { it.copy(loaded = true, isCouple = isCouple) }
+            _uiState.update { it.copy(loaded = true, isCouple = isCouple, meMissing = false) }
             return
         }
         val memo = memoRepository.observeMemo(memoId).first()
@@ -162,14 +171,21 @@ class MemoEditViewModel @Inject constructor(
             _uiState.update { it.copy(saving = true, loading = true) }
             viewModelScope.launch {
                 // 입력 그대로 넘긴다. 정리(D-132)는 저장소가 보내기 직전에 한다. 개인 공간은 notifyPartner를 보내지 않는다
-                val result = memoRepository.create(
-                    NewMemo(
-                        title = s.title,
-                        body = s.body,
-                        memoDate = s.memoDate,
-                        notifyPartner = if (s.showNotify) s.notifyPartner else null,
-                    ),
-                )
+                // 저장소가 예외를 던져도 덮개는 걷힌다 (예외는 공통 오류로, D-115)
+                val result = try {
+                    guardedWrite {
+                        memoRepository.create(
+                            NewMemo(
+                                title = s.title,
+                                body = s.body,
+                                memoDate = s.memoDate,
+                                notifyPartner = if (s.showNotify) s.notifyPartner else null,
+                            ),
+                        )
+                    }
+                } finally {
+                    _uiState.update { it.copy(loading = false) }
+                }
                 when (result) {
                     is DataResult.Success -> closeAfterRequest()
                     is DataResult.Failure -> fail(result.error)
@@ -185,7 +201,12 @@ class MemoEditViewModel @Inject constructor(
         }
         _uiState.update { it.copy(saving = true, loading = true) }
         viewModelScope.launch {
-            when (val result = memoRepository.update(memoId, patch)) {
+            val result = try {
+                guardedWrite { memoRepository.update(memoId, patch) }
+            } finally {
+                _uiState.update { it.copy(loading = false) }
+            }
+            when (result) {
                 is DataResult.Success -> closeAfterRequest()
                 is DataResult.Failure -> fail(result.error)
             }

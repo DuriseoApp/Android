@@ -21,6 +21,7 @@ data class MemoDateSheetState(
  * @property notifyPartner "상대에게 알림 보내기" 값. 기본 켜짐 (커플의 새 메모만 쓴다)
  * @property saving 저장 요청이 도는 동안 true: 입력과 [저장]을 막는다
  * @property loading 저장 요청이 도는 동안만 true: 로딩 덮개 (D-115). 성공하면 닫기 전에 먼저 걷는다
+ * @property meMissing 새 메모(SCR-CAL-03의 [메모] 탭)에서 내 정보를 아직 받지 못했다. 작성 화면은 닫지 않고 [저장]만 막는다
  * @property today 기기 시계의 오늘. 날짜 시트가 처음 보여 줄 달(메모 날짜가 없을 때)이다
  */
 data class MemoEditUiState(
@@ -34,13 +35,14 @@ data class MemoEditUiState(
     val dateSheet: MemoDateSheetState? = null,
     val saving: Boolean = false,
     val loading: Boolean = false,
+    val meMissing: Boolean = false,
     val today: LocalDate = LocalDate.of(2026, 1, 1),
 ) {
     /**
      * [저장] 활성: 제목과 본문이 앞뒤 공백을 지운 뒤 모두 비면 비활성이다. 날짜만 있어도 비활성이다 (D-132, FR-MEMO-02 AC2).
      * 수정해서 둘 다 비게 되는 경우도 같다 (AC5).
      */
-    val saveEnabled: Boolean get() = loaded && !saving && MemoRules.isSavable(title, body)
+    val saveEnabled: Boolean get() = loaded && !saving && !meMissing && MemoRules.isSavable(title, body)
 
     /** "상대에게 알림 보내기" 스위치는 커플 공간의 새 메모에서만 보인다. 개인 공간과 수정에는 없다 (FR-NOTI-04 AC3) */
     val showNotify: Boolean get() = isCouple && !isEdit

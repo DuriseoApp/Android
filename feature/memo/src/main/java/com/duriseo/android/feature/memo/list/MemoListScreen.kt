@@ -333,10 +333,13 @@ private fun CountText(count: Int) {
     )
 }
 
+/** 고정 없음 점선 상자의 모서리 16 (보드 `Memo.dc.html` 32행 `border-radius: 16px`) */
+private val NoPinsRadius = 16.dp
+
 /** 고정 없음: 점선 상자 "중요한 메모는 핀으로 고정하면 둘 다 맨 위에서 공지처럼 볼 수 있어요." */
 @Composable
 private fun NoPinsBox(modifier: Modifier = Modifier) {
-    val radius = 16.dp
+    val radius = NoPinsRadius
     Text(
         text = stringResource(R.string.memo_pins_empty),
         modifier = modifier
@@ -516,6 +519,7 @@ private fun PreviewScreen(state: MemoListUiState) {
 private val DefaultState = MemoListUiState(
     loaded = true,
     pins = listOf(Pin3),
+    pinsLoaded = true,
     items = Rows,
     totalCount = 5,
     favoriteCount = 2,

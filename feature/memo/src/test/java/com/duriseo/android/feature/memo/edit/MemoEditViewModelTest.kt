@@ -380,6 +380,70 @@ class MemoEditViewModelTest {
     }
 
     @Test
+    fun `D-115 저장소가 예외를 던져도 loading이 false로 돌아온다`() = runTest {
+        repo.writeFailure = IllegalStateException("저장 실패")
+        val vm = create()
+        vm.onAction(MemoEditAction.BodyChanged("본문"))
+
+        vm.effects.test {
+            vm.onAction(MemoEditAction.SaveClicked)
+            assertEquals(MemoEditSideEffect.ShowMessage(DesignR.string.error_common), awaitItem())
+            expectNoEvents()
+        }
+        assertFalse(vm.uiState.value.loading)
+        assertFalse(vm.uiState.value.saving)
+        // 입력은 그대로이고 다시 저장할 수 있다
+        assertEquals("본문", vm.uiState.value.body)
+        assertTrue(vm.uiState.value.saveEnabled)
+    }
+
+    @Test
+    fun `D-115 수정 저장소가 예외를 던져도 loading이 false로 돌아온다`() = runTest {
+        storeMine()
+        repo.writeFailure = IllegalStateException("저장 실패")
+        val vm = edit()
+        vm.onAction(MemoEditAction.BodyChanged("바뀐 본문"))
+
+        vm.effects.test {
+            vm.onAction(MemoEditAction.SaveClicked)
+            assertEquals(MemoEditSideEffect.ShowMessage(DesignR.string.error_common), awaitItem())
+            expectNoEvents()
+        }
+        assertFalse(vm.uiState.value.loading)
+        assertFalse(vm.uiState.value.saving)
+    }
+
+    @Test
+    fun `D-133 일정 작성 화면 안의 메모 탭은 내 정보가 없어도 작성 화면을 닫지 않고 저장만 막는다`() = runTest {
+        val noMe = FakeMeRepository(null)
+        val vm = MemoEditViewModel(SavedStateHandle(emptyMap()), repo, noMe, TestClock)
+
+        vm.effects.test {
+            vm.onAction(MemoEditAction.BodyChanged("본문"))
+            assertFalse(vm.uiState.value.saveEnabled)
+            expectNoEvents() // 닫기 신호가 없다
+        }
+        // 내 정보가 오면 저장할 수 있다
+        noMe.me.value = coupleMe()
+        assertTrue(vm.uiState.value.saveEnabled)
+        assertTrue(vm.uiState.value.isCouple)
+    }
+
+    @Test
+    fun `단독 수정 화면은 내 정보가 없으면 닫는다`() = runTest {
+        val vm = MemoEditViewModel(
+            SavedStateHandle(mapOf(MemoRouteModel.Edit::memoId.name to "m1")),
+            repo,
+            FakeMeRepository(null),
+            TestClock,
+        )
+        vm.effects.test {
+            assertEquals(MemoEditSideEffect.Close, awaitItem())
+        }
+        assertFalse(vm.uiState.value.loaded)
+    }
+
+    @Test
     fun `오프라인이면 요청하지 않는다`() = runTest {
         // 저장소가 오프라인이면 요청 없이 Offline을 돌려준다 (NFR-OFF-02): 화면은 안내만 보이고 입력을 남긴다
         repo.createResult = Offline

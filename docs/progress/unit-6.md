@@ -116,10 +116,22 @@
 18. **메모 카드는 제목 한 줄**: SCREENS 구성 "메모 카드: '메모' 표시, 제목"대로 "메모" + 제목(D-131) + 작성자 태그(나·상대)다. `SCR-CAL-01.png`에는 제목 아래 본문 한 줄이 더 보이나 SCREENS 글에 없고 줄 수 규칙이 없어 넣지 않았다. `<Docs 후속>`
 19. **날짜 목록·점의 메모 범위**: 보이는 달의 날짜만 그린다(앞뒤 하루로 받은 이웃 달 메모는 거르고 달력에 그리지 않는다, 기념일과 같다). 정렬은 `groupMemosByDay`가 작성 최신순(`createdAt` 내림차순), 같으면 `id` 오름차순으로 한다. 월 조회·달 넘김·당겨서 새로고침은 `refreshDated`를 일정·기념일과 함께 부르고 `setVisibleRange`도 함께 알린다. 날짜 칸 읽기 라벨은 "일정·메모 N개"에 메모를 일정 뒤에 합친다.
 
+리뷰 1회차 수정 (단위 6 전체):
+
+20. **서버 성공 뒤 Room 반영 예외는 삼킨다**: `MemoRepositoryImpl`의 생성·수정 응답 저장(`thenSaveDetail`)과 삭제·404 뒤 기기에서 지우기(`forgetLocally`)를 `quietly`(취소만 다시 던지고 예외는 클래스 이름만 로그) 안에 넣었다. 서버가 성공이면 Room 반영이 실패해도 결과는 `Success`다.
+21. **쓰기 launch는 덮개를 반드시 걷는다**: `feature:memo`의 `guardedWrite`(저장소 예외를 공통 오류 `Failure`로 바꿈, 오류 코드 `CLIENT_ERROR`는 기기에서 만든 값)로 감싸고 목록·고정 전체·상세(핀·별·삭제)·작성·수정의 쓰기 launch에 `try/finally`로 `loading`(`writing`)을 false로 돌린다. 예외 안내는 공통 오류 스낵바다.
+22. **삭제와 늦은 상세 응답**: 저장소에 `detailSeq`(요청 번호)·`goneAt`(삭제·404 시점)·`detailLock`을 두어, 삭제·404 뒤에 도착한 그보다 먼저 요청한 `refreshMemo` 응답은 저장하지 않는다(DETAIL 행이 되살아나지 않게). 락 순서는 `detailLock` -> `LocalCacheGeneration`.
+23. **쓰기 뒤 다시 불러오기는 병렬이다**: `thenRefreshAll`·`thenRereadIfNotAuthor`가 `coroutineScope`+`async`로 목록·고정·달(`refreshAll` 안에서도 병렬)과 상세를 함께 부르는 것을 확인했다. 바꾼 것 없음.
+24. **고정 목록을 받았는지 저장소가 안다**: `MemoRepository.observePinnedLoaded()`(상태 행 키 `PINNED`, `replacePinned`가 함께 저장, 스키마 변화 없음)를 더하고 `MemoListUiState.pinsLoaded`로 `showNoPins`를 `pinsLoaded && pins.isEmpty()`로 했다. 받기 전에는 점선 상자를 숨긴다. `loadedViewKeys`는 보기 세 개만 세므로 영향 없다.
+25. **일정 작성 화면의 [메모] 탭에서 내 정보가 없을 때**: `MemoEditViewModel`이 새 메모(`memoId == null`, 슬롯)면 닫기 신호를 보내지 않고 `loaded = true, meMissing = true`로 두어 [저장]만 막는다. 내 정보가 오면 풀린다(`MemoEditUiState.saveEnabled`가 `!meMissing`을 본다). 단독 수정 화면은 그대로 닫는다.
+26. **작성일이 자정에 낡지 않게**: `component/MemoRuntime.kt`의 `midnightTicks(clock)`(처음 한 번 + 기기 시간대 다음 자정까지 `delay`, 분 단위 ticker 아님)를 내 정보 Flow와 `combine`해 목록·상세가 표기를 다시 계산한다.
+27. **상수**: `MemoListScreen`의 점선 상자 반지름은 `NoPinsRadius`(보드 `Memo.dc.html` 32행 16), `CalendarScreen`의 펼친 행 안 간격은 `RowItemGap`(보드 `Calendar.dc.html` 325행 `gap: 10px`, 간격 토큰에 없는 값)로 뺐다.
+
 ## 리뷰 기록
 
 | 회차 | Critical | Major | 비고 |
 | --- | --- | --- | --- |
+| 1 (sonnet) | 0 | 1 | Major: 서버 성공 뒤 Room 반영 예외가 쓰기 코루틴을 터뜨리고 덮개가 안 걷힘 → 수정. Minor 6건(상세 응답 되살림, 병렬 다시 불러오기 확인, 고정 점선 상자 깜빡임, 슬롯에서 내 정보 없음, 매직 dp, 자정 표기) 함께 수정 |
 
 ## 남은 일
 

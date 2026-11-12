@@ -105,6 +105,9 @@ class FakeMeRepository(initial: Me? = null) : MeRepository {
 class FakeMemoRepository : MemoRepository {
     val lists = MemoView.entries.associateWith { MutableStateFlow(MemoList(emptyList(), 0, hasMore = false, isLoaded = true)) }
     val pinned = MutableStateFlow<List<Memo>>(emptyList())
+
+    /** 고정 목록을 받은 적이 있는가. 기본은 받았다고 본다 (Room의 상태 행) */
+    val pinnedLoaded = MutableStateFlow(true)
     val favoriteCount = MutableStateFlow(0)
 
     /** 상세용으로 저장된 메모 (id -> 메모) */
@@ -132,6 +135,9 @@ class FakeMemoRepository : MemoRepository {
     /** 설정하면 해당 쓰기가 이 신호를 받을 때까지 멈춘다 (요청 중 상태를 확인하려고) */
     var writeGate: CompletableDeferred<Unit>? = null
 
+    /** 설정하면 모든 쓰기가 (게이트를 지난 뒤) 이 예외를 던진다 (저장소가 예외를 던져도 덮개가 걷히는지 보려고) */
+    var writeFailure: Exception? = null
+
     fun setList(view: MemoView, items: List<Memo>, totalCount: Int = items.size, hasMore: Boolean = false) {
         lists.getValue(view).value = MemoList(items, totalCount, hasMore, isLoaded = true)
     }
@@ -139,6 +145,7 @@ class FakeMemoRepository : MemoRepository {
     override fun observeList(view: MemoView): Flow<MemoList> = lists.getValue(view)
     override fun observeFavoriteCount(): Flow<Int> = favoriteCount
     override fun observePinned(): Flow<List<Memo>> = pinned
+    override fun observePinnedLoaded(): Flow<Boolean> = pinnedLoaded
     override fun observeDated(from: LocalDate, to: LocalDate): Flow<List<Memo>> = MutableStateFlow(emptyList())
     override fun observeMemo(id: String): Flow<Memo?> = memos.map { it[id] }
     override fun setVisibleRange(from: LocalDate, to: LocalDate) = Unit
@@ -173,6 +180,7 @@ class FakeMemoRepository : MemoRepository {
     override suspend fun create(memo: NewMemo): DataResult<Memo> {
         created += memo
         writeGate?.await()
+        writeFailure?.let { throw it }
         (createResult as? DataResult.Failure)?.let { return it }
         return DataResult.Success(makeMemo("new-${created.size}", memo.title, memo.body, memoDate = memo.memoDate))
     }
@@ -180,24 +188,28 @@ class FakeMemoRepository : MemoRepository {
     override suspend fun update(id: String, patch: MemoPatch): DataResult<Unit> {
         patches += id to patch
         writeGate?.await()
+        writeFailure?.let { throw it }
         return updateResult.alsoApplyServerAnswer(id)
     }
 
     override suspend fun delete(id: String): DataResult<Unit> {
         deleted += id
         writeGate?.await()
+        writeFailure?.let { throw it }
         return deleteResult.alsoApplyServerAnswer(id)
     }
 
     override suspend fun setPinned(id: String, pinned: Boolean): DataResult<Unit> {
         pinCalls += id to pinned
         writeGate?.await()
+        writeFailure?.let { throw it }
         return pinResult.alsoApplyServerAnswer(id)
     }
 
     override suspend fun setFavorite(id: String, favorite: Boolean): DataResult<Unit> {
         favoriteCalls += id to favorite
         writeGate?.await()
+        writeFailure?.let { throw it }
         val result = favoriteResult.alsoApplyServerAnswer(id)
         if (result is DataResult.Success) {
             // 성공하면 저장소가 개수를 다시 읽는다
@@ -222,4 +234,11 @@ class FakeMemoRepository : MemoRepository {
         }
         return this
     }
+}
+
+/** 값을 바꿀 수 있는 가짜 시계 (자정이 지나는 것을 흉내 낸다) */
+class MutableClock(var now: Instant, private val zoneId: ZoneId = ZoneId.of("Asia/Seoul")) : Clock() {
+    override fun getZone(): ZoneId = zoneId
+    override fun withZone(zone: ZoneId): Clock = MutableClock(now, zone)
+    override fun instant(): Instant = now
 }

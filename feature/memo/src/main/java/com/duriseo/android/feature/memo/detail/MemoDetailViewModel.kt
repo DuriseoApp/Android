@@ -15,6 +15,8 @@ import com.duriseo.android.domain.memo.Memo
 import com.duriseo.android.domain.memo.MemoRepository
 import com.duriseo.android.domain.result.DataResult
 import com.duriseo.android.feature.memo.component.MemoAuthor
+import com.duriseo.android.feature.memo.component.guardedWrite
+import com.duriseo.android.feature.memo.component.midnightTicks
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,9 +62,12 @@ class MemoDetailViewModel @Inject constructor(
     private var everLoaded = false
     private var vanished = false
 
+    /** 내 정보. 다음 자정마다 다시 내보내 작성일의 "오늘"·"어제"를 새로 계산하게 한다 (NFR-TIME-02) */
+    private val meAtMidnight = combine(meRepository.observeMe(), midnightTicks(clock)) { me, _ -> me }
+
     val uiState: StateFlow<MemoDetailUiState> = combine(
         memoRepository.observeMemo(memoId),
-        meRepository.observeMe(),
+        meAtMidnight,
         local,
     ) { memo, me, local ->
         val base = MemoDetailUiState(
@@ -127,8 +132,12 @@ class MemoDetailViewModel @Inject constructor(
         if (local.value.writing) return
         local.update { it.copy(writing = true) }
         viewModelScope.launch {
-            val result = request()
-            local.update { it.copy(writing = false) }
+            // 저장소가 예외를 던져도 덮개는 걷힌다 (예외는 공통 오류로, D-115)
+            val result = try {
+                guardedWrite(request)
+            } finally {
+                local.update { it.copy(writing = false) }
+            }
             if (result is DataResult.Failure) showFailure(result)
         }
     }
@@ -137,13 +146,19 @@ class MemoDetailViewModel @Inject constructor(
         if (local.value.deleting || uiState.value.memo?.canEdit != true) return
         local.update { it.copy(deleting = true, deleteLoading = true) }
         viewModelScope.launch {
-            when (val result = memoRepository.delete(memoId)) {
+            // 저장소가 예외를 던져도 덮개는 걷힌다 (예외는 공통 오류로, D-115)
+            val result = try {
+                guardedWrite { memoRepository.delete(memoId) }
+            } finally {
+                local.update { it.copy(deleteLoading = false) }
+            }
+            when (result) {
                 is DataResult.Success -> {
-                    local.update { it.copy(deleteDialogVisible = false, deleteLoading = false) }
+                    local.update { it.copy(deleteDialogVisible = false) }
                     effectChannel.trySend(MemoDetailSideEffect.Close)
                 }
                 is DataResult.Failure -> {
-                    local.update { it.copy(deleting = false, deleteLoading = false, deleteDialogVisible = false) }
+                    local.update { it.copy(deleting = false, deleteDialogVisible = false) }
                     showFailure(result)
                 }
             }

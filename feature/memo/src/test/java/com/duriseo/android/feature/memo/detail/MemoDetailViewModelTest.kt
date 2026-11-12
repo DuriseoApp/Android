@@ -12,6 +12,7 @@ import com.duriseo.android.feature.memo.PartnerId
 import com.duriseo.android.feature.memo.TestClock
 import com.duriseo.android.feature.memo.apiError
 import com.duriseo.android.feature.memo.coupleMe
+import com.duriseo.android.feature.memo.MutableClock
 import com.duriseo.android.feature.memo.makeMemo
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -250,6 +251,39 @@ class MemoDetailViewModelTest {
         assertTrue(vm.uiState.value.loading)
         gate2.complete(Unit)
         assertFalse(vm.uiState.value.loading)
+    }
+
+    @Test
+    fun `D-115 저장소가 예외를 던져도 loading이 false로 돌아온다`() = runTest {
+        storeMine()
+        repo.writeFailure = IllegalStateException("저장 실패")
+        val vm = viewModel()
+
+        vm.effects.test {
+            vm.onAction(MemoDetailAction.FavoriteClicked)
+            assertEquals(MemoDetailSideEffect.ShowMessage(DesignR.string.error_common), awaitItem())
+        }
+        assertFalse(vm.uiState.value.loading)
+
+        // 삭제도 같다: 덮개가 걷히고 화면에 남는다
+        vm.onAction(MemoDetailAction.DeleteClicked)
+        vm.onAction(MemoDetailAction.DeleteConfirmed)
+        assertFalse(vm.uiState.value.loading)
+        assertFalse(vm.uiState.value.deleting)
+    }
+
+    @Test
+    fun `NFR-TIME-02 자정이 지나면 작성일의 오늘과 어제를 다시 계산한다`() = runTest {
+        val clock = MutableClock(java.time.Instant.parse("2026-10-12T14:50:00Z"))
+        repo.memos.value = mapOf("m1" to makeMemo("m1", createdAt = java.time.Instant.parse("2026-10-12T05:00:00Z")))
+        val vm = MemoDetailViewModel(SavedStateHandle(mapOf(MemoRouteModel.Detail::memoId.name to "m1")), repo, me, clock)
+        assertTrue(vm.uiState.value.memo?.writtenAt is WrittenAt.Today)
+
+        clock.now = java.time.Instant.parse("2026-10-12T15:10:00Z")
+        testScheduler.advanceTimeBy(20 * 60 * 1000L)
+        testScheduler.runCurrent()
+
+        assertEquals(WrittenAt.Yesterday, vm.uiState.value.memo?.writtenAt)
     }
 
     @Test

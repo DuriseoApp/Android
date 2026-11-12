@@ -404,6 +404,60 @@ class MemoRepositoryTest {
     }
 
     @Test
+    fun `Room 반영이 실패해도 서버 성공이면 쓰기 결과는 성공이다`() = runTestWithTimeout {
+        val h = harness()
+        server.dispatcher = PathServer(
+            mapOf(
+                "POST /api/v1/memos" to jsonResponse(201, memo("n1")),
+                "PATCH /api/v1/memos/n1" to jsonResponse(200, memo("n1")),
+                "DELETE /api/v1/memos/n1" to MockResponse().setResponseCode(204),
+            ),
+        )
+        h.database.close() // 이제 Room 쓰기는 모두 예외다
+
+        val created = h.memoRepository.create(NewMemo("n1", null, null))
+        val updated = h.memoRepository.update("n1", MemoPatch(title = FieldChange.Set("새 제목")))
+        val deleted = h.memoRepository.delete("n1")
+
+        assertTrue(created is DataResult.Success)
+        assertTrue(updated is DataResult.Success)
+        assertTrue(deleted is DataResult.Success)
+    }
+
+    @Test
+    fun `삭제 성공 뒤 늦게 도착한 이전 상세 응답은 저장하지 않는다`() = runTestWithTimeout {
+        val h = harness()
+        server.enqueue(jsonResponse(200, memo("a1")).setHeadersDelay(1500, TimeUnit.MILLISECONDS))
+        val stale = async(Dispatchers.Default) { h.memoRepository.refreshMemo("a1") }
+        assertTrue(server.takeRequest(5, TimeUnit.SECONDS) != null)
+        server.dispatcher = PathServer(
+            mapOf(
+                "DELETE /api/v1/memos/a1" to MockResponse().setResponseCode(204),
+                "GET /api/v1/memos" to jsonResponse(200, page(null, 0, 0)),
+                "GET /api/v1/memos/pinned" to jsonResponse(200, items()),
+            ),
+        )
+
+        val deleted = h.memoRepository.delete("a1")
+        stale.await()
+
+        assertTrue(deleted is DataResult.Success)
+        assertNull(h.memoRepository.observeMemo("a1").first())
+    }
+
+    @Test
+    fun `고정 목록을 받으면 받은 적이 있다고 표시하고 빈 목록도 그렇다`() = runTestWithTimeout {
+        val h = harness()
+        assertFalse(h.memoRepository.observePinnedLoaded().first())
+
+        server.enqueue(jsonResponse(200, items()))
+        h.memoRepository.refreshPinned()
+
+        assertTrue(h.memoRepository.observePinnedLoaded().first())
+        assertEquals(emptyList<String>(), h.pinnedIds())
+    }
+
+    @Test
     fun `삭제 성공은 기기에서도 지우고 목록을 다시 불러온다`() = runTestWithTimeout {
         val h = harness()
         server.enqueue(jsonResponse(200, page(null, 2, 0, memo("a1"), memo("a2"))))

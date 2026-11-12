@@ -320,6 +320,7 @@ class FakeMemoRepository(initial: List<Memo> = emptyList()) : MemoRepository {
     override fun observeList(view: MemoView): Flow<MemoList> = error("캘린더는 쓰지 않아요")
     override fun observeFavoriteCount(): Flow<Int> = error("캘린더는 쓰지 않아요")
     override fun observePinned(): Flow<List<Memo>> = error("캘린더는 쓰지 않아요")
+    override fun observePinnedLoaded(): Flow<Boolean> = error("캘린더는 쓰지 않아요")
     override fun observeMemo(id: String): Flow<Memo?> = error("캘린더는 쓰지 않아요")
     override suspend fun refreshList(view: MemoView): DataResult<Unit> = error("캘린더는 쓰지 않아요")
     override suspend fun loadMoreList(view: MemoView): DataResult<Unit> = error("캘린더는 쓰지 않아요")

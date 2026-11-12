@@ -11,6 +11,7 @@ const val MAX_VISIBLE_PINS = 3
  * SCR-MEMO-01 메모 목록 (FR-MEMO-01, FR-MEMO-05, FR-MEMO-06). 화면은 Room만 구독한다 (NFR-OFF-01).
  *
  * @property loaded 내 정보를 읽었다 (작성자 닉네임·색을 알 수 있다)
+ * @property pinsLoaded 고정 목록을 한 번이라도 받았다. false인 빈 `pins`는 "고정 없음"이 아니라 "아직 안 받음"이다
  * @property pins 고정 메모 전체, 최근 고정순. "고정된 핀 N개"의 N은 길이다 (SCREENS "개수 표시 출처")
  * @property view 고른 보기 칩
  * @property items 고른 보기의 목록. 고정된 메모는 없다 (D-130)
@@ -23,6 +24,7 @@ const val MAX_VISIBLE_PINS = 3
 data class MemoListUiState(
     val loaded: Boolean = false,
     val pins: List<MemoItemUi> = emptyList(),
+    val pinsLoaded: Boolean = false,
     val view: MemoView = MemoView.NEWEST,
     val items: List<MemoItemUi> = emptyList(),
     val totalCount: Int = 0,
@@ -40,8 +42,8 @@ data class MemoListUiState(
     /** 고정 4개 이상이면 [고정 메모 전체 보기 (N) ›] */
     val showPinsMore: Boolean get() = pins.size > MAX_VISIBLE_PINS
 
-    /** 고정 없음: 점선 상자 */
-    val showNoPins: Boolean get() = pins.isEmpty()
+    /** 고정 없음: 점선 상자. 고정 목록을 받기 전에는 숨긴다 (받기 전의 빈 목록은 "없음"이 아니다) */
+    val showNoPins: Boolean get() = pinsLoaded && pins.isEmpty()
 
     /**
      * 즐겨찾기 없음: "즐겨찾기한 메모가 없어요. 메모 옆 별을 눌러 추가해 보세요." 메모가 하나도 없는 최신순·오래된순은

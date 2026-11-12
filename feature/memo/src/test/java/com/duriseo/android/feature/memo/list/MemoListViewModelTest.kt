@@ -6,6 +6,7 @@ import com.duriseo.android.domain.format.WrittenAt
 import com.duriseo.android.domain.memo.MemoView
 import com.duriseo.android.feature.memo.FakeMemoRepository
 import com.duriseo.android.feature.memo.FakeMeRepository
+import com.duriseo.android.feature.memo.MutableClock
 import com.duriseo.android.feature.memo.Offline
 import com.duriseo.android.feature.memo.PartnerId
 import com.duriseo.android.feature.memo.TestClock
@@ -147,6 +148,12 @@ class MemoListViewModelTest {
     }
 
     @Test
+    fun `SCR-MEMO-01 고정 목록을 받기 전에는 점선 상자를 숨긴다`() = runTest {
+        repo.pinnedLoaded.value = false
+        assertFalse(viewModel().uiState.value.showNoPins)
+    }
+
+    @Test
     fun `SCR-MEMO-01 즐겨찾기 보기가 비면 안내 문구를 보이고 최신순이 비면 보이지 않는다`() = runTest {
         val vm = viewModel()
         // 최신순이 비어도 새 문구는 없다 (확인 필요 2)
@@ -204,6 +211,39 @@ class MemoListViewModelTest {
 
         gate.complete(Unit)
         assertFalse(vm.uiState.value.loading)
+    }
+
+    @Test
+    fun `D-115 저장소가 예외를 던져도 loading이 false로 돌아온다`() = runTest {
+        repo.setList(MemoView.NEWEST, listOf(makeMemo("m1")))
+        repo.writeFailure = IllegalStateException("저장 실패")
+        val vm = viewModel()
+
+        vm.effects.test {
+            vm.onAction(MemoListAction.PinClicked(vm.uiState.value.items.single()))
+            assertEquals(MemoListSideEffect.ShowMessage(DesignR.string.error_common), awaitItem())
+        }
+        assertFalse(vm.uiState.value.loading)
+        // 덮개가 걷힌 뒤에는 다시 쓸 수 있다
+        repo.writeFailure = null
+        vm.onAction(MemoListAction.PinClicked(vm.uiState.value.items.single()))
+        assertEquals(2, repo.pinCalls.size)
+    }
+
+    @Test
+    fun `NFR-TIME-02 자정이 지나면 작성일의 오늘과 어제를 다시 계산한다`() = runTest {
+        // 2026-10-12 23:50(서울), 같은 날 오후 2시에 쓴 메모는 "오늘"
+        val clock = MutableClock(java.time.Instant.parse("2026-10-12T14:50:00Z"))
+        repo.setList(MemoView.NEWEST, listOf(makeMemo("m1", createdAt = java.time.Instant.parse("2026-10-12T05:00:00Z"))))
+        val vm = MemoListViewModel(repo, me, clock)
+        assertTrue(vm.uiState.value.items.single().writtenAt is WrittenAt.Today)
+
+        // 자정이 지났다: 다음 자정까지 쉬던 신호가 깨어나 "어제"로 바뀐다
+        clock.now = java.time.Instant.parse("2026-10-12T15:10:00Z")
+        testScheduler.advanceTimeBy(20 * 60 * 1000L)
+        testScheduler.runCurrent()
+
+        assertEquals(WrittenAt.Yesterday, vm.uiState.value.items.single().writtenAt)
     }
 
     @Test

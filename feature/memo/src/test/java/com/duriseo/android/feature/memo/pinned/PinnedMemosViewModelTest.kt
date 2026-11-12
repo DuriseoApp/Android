@@ -81,6 +81,19 @@ class PinnedMemosViewModelTest {
     }
 
     @Test
+    fun `D-115 저장소가 예외를 던져도 loading이 false로 돌아온다`() = runTest {
+        repo.pinned.value = listOf(makeMemo("p1", pinned = true))
+        repo.writeFailure = IllegalStateException("저장 실패")
+        val vm = viewModel()
+
+        vm.effects.test {
+            vm.onAction(PinnedMemosAction.UnpinClicked(vm.uiState.value.items.single()))
+            assertEquals(PinnedMemosSideEffect.ShowMessage(DesignR.string.error_common), awaitItem())
+        }
+        assertFalse(vm.uiState.value.loading)
+    }
+
+    @Test
     fun `NFR-OFF-02 오프라인이면 인터넷 연결이 필요하다는 안내를 보인다`() = runTest {
         repo.pinned.value = listOf(makeMemo("p1", pinned = true))
         repo.pinResult = Offline

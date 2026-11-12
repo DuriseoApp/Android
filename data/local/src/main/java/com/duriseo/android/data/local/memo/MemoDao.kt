@@ -59,6 +59,8 @@ abstract class MemoDao {
     open suspend fun replacePinned(items: List<MemoEntity>) {
         deleteList(MEMO_LIST_PINNED)
         insertMemos(items.mapIndexed { i, e -> e.copy(listType = MEMO_LIST_PINNED, position = i) })
+        // 받은 적이 있다는 표시. 빈 목록도 "고정 없음"으로 확정된다
+        upsertState(MemoPageStateEntity(MEMO_STATE_PINNED, null, null, null))
     }
 
     // --- 날짜 메모 범위 ---

@@ -181,6 +181,9 @@ private val TagGap = 5.dp
 /** 펼친 행: 높이 44, 모서리 12, 안쪽 좌우 14, 사이 10, 시간 칸 34 (소스 `rowBase`) */
 private val RowHeight = 44.dp
 private val RowRadius = 12.dp
+
+/** 펼친 행 안 요소 사이 10 (보드 `Calendar.dc.html` 325행 `rowBase`의 `gap: 10px`). 간격 토큰(8·12)에 없는 값이다 */
+private val RowItemGap = 10.dp
 private val RowTimeWidth = 34.dp
 
 /** FAB 아이콘 26 (`Calendar.dc.html` 133행). 위치: 오른쪽 20, 탭 위 20 */
@@ -1067,7 +1070,7 @@ private fun MemoRow(memo: CalendarMemo, onClick: () -> Unit) {
             .background(Surface50)
             .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = RowPadding),
-        horizontalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space3 - 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(RowItemGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(TagDot).background(memo.author.color(), CircleShape))
@@ -1186,7 +1189,7 @@ private fun EventRow(event: CalendarEvent, onClick: () -> Unit) {
             .background(Surface50)
             .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = RowPadding),
-        horizontalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space3 - 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(RowItemGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(TagDot).background(event.target.color(), CircleShape))
@@ -1224,7 +1227,7 @@ private fun AnniversaryRow(anniversary: CalendarAnniversary, onClick: () -> Unit
             .background(Brand50)
             .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = RowPadding),
-        horizontalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space3 - 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(RowItemGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(TagDot).border(MarkRingStroke, Brand500, CircleShape))

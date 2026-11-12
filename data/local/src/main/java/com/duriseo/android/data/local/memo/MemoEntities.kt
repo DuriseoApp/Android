@@ -22,6 +22,9 @@ const val MEMO_LIST_DETAIL = "DETAIL"
 /** [MemoPageStateEntity.key]의 값: 그 밖에 보기별 키는 [MEMO_LIST_NEWEST] 등과 같다 */
 const val MEMO_STATE_COUNTS = "COUNTS"
 
+/** 고정 목록을 받은 적이 있다는 표시(상태 행의 존재). 보기가 아니라서 `loadedViewKeys`에 들지 않는다 */
+const val MEMO_STATE_PINNED = "PINNED"
+
 /** 보기별 목록의 `listType`들. 이어 받기 상태([MemoPageStateEntity])가 있는 목록이다 */
 val MEMO_VIEW_LISTS = listOf(MEMO_LIST_NEWEST, MEMO_LIST_OLDEST, MEMO_LIST_FAVORITES)
 

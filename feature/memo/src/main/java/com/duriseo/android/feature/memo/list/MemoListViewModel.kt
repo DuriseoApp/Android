@@ -7,6 +7,8 @@ import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.memo.MemoRepository
 import com.duriseo.android.domain.memo.MemoView
 import com.duriseo.android.domain.result.DataResult
+import com.duriseo.android.feature.memo.component.guardedWrite
+import com.duriseo.android.feature.memo.component.midnightTicks
 import com.duriseo.android.feature.memo.component.toItemUi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -49,19 +51,24 @@ class MemoListViewModel @Inject constructor(
 
     private val local = MutableStateFlow(Local())
 
+    /** 내 정보. 다음 자정마다 다시 내보내 작성일의 "오늘"·"어제"를 새로 계산하게 한다 (NFR-TIME-02) */
+    private val meAtMidnight = combine(meRepository.observeMe(), midnightTicks(clock)) { me, _ -> me }
+
     val uiState: StateFlow<MemoListUiState> = combine(
-        meRepository.observeMe(),
-        memoRepository.observePinned(),
+        meAtMidnight,
+        // 고정 목록과 "받은 적이 있는가". 받기 전의 빈 목록에는 "고정 없음" 점선 상자를 그리지 않는다
+        combine(memoRepository.observePinned(), memoRepository.observePinnedLoaded()) { pinned, loaded -> pinned to loaded },
         local.map { it.view }.distinctUntilChanged().flatMapLatest { memoRepository.observeList(it) },
         memoRepository.observeFavoriteCount(),
         local,
-    ) { me, pinned, list, favoriteCount, state ->
+    ) { me, (pinned, pinnedLoaded), list, favoriteCount, state ->
         if (me == null) {
             MemoListUiState(view = state.view, writing = state.writing)
         } else {
             MemoListUiState(
                 loaded = true,
                 pins = pinned.map { it.toItemUi(me, clock) },
+                pinsLoaded = pinnedLoaded,
                 view = state.view,
                 items = list.items.map { it.toItemUi(me, clock) },
                 totalCount = list.totalCount,
@@ -126,8 +133,12 @@ class MemoListViewModel @Inject constructor(
         if (local.value.writing) return
         local.update { it.copy(writing = true) }
         viewModelScope.launch {
-            val result = request()
-            local.update { it.copy(writing = false) }
+            // 저장소가 예외를 던져도 덮개는 걷힌다 (예외는 공통 오류로, D-115)
+            val result = try {
+                guardedWrite(request)
+            } finally {
+                local.update { it.copy(writing = false) }
+            }
             if (result is DataResult.Failure) {
                 effectChannel.trySend(MemoListSideEffect.ShowMessage(result.error.toMessageRes()))
             }

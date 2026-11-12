@@ -6,6 +6,7 @@ import com.duriseo.android.core.designsystem.message.toMessageRes
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.memo.MemoRepository
 import com.duriseo.android.domain.result.DataResult
+import com.duriseo.android.feature.memo.component.guardedWrite
 import com.duriseo.android.feature.memo.component.toItemUi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -66,8 +67,12 @@ class PinnedMemosViewModel @Inject constructor(
         if (writing.value) return
         writing.update { true }
         viewModelScope.launch {
-            val result = memoRepository.setPinned(id, pinned = false)
-            writing.update { false }
+            // 저장소가 예외를 던져도 덮개는 걷힌다 (예외는 공통 오류로, D-115)
+            val result = try {
+                guardedWrite { memoRepository.setPinned(id, pinned = false) }
+            } finally {
+                writing.update { false }
+            }
             if (result is DataResult.Failure) {
                 effectChannel.trySend(PinnedMemosSideEffect.ShowMessage(result.error.toMessageRes()))
             }
