@@ -3,6 +3,7 @@ package com.duriseo.android.data.repository.couple
 import com.duriseo.android.data.local.anniversary.AnniversaryLocalDataSource
 import com.duriseo.android.data.local.event.EventLocalDataSource
 import com.duriseo.android.data.local.me.MeLocalDataSource
+import com.duriseo.android.data.local.memo.MemoLocalDataSource
 import com.duriseo.android.data.remote.couple.CoupleRemoteDataSource
 import com.duriseo.android.data.repository.cache.LocalCacheGeneration
 import com.duriseo.android.data.repository.me.MeWriteLock
@@ -36,6 +37,7 @@ class CoupleRepositoryImpl @Inject constructor(
     private val writeLock: MeWriteLock,
     private val events: EventLocalDataSource,
     private val anniversaries: AnniversaryLocalDataSource,
+    private val memos: MemoLocalDataSource,
     private val cache: LocalCacheGeneration,
 ) : CoupleRepository {
 
@@ -60,6 +62,7 @@ class CoupleRepositoryImpl @Inject constructor(
                     cache.clearing {
                         events.clear()
                         anniversaries.clear()
+                        memos.clear()
                     }
                 }
             }

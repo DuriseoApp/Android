@@ -4,6 +4,7 @@ import com.duriseo.android.data.local.anniversary.AnniversaryLocalDataSource
 import com.duriseo.android.data.local.event.EventLocalDataSource
 import com.duriseo.android.data.local.me.AcknowledgedSpaceLocalDataSource
 import com.duriseo.android.data.local.me.MeLocalDataSource
+import com.duriseo.android.data.local.memo.MemoLocalDataSource
 import com.duriseo.android.data.remote.me.MeRemoteDataSource
 import com.duriseo.android.data.repository.auth.SessionManager
 import com.duriseo.android.data.repository.cache.LocalCacheGeneration
@@ -38,6 +39,7 @@ class MeRepositoryImpl @Inject constructor(
     private val writeLock: MeWriteLock,
     private val events: EventLocalDataSource,
     private val anniversaries: AnniversaryLocalDataSource,
+    private val memos: MemoLocalDataSource,
     private val cache: LocalCacheGeneration,
 ) : MeRepository {
 
@@ -144,11 +146,12 @@ class MeRepositoryImpl @Inject constructor(
         val unlinked = leftCouple || (isPersonal && acknowledgedId != null && acknowledgedId != fresh.space.id)
 
         if (unlinked) session.clearUserData()
-        // 공간이 바뀌었으면(연결·복구·다른 커플 공간) 이전 공간의 일정·기념일 캐시를 비운다 (unit-4.md 확인 필요 12, 단위 5)
+        // 공간이 바뀌었으면(연결·복구·다른 커플 공간) 이전 공간의 일정·기념일·메모 캐시를 비운다 (unit-4.md 확인 필요 12, 단위 5)
         if (!unlinked && previous != null && previous.space.id != fresh.space.id) {
             cache.clearing {
                 events.clear()
                 anniversaries.clear()
+                memos.clear()
             }
         }
         local.replace(fresh.toEntity())

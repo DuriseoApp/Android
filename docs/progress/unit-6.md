@@ -1,6 +1,6 @@
 # 단위 6: 메모 — SCR-MEMO-01~04, 날짜, 고정, 즐겨찾기, 캘린더 메모 표시
 
-> 브랜치: `feat/6-memo` · PR: (draft 때 채움) · 상태: 진행 중 (2026-11-12 범위 승인, 확인 필요 1~4 추천안대로)
+> 브랜치: `feat/6-memo` · PR: #17 · 상태: 진행 중 (2026-11-12 범위 승인, 확인 필요 1~4 추천안대로)
 > 기준: PRD v0.12 (FR-MEMO-01·02·03·05·06, FR-CAL-01 AC2·AC8, FR-NOTI-04, NFR-TIME-02, D-57·D-115·D-118·D-119·D-121·D-123·D-126·D-129~D-133), SCREENS.md(캔버스 버전 43) SCR-MEMO-01~04·SCR-CAL-01·SCR-CAL-03·공통 "날짜·시각 표기", API.md 1.1·3.4·3.3 "커서 정렬 키"·5장
 > Docs 기준 커밋: DuriseoApp/Docs main `cee0885`
 > 앞 단위: 단위 5 머지됨 (main `057ed33`). 서버 메모 API(서버 단위 5)는 개발 서버 배포됨
@@ -87,6 +87,16 @@
 ## 결정
 
 구현하면서 정한 것 중 문서에 없는 것. 문서에 있어야 할 결정이면 여기 적지 말고 작업을 멈추고 보고한다.
+
+묶음 A·D (데이터·공통 표기):
+
+1. **Room 테이블**: `memo` 한 테이블에 `list_type`(`NEWEST`·`OLDEST`·`FAVORITES`·`PINNED`·`DATED`·`DETAIL`)과 응답 위치(`position`)를 담는다 (단위 5 `anniversary_occurrence`와 같은 방식). 보기별 이어 받기 상태와 `favoriteCount`는 `memo_page_state`(키 `NEWEST`·`OLDEST`·`FAVORITES`, 그리고 `COUNTS`)에 둔다. 상태 행이 있으면 그 보기를 받은 적이 있다는 뜻이고, `MemoList.isLoaded`로 화면에 알린다 (빈 목록이 "메모 없음"인지 "아직 안 받음"인지 구분).
+2. **상세 `observeMemo(id)`**: 그 메모를 담은 행 중 가장 나중에 저장한 것(행 `id` 최대)을 쓴다. 목록에서 받은 값과 상세로 받은 값 중 최신이 보인다. 상세 화면은 들어갈 때 `refreshMemo(id)`를 불러 404(D-121)를 알아챈다.
+3. **쓰기 뒤 다시 불러오기 범위**: "현재 보기들" = 지금까지 한 번이라도 받은(상태 행이 있는) 보기 전부의 첫 페이지 + `GET /memos/pinned` + `setVisibleRange`로 알린 달. 고정·즐겨찾기는 204라 응답에 메모가 없으므로, 그 메모의 상세를 저장해 둔 적이 있으면 상세도 함께 다시 받는다(API.md 3.4에는 없는 추가 요청 1건). 생성·수정은 응답의 `Memo`를 상세로 저장한다.
+4. **삭제 성공(204)**: 서버가 성공했으니 기기에서도 바로 지우고(그 보기의 `totalCount`·`favoriteCount`를 하나씩 줄임) 다시 불러오기로 맞춘다. 다시 불러오기가 실패해도 지운 메모가 남아 보이지 않게 하려는 것이다.
+5. **`MemoPatch`**: `FieldChange.Keep`(보내지 않음)과 `FieldChange.Set(value?)`(null이면 JSON `null`로 지움)로 세 필드를 나타낸다. 비교는 `MemoRules.patchOf(원래 Memo, 입력 제목, 입력 본문, 입력 날짜)`가 정리한 값(D-132)끼리 한다. 본문은 공백·줄바꿈까지 비교한다. `NewMemo`는 입력 그대로 받고 보내기 직전에 정리한다.
+6. **작성일 표기 분리 (D-129)**: 계산은 `domain/format/DateTexts`(순수 함수, `java.time.Clock`을 받아 그 시간대로 가름)가 `WrittenAt`·`MemoDateChip`을 돌려주고, 문구는 `core:designsystem`의 `format/DateTextFormat`(`Resources.writtenAtText`·`memoDateChipText`와 Composable 같은 이름)이 `strings.xml` 조각으로 붙인다. 요일은 기존 `weekday_short` 배열, 다른 해 연월일은 기존 `date_year_month_day`를 다시 쓴다. 문자열부는 Robolectric이 없는 모듈이라 단위 테스트 없이 Preview로 대조한다.
+7. 미리보기(본문 줄 수 자르기)는 규칙이 문서에 없어 화면(묶음 B)이 2줄 말줄임으로 처리한다. 도메인 함수는 두지 않았다.
 
 ## 리뷰 기록
 

@@ -10,6 +10,9 @@ import com.duriseo.android.data.local.event.EventDao
 import com.duriseo.android.data.local.event.EventEntity
 import com.duriseo.android.data.local.me.MeDao
 import com.duriseo.android.data.local.me.MeEntity
+import com.duriseo.android.data.local.memo.MemoDao
+import com.duriseo.android.data.local.memo.MemoEntity
+import com.duriseo.android.data.local.memo.MemoPageStateEntity
 
 /**
  * 앱의 Room 데이터베이스 (오프라인 보기 캐시, NFR-OFF-01). 첫 엔티티는 `MeEntity`(단위 2).
@@ -23,6 +26,9 @@ import com.duriseo.android.data.local.me.MeEntity
  *
  * 버전 4 (단위 5): 기념일 `anniversary_occurrence`(캘린더 범위·다가오는 목록, 응답 위치 저장)·`anniversary_past`(지난 기념일)·
  * `anniversary_page_state`(다음 커서·지난 기념일 개수)를 더했다 (API.md 3.3 "기념일"). 같은 방식으로 지우고 다시 만든다.
+ *
+ * 버전 5 (단위 6): 메모 `memo`(보기별 목록·고정 목록·날짜 메모·상세, 응답 위치 저장)·`memo_page_state`(보기별 다음 커서·전체 개수, 즐겨찾기 개수)를
+ * 더했다 (API.md 3.4). 같은 방식으로 지우고 다시 만든다.
  */
 @Database(
     entities = [
@@ -31,8 +37,10 @@ import com.duriseo.android.data.local.me.MeEntity
         AnniversaryOccurrenceEntity::class,
         PastAnniversaryEntity::class,
         AnniversaryPageStateEntity::class,
+        MemoEntity::class,
+        MemoPageStateEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class DuriseoDatabase : RoomDatabase() {
@@ -41,6 +49,8 @@ abstract class DuriseoDatabase : RoomDatabase() {
     abstract fun eventDao(): EventDao
 
     abstract fun anniversaryDao(): AnniversaryDao
+
+    abstract fun memoDao(): MemoDao
 
     companion object {
         const val NAME = "duriseo.db"

@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.duriseo.android.data.local.anniversary.AnniversaryDao
 import com.duriseo.android.data.local.event.EventDao
 import com.duriseo.android.data.local.me.MeDao
+import com.duriseo.android.data.local.memo.MemoDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -32,4 +33,7 @@ object DatabaseModule {
 
     @Provides
     fun provideAnniversaryDao(database: DuriseoDatabase): AnniversaryDao = database.anniversaryDao()
+
+    @Provides
+    fun provideMemoDao(database: DuriseoDatabase): MemoDao = database.memoDao()
 }
