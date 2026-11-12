@@ -9,7 +9,7 @@ sealed interface MainRouteModel : RouteModel {
     @Serializable
     data object Calendar : MainRouteModel
 
-    /** 하단 탭 2: 메모 (D-30). `feature:memo`가 생기기 전까지 빈 자리표시 */
+    /** 하단 탭 2: 메모 (SCR-MEMO-01, D-30) */
     @Serializable
     data object Memo : MainRouteModel
 
@@ -49,6 +49,26 @@ sealed interface AnniversaryRouteModel : RouteModel {
      */
     @Serializable
     data class Edit(val anniversaryId: String? = null, val date: String? = null) : AnniversaryRouteModel
+}
+
+/** 메모 하위 화면 (`feature:memo`). 하단 탭이 없다. 진입은 메모 탭(SCR-MEMO-01), 단위 6 묶음 C부터는 캘린더 날짜 목록의 메모도 상세로 온다 */
+sealed interface MemoRouteModel : RouteModel {
+    /** 고정 메모 전체 (SCR-MEMO-02). 고정이 4개 이상일 때만 SCR-MEMO-01이 연다 */
+    @Serializable
+    data object Pinned : MemoRouteModel
+
+    /** 메모 상세 (SCR-MEMO-03) */
+    @Serializable
+    data class Detail(val memoId: String) : MemoRouteModel
+
+    /**
+     * 메모 작성·수정 (SCR-MEMO-04).
+     *
+     * @property memoId 있으면 수정(종류 탭 없음), 없으면 새로 추가. 속성 이름 `memoId`는 `MemoEditViewModel`이
+     *   `SavedStateHandle`에서 같은 이름으로 읽는다 (`MemoEditViewModel.ARG_MEMO_ID`)
+     */
+    @Serializable
+    data class Edit(val memoId: String? = null) : MemoRouteModel
 }
 
 /** 로그인 전 화면 (`feature:auth`). 하단 탭이 없다. */

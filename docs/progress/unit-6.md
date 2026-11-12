@@ -98,6 +98,17 @@
 6. **작성일 표기 분리 (D-129)**: 계산은 `domain/format/DateTexts`(순수 함수, `java.time.Clock`을 받아 그 시간대로 가름)가 `WrittenAt`·`MemoDateChip`을 돌려주고, 문구는 `core:designsystem`의 `format/DateTextFormat`(`Resources.writtenAtText`·`memoDateChipText`와 Composable 같은 이름)이 `strings.xml` 조각으로 붙인다. 요일은 기존 `weekday_short` 배열, 다른 해 연월일은 기존 `date_year_month_day`를 다시 쓴다. 문자열부는 Robolectric이 없는 모듈이라 단위 테스트 없이 Preview로 대조한다.
 7. 미리보기(본문 줄 수 자르기)는 규칙이 문서에 없어 화면(묶음 B)이 2줄 말줄임으로 처리한다. 도메인 함수는 두지 않았다.
 
+묶음 B (메모 화면, `feature:memo`):
+
+8. **미리보기 글**: 줄바꿈·연속 공백을 공백 하나로 접은 한 줄이고 200자까지 상태에 담는다(`MemoPreview`). 제목이 없어 본문 첫 줄이 제목 자리에 올라가면 그 줄은 빼고 나머지를 쓴다(같은 글이 두 번 나오지 않게). 핀 카드는 2줄, 메모 행은 1줄 말줄임(결정 7).
+9. **메모 입력 부분의 공개 부품 (확인 필요 3)**: `MemoEditViewModel`(Hilt, `uiState`·`effects`·`onAction`)과 Composable `MemoForm`(제목·날짜 영역·본문·알림 스위치, 앱바·저장·스크롤 없음)·`MemoDateSheet`(날짜 시트, 화면 전체 덮개라 바깥이 `DuriseoDialogLayer`의 `dialog`에 둠)를 공개한다. 메모 id는 `SavedStateHandle`의 `memoId` 키(`MemoRouteModel.Edit::memoId`와 같은 이름, `MemoEditViewModel.ARG_MEMO_ID`)에서 읽는다: 키가 없는 항목에서 만들면 새 메모라서 SCR-CAL-03 항목에서 만들어도 메모 날짜는 비어 있다(D-133). 탭마다 입력 보존은 그 ViewModel이 항목에 살아 있는 동안 상태를 들고 있어서 된다.
+10. **FAB의 새 메모는 탭 없이 연다**: SCREENS SCR-MEMO-04 진입에 "SCR-MEMO-01의 FAB"이 있고 이미지는 [일정|메모] 탭이 있는 SCR-CAL-03 모양이다. `feature:memo`는 일정 폼을 모르므로 이 단위의 FAB은 `MemoRouteModel.Edit()`(탭 없는 메모 전용 작성 화면)로 간다. 탭이 있는 SCR-CAL-03 안의 메모로 연결할지는 묶음 C에서 정한다(보고).
+11. **새 경로 `MemoRouteModel`**(`core:common`): `Pinned`·`Detail(memoId)`·`Edit(memoId = null)`. 수정이 404면 `NavController.closeMemoEditAndDetail()`이 `Detail`까지 포함해 되돌린다(상세가 메모 탭이든 캘린더든 그 앞으로). 403이면 수정 화면만 닫고 상세는 `ON_START`의 `Shown`과 저장소의 다시 불러오기로 맞춘다.
+12. **날짜 시트**: [날짜 추가]·날짜 행은 `StartDatePickerSheet`(범위 1950~2050, 제목 "날짜", 설명·안내 없음, 버튼 "완료")를 연다. 처음 열 때 고른 날은 메모 날짜가 있으면 그 날, 없으면 오늘이고, [완료]를 눌러야 메모 날짜가 붙는다(닫으면 그대로).
+13. **화면이 보일 때 다시 불러오기**: 메모 목록(고정 + 지금 보기 첫 페이지)·고정 전체·상세는 `ON_START`에 조회한다(캘린더·기념일과 같다). 당겨서 새로고침은 SCREENS SCR-MEMO-01에 없어 넣지 않았다(PRD Q-16·NFR-SYNC-02는 캘린더 기준이다).
+14. **로딩 덮개**: 핀·별(목록·고정 전체·상세), 삭제·저장은 `loading`을 `DuriseoLoadingLayer`/`DuriseoDialogLayer`에 넘긴다. 요청 중에는 다른 쓰기를 받지 않고, 결과 안내는 덮개를 걷은 뒤에 보낸다(D-115).
+15. **아이콘**: 핀·별(꺼짐 선, 켜짐 채움)·달력+더하기를 `core:designsystem`에 벡터로 추가했다(`ic_pin`, `ic_pin_filled`, `ic_star`, `ic_star_filled`, `ic_calendar_plus`). 보드 인라인 SVG 그대로다. 켜짐 색은 핀 `brand-500`, 별 `favorite-600`, 꺼짐은 목록 `ink-400`·상세 `ink-600`(보드).
+
 ## 리뷰 기록
 
 | 회차 | Critical | Major | 비고 |

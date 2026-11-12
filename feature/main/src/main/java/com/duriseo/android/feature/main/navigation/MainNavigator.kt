@@ -23,6 +23,11 @@ import com.duriseo.android.feature.couple.navigation.navigateToInviteCreate
 import com.duriseo.android.feature.couple.navigation.navigateToInviteEnter
 import com.duriseo.android.feature.main.MainStart
 import com.duriseo.android.feature.main.component.MainTab
+import com.duriseo.android.feature.memo.navigation.closeMemoEditAndDetail
+import com.duriseo.android.feature.memo.navigation.navigateToMemoCreate
+import com.duriseo.android.feature.memo.navigation.navigateToMemoDetail
+import com.duriseo.android.feature.memo.navigation.navigateToMemoEdit
+import com.duriseo.android.feature.memo.navigation.navigateToPinnedMemos
 import com.duriseo.android.feature.settings.navigation.navigateToAccount
 import com.duriseo.android.feature.settings.navigation.navigateToColors
 import com.duriseo.android.feature.settings.navigation.navigateToConnectionInfo
@@ -110,6 +115,21 @@ class MainNavigator(
     fun navigateToAnniversaryEdit(anniversaryId: String, date: java.time.LocalDate) =
         navController.navigateToAnniversaryEdit(anniversaryId, date)
 
+    /** 고정 메모 전체 (SCR-MEMO-02). SCR-MEMO-01의 [고정 메모 전체 보기] */
+    fun navigateToPinnedMemos() = navController.navigateToPinnedMemos()
+
+    /** 메모 상세 (SCR-MEMO-03). 메모 목록·핀 카드·고정 메모 전체가 부른다 (묶음 C부터 캘린더 날짜 목록의 메모도) */
+    fun navigateToMemoDetail(memoId: String) = navController.navigateToMemoDetail(memoId)
+
+    /** 새 메모 작성 (SCR-MEMO-04). 메모 탭의 FAB */
+    fun navigateToMemoCreate() = navController.navigateToMemoCreate()
+
+    /** 메모 수정 (SCR-MEMO-04). 상세의 [수정] */
+    fun navigateToMemoEdit(memoId: String) = navController.navigateToMemoEdit(memoId)
+
+    /** 수정 화면과 상세를 함께 닫는다 (수정 중 서버가 그 메모가 없다고 답함, D-121) */
+    fun closeMemoEditAndDetail() = navController.closeMemoEditAndDetail()
+
     /** 전체 메뉴(SCR-SET-01). 진입은 캘린더 앱바 */
     fun navigateToSettings() = navController.navigateToSettings()
 
@@ -131,7 +151,7 @@ class MainNavigator(
 
     /**
      * 스낵바 위치 (D-126). 하단 탭이 있는 화면(SCR-CAL-01·메모 탭 루트)은 하단 탭 위(바닥에서 96)이고 false다.
-     * 탭이 없는 화면(SCR-CAL-02·03, SCR-ANNIV-01·02, SCR-COUPLE-01~03, SCR-SET-01~)은 위에서 40이다.
+     * 탭이 없는 화면(SCR-CAL-02·03, SCR-MEMO-02·03·04, SCR-ANNIV-01·02, SCR-COUPLE-01~03, SCR-SET-01~)은 위에서 40이다.
      * 연결 완료 시트([linkedSheetVisible])가 떠 있는 동안은 탭 화면 위여도 위에서 40이다.
      */
     @Composable

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- SCR-MEMO-01 메모 목록 (SCREENS.md 메모, 보드 Memo.dc.html) -->
+    <string name="memo_list_title">메모장</string>
+    <string name="memo_pins_title">고정된 핀</string>
+    <string name="memo_count">%1$d개</string>
+    <string name="memo_pins_empty">중요한 메모는 핀으로 고정하면 둘 다 맨 위에서 공지처럼 볼 수 있어요.</string>
+    <string name="memo_pins_more">고정 메모 전체 보기 (%1$d)</string>
+    <string name="memo_all_title">전체 메모</string>
+    <string name="memo_view_group">정렬과 필터</string>
+    <string name="memo_view_newest">최신순</string>
+    <string name="memo_view_oldest">오래된순</string>
+    <string name="memo_view_favorites">즐겨찾기 %1$d</string>
+    <string name="memo_favorites_empty">즐겨찾기한 메모가 없어요.\n메모 옆 별을 눌러 추가해 보세요.</string>
+    <string name="memo_fab_description">새 메모</string>
+
+    <!-- 작성자 아바타 글자: 나 "나", 상대 "너" (design-system "사람 호칭"). 닉네임이 옆에 같이 읽히므로 아바타는 읽지 않는다 -->
+    <string name="memo_author_me">나</string>
+    <string name="memo_author_partner">너</string>
+
+    <!-- 핀·별 버튼의 접근성 문구 (보드 Memo.dc.html 159·160행) -->
+    <string name="memo_pin_on_description">고정 해제</string>
+    <string name="memo_pin_off_description">상단에 고정</string>
+    <string name="memo_favorite_on_description">즐겨찾기 해제</string>
+    <string name="memo_favorite_off_description">즐겨찾기</string>
+
+    <!-- 메모 날짜 칩의 접근성 문구: "메모 날짜 10월 17일 (토)" (design-system "메모 날짜 칩") -->
+    <string name="memo_date_description">메모 날짜 %1$s</string>
+
+    <!-- SCR-MEMO-02 고정 메모 전체 -->
+    <string name="memo_pinned_title">고정된 메모 %1$d</string>
+    <string name="memo_pinned_description">최근에 고정한 순서예요. 핀을 누르면 고정이 풀려요.</string>
+    <string name="memo_pinned_empty">고정된 메모가 없어요.</string>
+
+    <!-- SCR-MEMO-03 메모 상세 -->
+    <string name="memo_detail_edit">수정</string>
+    <string name="memo_detail_author">%1$s · %2$s 작성</string>
+    <string name="memo_detail_read_only">상대가 쓴 메모는 상대만 고치거나 지울 수 있어요. 고정과 즐겨찾기는 할 수 있어요.</string>
+    <string name="memo_detail_delete">메모 삭제</string>
+    <string name="memo_delete_dialog_title">메모를 삭제할까요?</string>
+    <string name="memo_delete_dialog_body">삭제하면 상대 메모장에서도 사라지고 되돌릴 수 없어요.</string>
+    <string name="memo_delete_dialog_confirm">삭제</string>
+
+    <!-- SCR-MEMO-04 메모 작성·수정 (보드 AddEvent.dc.html 메모 종류). 수정 화면의 제목은 문서에 없어 임시 문구다 (unit-6.md 보고) -->
+    <string name="memo_edit_title_new">새로 추가</string>
+    <string name="memo_edit_title_edit">메모 수정</string>
+    <string name="memo_edit_save">저장</string>
+    <string name="memo_edit_title_label">제목</string>
+    <string name="memo_edit_title_placeholder">예) 주말에 살 것</string>
+    <string name="memo_edit_body_label">메모</string>
+    <string name="memo_edit_body_placeholder">상대에게 남길 내용을 적어주세요</string>
+    <string name="memo_edit_date_add">날짜 추가</string>
+    <string name="memo_edit_date_add_hint">날짜를 넣으면 캘린더 그 날에도 보여요.</string>
+    <string name="memo_edit_date_label">날짜</string>
+    <string name="memo_edit_date_remove">날짜 빼기</string>
+    <string name="memo_edit_date_hint">캘린더 %1$d월 %2$d일에 메모로 보여요.</string>
+    <string name="memo_edit_date_value_description">날짜 %1$s</string>
+    <string name="memo_edit_date_sheet_title">날짜</string>
+    <string name="memo_edit_notify_title">상대에게 알림 보내기</string>
+    <string name="memo_edit_notify_description">저장하면 상대에게 푸시 알림이 가요</string>
+</resources>
