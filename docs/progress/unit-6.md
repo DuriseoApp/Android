@@ -102,12 +102,19 @@
 
 8. **미리보기 글**: 줄바꿈·연속 공백을 공백 하나로 접은 한 줄이고 200자까지 상태에 담는다(`MemoPreview`). 제목이 없어 본문 첫 줄이 제목 자리에 올라가면 그 줄은 빼고 나머지를 쓴다(같은 글이 두 번 나오지 않게). 핀 카드는 2줄, 메모 행은 1줄 말줄임(결정 7).
 9. **메모 입력 부분의 공개 부품 (확인 필요 3)**: `MemoEditViewModel`(Hilt, `uiState`·`effects`·`onAction`)과 Composable `MemoForm`(제목·날짜 영역·본문·알림 스위치, 앱바·저장·스크롤 없음)·`MemoDateSheet`(날짜 시트, 화면 전체 덮개라 바깥이 `DuriseoDialogLayer`의 `dialog`에 둠)를 공개한다. 메모 id는 `SavedStateHandle`의 `memoId` 키(`MemoRouteModel.Edit::memoId`와 같은 이름, `MemoEditViewModel.ARG_MEMO_ID`)에서 읽는다: 키가 없는 항목에서 만들면 새 메모라서 SCR-CAL-03 항목에서 만들어도 메모 날짜는 비어 있다(D-133). 탭마다 입력 보존은 그 ViewModel이 항목에 살아 있는 동안 상태를 들고 있어서 된다.
-10. **FAB의 새 메모는 탭 없이 연다**: SCREENS SCR-MEMO-04 진입에 "SCR-MEMO-01의 FAB"이 있고 이미지는 [일정|메모] 탭이 있는 SCR-CAL-03 모양이다. `feature:memo`는 일정 폼을 모르므로 이 단위의 FAB은 `MemoRouteModel.Edit()`(탭 없는 메모 전용 작성 화면)로 간다. 탭이 있는 SCR-CAL-03 안의 메모로 연결할지는 묶음 C에서 정한다(보고).
+10. **FAB의 새 메모는 [메모] 탭이 골라진 작성 화면으로 연다 (묶음 C에서 고침)**: SCREENS SCR-MEMO-04 진입에 "SCR-MEMO-01의 FAB"이 있고 이미지는 [일정|메모] 탭이 있는 SCR-CAL-03 모양이다. 처음(묶음 B)에는 `feature:memo`가 일정 폼을 몰라 탭 없는 `MemoRouteModel.Edit()`로 연결했으나, 묶음 C에서 슬롯(결정 16)이 생겨 `CalendarRouteModel.EventEdit(startOnMemo = true)`로 바꿨다(`MainNavigator.navigateToMemoCreate()`). 탭 없는 새 메모 화면 경로는 쓰지 않는다: `navigateToMemoCreate`(feature:memo)를 없애고 `MemoRouteModel.Edit`은 `memoId`가 필수인 수정 전용이다.
 11. **새 경로 `MemoRouteModel`**(`core:common`): `Pinned`·`Detail(memoId)`·`Edit(memoId = null)`. 수정이 404면 `NavController.closeMemoEditAndDetail()`이 `Detail`까지 포함해 되돌린다(상세가 메모 탭이든 캘린더든 그 앞으로). 403이면 수정 화면만 닫고 상세는 `ON_START`의 `Shown`과 저장소의 다시 불러오기로 맞춘다.
 12. **날짜 시트**: [날짜 추가]·날짜 행은 `StartDatePickerSheet`(범위 1950~2050, 제목 "날짜", 설명·안내 없음, 버튼 "완료")를 연다. 처음 열 때 고른 날은 메모 날짜가 있으면 그 날, 없으면 오늘이고, [완료]를 눌러야 메모 날짜가 붙는다(닫으면 그대로).
 13. **화면이 보일 때 다시 불러오기**: 메모 목록(고정 + 지금 보기 첫 페이지)·고정 전체·상세는 `ON_START`에 조회한다(캘린더·기념일과 같다). 당겨서 새로고침은 SCREENS SCR-MEMO-01에 없어 넣지 않았다(PRD Q-16·NFR-SYNC-02는 캘린더 기준이다).
 14. **로딩 덮개**: 핀·별(목록·고정 전체·상세), 삭제·저장은 `loading`을 `DuriseoLoadingLayer`/`DuriseoDialogLayer`에 넘긴다. 요청 중에는 다른 쓰기를 받지 않고, 결과 안내는 덮개를 걷은 뒤에 보낸다(D-115).
 15. **아이콘**: 핀·별(꺼짐 선, 켜짐 채움)·달력+더하기를 `core:designsystem`에 벡터로 추가했다(`ic_pin`, `ic_pin_filled`, `ic_star`, `ic_star_filled`, `ic_calendar_plus`). 보드 인라인 SVG 그대로다. 켜짐 색은 핀 `brand-500`, 별 `favorite-600`, 꺼짐은 목록 `ink-400`·상세 `ink-600`(보드).
+
+묶음 C (캘린더 메모 표시, SCR-CAL-03 종류 탭):
+
+16. **[메모] 탭 슬롯**: `feature:calendar`의 `EventEditMemoTab`(저장 활성·로딩·날짜 시트 표시·저장 클릭·`form`·`dateSheet` 람다)과 `EventEditMemoTabProvider`(Composable)를 `EventEditRoute`·`calendarNavGraph(memoTab = …)`가 받는다. `feature:main`의 `rememberEventEditMemoTab`이 작성 화면 내비게이션 항목 안에서 `MemoEditViewModel`(hiltViewModel)을 만들어 채운다. 그래서 일정·메모 두 ViewModel이 같은 항목에 살아 탭마다 입력이 남는다. 메모 ViewModel은 새로 쓸 때만 만든다(수정은 슬롯을 부르지 않음). 항목 인자에 `memoId`가 없어 메모 날짜는 비어 있다(D-133). 현재 탭은 `EventEditUiState.kind`(`EditKind`)가 들고, 앱바 [저장]·로딩 덮개·날짜 시트는 그 탭 기준이다. 앱바 제목은 두 탭 모두 "새로 추가"다. 메모 저장이 성공하면 `MemoEditSideEffect.Close`로 작성 화면을 닫고, 오류 안내는 스낵바로 보낸다. 탭 모양은 보드 `AddEvent.dc.html` 28~30·216·217행(높이 40, 모서리 11, 바깥 4·14, 고른 탭 `surface-0`+`shadow-sm`+700 `ink-900`, 안 고른 탭 500 `ink-600`)이다.
+17. **펼친 달력(크게 보기)의 메모**: 펼친 칸의 막대·"+N"은 기념일·일정만이다. 메모 막대는 SCREENS·design-system에 없어 만들지 않았다(접힌 달력의 점과 날짜 목록의 메모 카드·행만). `<Docs 후속>`
+18. **메모 카드는 제목 한 줄**: SCREENS 구성 "메모 카드: '메모' 표시, 제목"대로 "메모" + 제목(D-131) + 작성자 태그(나·상대)다. `SCR-CAL-01.png`에는 제목 아래 본문 한 줄이 더 보이나 SCREENS 글에 없고 줄 수 규칙이 없어 넣지 않았다. `<Docs 후속>`
+19. **날짜 목록·점의 메모 범위**: 보이는 달의 날짜만 그린다(앞뒤 하루로 받은 이웃 달 메모는 거르고 달력에 그리지 않는다, 기념일과 같다). 정렬은 `groupMemosByDay`가 작성 최신순(`createdAt` 내림차순), 같으면 `id` 오름차순으로 한다. 월 조회·달 넘김·당겨서 새로고침은 `refreshDated`를 일정·기념일과 함께 부르고 `setVisibleRange`도 함께 알린다. 날짜 칸 읽기 라벨은 "일정·메모 N개"에 메모를 일정 뒤에 합친다.
 
 ## 리뷰 기록
 
@@ -116,4 +123,7 @@
 
 ## 남은 일
 
-- 맥: Room 스키마 JSON(버전 5), Preview 대조
+- 맥: Room 스키마 JSON(버전 5), Preview 대조 (묶음 C Preview: `CalendarPreview_Memo`, `EventEditPreview_KindTabs`(calendar), `EventEditPreview_MemoTab`(main))
+- 묶음 C 확인 요청: 이 환경은 Gradle을 못 돌려 컴파일·테스트를 눈으로만 확인했다. CI에서 `assembleDebug testDebugUnitTest` 확인
+- Docs 후속: SCR-MEMO-04 수정 화면 앱바 제목("메모 수정"으로 씀, 문서에 없음)
+- Docs 후속: 펼친 달력의 메모 표시(결정 17), 캘린더 메모 카드의 본문 줄(결정 18)

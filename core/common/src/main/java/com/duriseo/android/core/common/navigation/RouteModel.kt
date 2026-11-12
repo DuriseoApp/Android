@@ -28,10 +28,16 @@ sealed interface CalendarRouteModel : RouteModel {
      * 일정 작성·수정 (SCR-CAL-03).
      *
      * @property eventId 있으면 수정, 없으면 새로 추가
-     * @property date 새로 추가할 때 처음 채울 날짜 (`YYYY-MM-DD`, 캘린더에서 선택한 날). 없으면 오늘
+     * @property date 새로 추가할 때 처음 채울 날짜 (`YYYY-MM-DD`, 캘린더에서 선택한 날). 없으면 오늘.
+     *   일정 탭의 날짜일 뿐이고 메모 날짜는 미리 채우지 않는다 (D-133)
+     * @property startOnMemo 새로 추가할 때 [메모] 탭을 고른 채로 연다 (메모 탭의 FAB, D-133). 수정에서는 쓰지 않는다
      */
     @Serializable
-    data class EventEdit(val eventId: String? = null, val date: String? = null) : CalendarRouteModel
+    data class EventEdit(
+        val eventId: String? = null,
+        val date: String? = null,
+        val startOnMemo: Boolean = false,
+    ) : CalendarRouteModel
 }
 
 /** 기념일 화면 (`feature:anniversary`). 하단 탭이 없다. 진입은 캘린더 (SCR-CAL-01 앱바·기념일 카드, 단위 5 묶음 B) */
@@ -62,13 +68,13 @@ sealed interface MemoRouteModel : RouteModel {
     data class Detail(val memoId: String) : MemoRouteModel
 
     /**
-     * 메모 작성·수정 (SCR-MEMO-04).
+     * 메모 수정 (SCR-MEMO-04, 종류 탭 없음). 새 메모는 이 경로가 아니라 [CalendarRouteModel.EventEdit]의 [메모] 탭이다 (D-133).
      *
-     * @property memoId 있으면 수정(종류 탭 없음), 없으면 새로 추가. 속성 이름 `memoId`는 `MemoEditViewModel`이
+     * @property memoId 수정할 메모. 속성 이름 `memoId`는 `MemoEditViewModel`이
      *   `SavedStateHandle`에서 같은 이름으로 읽는다 (`MemoEditViewModel.ARG_MEMO_ID`)
      */
     @Serializable
-    data class Edit(val memoId: String? = null) : MemoRouteModel
+    data class Edit(val memoId: String) : MemoRouteModel
 }
 
 /** 로그인 전 화면 (`feature:auth`). 하단 탭이 없다. */

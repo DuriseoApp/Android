@@ -35,6 +35,7 @@ class CalendarViewModelTest {
     private val couple = FakeCoupleRepository()
     private val events = FakeEventRepository()
     private val anniversaries = FakeAnniversaryRepository()
+    private val memos = FakeMemoRepository()
 
     /** 2026-10-12(월) 오전 10:20, 서울 */
     private val clock = Clock.fixed(Instant.parse("2026-10-12T01:20:00Z"), ZoneId.of("Asia/Seoul"))
@@ -51,7 +52,7 @@ class CalendarViewModelTest {
     }
 
     private fun TestScope.viewModel(): CalendarViewModel {
-        val vm = CalendarViewModel(events, anniversaries, me, couple, clock)
+        val vm = CalendarViewModel(events, anniversaries, memos, me, couple, clock)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect { } }
         return vm
     }
@@ -317,6 +318,7 @@ class CalendarViewModelTest {
             when (it) {
                 is CalendarListItem.Anniversary -> "기념일:${it.value.name}"
                 is CalendarListItem.Event -> it.value.id
+                is CalendarListItem.Memo -> "메모:${it.value.id}"
             }
         }
         // 기념일은 저장소 순서 그대로(앱이 다시 정렬하지 않는다), 종일은 시작 날짜순, 시간은 보이는 시각순
@@ -465,4 +467,72 @@ class CalendarViewModelTest {
 
     private fun timed(start: String, end: String) =
         com.duriseo.android.domain.event.EventTime.Timed(Instant.parse(start), Instant.parse(end))
+
+    @Test
+    fun `FR-CAL-01 AC2 메모는 날짜 목록 맨 아래 작성 최신순이다`() = runTest {
+        events.events.value = listOf(sampleEvent(id = "e", time = allDay(today)))
+        memos.memos.value = listOf(
+            sampleMemo("m-old", title = "오래된", createdAt = Instant.parse("2026-10-01T00:00:00Z")),
+            sampleMemo("m-b", title = "같은 시각 b", createdAt = Instant.parse("2026-10-10T00:00:00Z"), authorId = PartnerId),
+            sampleMemo("m-a", title = "같은 시각 a", createdAt = Instant.parse("2026-10-10T00:00:00Z")),
+            sampleMemo("m-new", title = null, body = "\n  첫 줄이 제목\n둘째 줄", createdAt = Instant.parse("2026-10-11T00:00:00Z")),
+            sampleMemo("m-other-day", memoDate = LocalDate.of(2026, 10, 13)),
+        )
+        val state = viewModel().uiState.value
+        val items = state.selectedItems
+        // 일정 다음에 메모 (작성 최신순, 같으면 id순)
+        assertTrue(items.first() is CalendarListItem.Event)
+        val memoItems = items.filterIsInstance<CalendarListItem.Memo>().map { it.value }
+        assertEquals(listOf("m-new", "m-a", "m-b", "m-old"), memoItems.map { it.id })
+        assertEquals(items.size - 4, items.indexOfFirst { it is CalendarListItem.Memo })
+        // 제목 규칙 (D-131): 제목이 없으면 본문 첫 줄. 작성자는 나·상대
+        assertEquals("첫 줄이 제목", memoItems.first().title)
+        assertEquals(EventTarget.PARTNER, memoItems.first { it.id == "m-b" }.author)
+    }
+
+    @Test
+    fun `FR-CAL-01 AC2 메모 날짜가 없는 메모와 이웃 달에서 받은 메모는 달력에 그리지 않는다`() = runTest {
+        memos.memos.value = listOf(
+            sampleMemo("none", memoDate = null),
+            sampleMemo("neighbor", memoDate = LocalDate.of(2026, 9, 30)),
+        )
+        assertTrue(viewModel().uiState.value.memosByDay.isEmpty())
+    }
+
+    @Test
+    fun `FR-CAL-01 AC2 메모를 누르면 메모 상세를 연다`() = runTest {
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(CalendarAction.MemoClicked("m1"))
+            assertEquals(CalendarSideEffect.OpenMemo("m1"), awaitItem())
+        }
+    }
+
+    @Test
+    fun `Q-19 월 조회는 메모도 앞뒤 하루를 더해 요청한다`() = runTest {
+        val vm = viewModel()
+        vm.onAction(CalendarAction.Shown)
+        val october = LocalDate.of(2026, 9, 30) to LocalDate.of(2026, 11, 1)
+        assertEquals(listOf(october), memos.refreshRanges)
+        assertEquals(listOf(october), memos.visibleRanges)
+        // 달 넘김과 당겨서 새로고침도 함께
+        vm.onAction(CalendarAction.NextMonth)
+        val november = LocalDate.of(2026, 10, 31) to LocalDate.of(2026, 12, 1)
+        vm.onAction(CalendarAction.Refresh)
+        assertEquals(listOf(october, november, november), memos.refreshRanges)
+        assertEquals(events.refreshRanges, memos.refreshRanges)
+        assertEquals(november, memos.visibleRanges.last())
+    }
+
+    @Test
+    fun `Q-19 메모 불러오기가 오프라인이어도 안내 없이 저장된 메모를 보여 준다`() = runTest {
+        memos.memos.value = listOf(sampleMemo("m1"))
+        memos.refreshDatedResult = Offline
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(CalendarAction.Shown)
+            expectNoEvents()
+        }
+        assertEquals(1, vm.uiState.value.selectedMemos.size)
+    }
 }

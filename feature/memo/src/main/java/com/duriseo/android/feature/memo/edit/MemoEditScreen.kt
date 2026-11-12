@@ -47,8 +47,8 @@ import java.time.LocalDate
 import java.time.YearMonth
 
 // SCR-MEMO-04 메모 작성·수정 화면 (FR-MEMO-02, FR-MEMO-03). 앱바·[저장]·로딩 덮개·날짜 시트를 바깥에서 그리고 입력은 [MemoForm]이 그린다.
-// 새로 쓰기에서 SCR-CAL-03의 [일정|메모] 탭이 필요한 진입은 묶음 C가 `feature:main`에서 같은 부품([MemoForm]·[MemoDateSheet])으로 짠다.
-// 이 화면은 종류 탭이 없다: 수정은 문서대로이고, 메모 탭의 FAB에서 오는 새로 쓰기도 지금은 탭 없이 연다 (unit-6.md 보고).
+// 새로 쓰기는 SCR-CAL-03의 [일정|메모] 탭 안에서 한다: `feature:main`이 같은 부품([MemoEditViewModel]·[MemoForm]·[MemoDateSheet])을
+// 일정 작성 화면의 슬롯에 채운다 (D-133, unit-6.md 결정 16). 이 화면은 수정 전용이고 종류 탭이 없다.
 
 @Composable
 fun MemoEditRoute(

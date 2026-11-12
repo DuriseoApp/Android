@@ -74,4 +74,30 @@ class CalendarDayMarksTest {
         assertFalse(marks.hasAnniversary)
         assertTrue(marks.dots.isEmpty())
     }
+
+    private fun memo(id: String, author: EventTarget) = CalendarMemo(id, id, author)
+
+    @Test
+    fun `FR-CAL-01 AC8 메모 점은 작성자 색이고 시간 일정 뒤다`() {
+        val events = listOf(timed("t", EventTarget.TOGETHER), allDay("a", EventTarget.ME))
+        val memos = listOf(memo("m1", EventTarget.PARTNER), memo("m2", EventTarget.ME))
+        // 종일(나) -> 시간(함께) -> 메모(상대, 나는 이미 있어 한 번만)
+        assertEquals(
+            listOf(EventTarget.ME, EventTarget.TOGETHER, EventTarget.PARTNER),
+            calendarDayMarks(hasAnniversary = false, events = events, memos = memos).dots,
+        )
+        // 고리가 있으면 점은 2개: 메모는 밀려난다
+        assertEquals(
+            listOf(EventTarget.ME, EventTarget.TOGETHER),
+            calendarDayMarks(hasAnniversary = true, events = events, memos = memos).dots,
+        )
+    }
+
+    @Test
+    fun `FR-CAL-01 AC8 메모만 있는 날은 작성자 색 점만 서로 다른 사람 색으로 보인다`() {
+        val memos = listOf(memo("m1", EventTarget.PARTNER), memo("m2", EventTarget.PARTNER), memo("m3", EventTarget.ME))
+        val marks = calendarDayMarks(hasAnniversary = false, events = emptyList(), memos = memos)
+        assertEquals(listOf(EventTarget.PARTNER, EventTarget.ME), marks.dots)
+        assertFalse(marks.hasAnniversary)
+    }
 }

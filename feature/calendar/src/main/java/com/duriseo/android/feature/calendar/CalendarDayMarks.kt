@@ -17,15 +17,19 @@ data class CalendarDayMarks(
 )
 
 /**
- * 점 고르는 규칙 (D-118): 종일 일정 -> 시간 일정 순으로 훑어 서로 다른 사람 색만 앞에서부터 고른다(같은 색은 한 번만).
- * 고리가 있으면 점은 2개, 없으면 3개까지다. 같은 종류 안에서는 받은 순서를 지킨다.
- * 메모(작성자 색)는 단위 6에서 시간 일정 뒤에 더한다.
+ * 점 고르는 규칙 (D-118): 종일 일정 -> 시간 일정 -> 메모 순으로 훑어 서로 다른 사람 색만 앞에서부터 고른다(같은 색은 한 번만).
+ * 메모의 점은 작성자의 사람 색이다(함께 색이 아님). 고리가 있으면 점은 2개, 없으면 3개까지다. 같은 종류 안에서는 받은 순서를 지킨다.
  */
-fun calendarDayMarks(hasAnniversary: Boolean, events: List<CalendarEvent>): CalendarDayMarks {
+fun calendarDayMarks(
+    hasAnniversary: Boolean,
+    events: List<CalendarEvent>,
+    memos: List<CalendarMemo> = emptyList(),
+): CalendarDayMarks {
     val maxDots = MAX_DAY_MARKS - if (hasAnniversary) 1 else 0
     val dots = events
         .sortedBy { if (it.isAllDay) 0 else 1 }
         .map { it.target }
+        .plus(memos.map { it.author })
         .distinct()
         .take(maxDots)
     return CalendarDayMarks(hasAnniversary = hasAnniversary, dots = dots)

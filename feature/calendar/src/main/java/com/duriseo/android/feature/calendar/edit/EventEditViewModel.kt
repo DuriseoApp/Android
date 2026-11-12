@@ -42,6 +42,8 @@ import com.duriseo.android.core.designsystem.R as DesignR
  * 저장이 성공해야 Room이 바뀐다 (낙관적 갱신 없음).
  *
  * - 새 일정의 기본값 (D-114, Q-17): 날짜는 캘린더에서 고른 날, 시간은 기기 시계의 다음 정시부터 1시간.
+ * - 새로 쓸 때만 종류 탭 [일정 | 메모]가 있고(D-133) 고른 탭은 [EventEditUiState.kind]다. 메모 탭의 입력·저장은 메모 쪽 ViewModel이 하고,
+ *   이 ViewModel의 [저장]은 일정 탭에서만 불린다. 메모 날짜는 `date`(일정 탭의 날짜)로 채우지 않는다.
  * - 알림은 일정을 만든 뒤 따로 정한다. 알림 설정이 실패해도 일정은 남기고 오류 안내만 한 뒤 닫는다 (D-108).
  */
 @HiltViewModel
@@ -56,7 +58,12 @@ class EventEditViewModel @Inject constructor(
     private val eventId: String? = route.eventId
     private val zone: ZoneId get() = clock.zone
 
-    private val _uiState = MutableStateFlow(EventEditUiState(isEdit = eventId != null, today = LocalDate.now(clock)))
+    private val _uiState = MutableStateFlow(EventEditUiState(
+            isEdit = eventId != null,
+            // 메모 탭의 FAB에서 열면 [메모] 탭이 골라져 있다. 수정에서는 탭이 없다 (D-133)
+            kind = if (eventId == null && route.startOnMemo) EditKind.Memo else EditKind.Event,
+            today = LocalDate.now(clock),
+        ))
     val uiState: StateFlow<EventEditUiState> = _uiState.asStateFlow()
 
     private val effectChannel = Channel<EventEditSideEffect>(Channel.BUFFERED)
@@ -142,6 +149,7 @@ class EventEditViewModel @Inject constructor(
             return
         }
         when (action) {
+            is EventEditAction.KindSelected -> if (!s.isEdit) _uiState.update { it.copy(kind = action.kind) }
             is EventEditAction.TitleChanged ->
                 _uiState.update { it.copy(title = EventRules.limit(action.text, EventRules.TITLE_MAX)).recomputed() }
             is EventEditAction.NoteChanged ->
