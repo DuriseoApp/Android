@@ -2,13 +2,13 @@ package com.duriseo.android.feature.memo.list
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.duriseo.android.core.common.time.MidnightTicker
 import com.duriseo.android.core.designsystem.message.toMessageRes
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.memo.MemoRepository
 import com.duriseo.android.domain.memo.MemoView
 import com.duriseo.android.domain.result.DataResult
 import com.duriseo.android.feature.memo.component.guardedWrite
-import com.duriseo.android.feature.memo.component.midnightTicks
 import com.duriseo.android.feature.memo.component.toItemUi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -41,6 +42,7 @@ class MemoListViewModel @Inject constructor(
     private val memoRepository: MemoRepository,
     meRepository: MeRepository,
     private val clock: Clock,
+    midnightTicker: MidnightTicker,
 ) : ViewModel() {
 
     /** 화면 안에서만 들고 있는 값 */
@@ -52,7 +54,7 @@ class MemoListViewModel @Inject constructor(
     private val local = MutableStateFlow(Local())
 
     /** 내 정보. 다음 자정마다 다시 내보내 작성일의 "오늘"·"어제"를 새로 계산하게 한다 (NFR-TIME-02) */
-    private val meAtMidnight = combine(meRepository.observeMe(), midnightTicks(clock)) { me, _ -> me }
+    private val meAtMidnight = combine(meRepository.observeMe(), midnightTicker.ticks().onStart { emit(Unit) }) { me, _ -> me }
 
     val uiState: StateFlow<MemoListUiState> = combine(
         meAtMidnight,

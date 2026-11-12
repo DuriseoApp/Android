@@ -12,6 +12,7 @@ import com.duriseo.android.feature.memo.PartnerId
 import com.duriseo.android.feature.memo.TestClock
 import com.duriseo.android.feature.memo.apiError
 import com.duriseo.android.feature.memo.coupleMe
+import com.duriseo.android.feature.memo.FakeMidnightTicker
 import com.duriseo.android.feature.memo.MutableClock
 import com.duriseo.android.feature.memo.makeMemo
 import kotlinx.coroutines.CompletableDeferred
@@ -56,6 +57,7 @@ class MemoDetailViewModelTest {
         repo,
         me,
         TestClock,
+        FakeMidnightTicker(),
     )
 
     private fun storeMine() {
@@ -276,12 +278,12 @@ class MemoDetailViewModelTest {
     fun `NFR-TIME-02 자정이 지나면 작성일의 오늘과 어제를 다시 계산한다`() = runTest {
         val clock = MutableClock(java.time.Instant.parse("2026-10-12T14:50:00Z"))
         repo.memos.value = mapOf("m1" to makeMemo("m1", createdAt = java.time.Instant.parse("2026-10-12T05:00:00Z")))
-        val vm = MemoDetailViewModel(SavedStateHandle(mapOf(MemoRouteModel.Detail::memoId.name to "m1")), repo, me, clock)
+        val ticker = FakeMidnightTicker()
+        val vm = MemoDetailViewModel(SavedStateHandle(mapOf(MemoRouteModel.Detail::memoId.name to "m1")), repo, me, clock, ticker)
         assertTrue(vm.uiState.value.memo?.writtenAt is WrittenAt.Today)
 
         clock.now = java.time.Instant.parse("2026-10-12T15:10:00Z")
-        testScheduler.advanceTimeBy(20 * 60 * 1000L)
-        testScheduler.runCurrent()
+        ticker.tick()
 
         assertEquals(WrittenAt.Yesterday, vm.uiState.value.memo?.writtenAt)
     }

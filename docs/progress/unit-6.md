@@ -124,7 +124,7 @@
 23. **쓰기 뒤 다시 불러오기는 병렬이다**: `thenRefreshAll`·`thenRereadIfNotAuthor`가 `coroutineScope`+`async`로 목록·고정·달(`refreshAll` 안에서도 병렬)과 상세를 함께 부르는 것을 확인했다. 바꾼 것 없음.
 24. **고정 목록을 받았는지 저장소가 안다**: `MemoRepository.observePinnedLoaded()`(상태 행 키 `PINNED`, `replacePinned`가 함께 저장, 스키마 변화 없음)를 더하고 `MemoListUiState.pinsLoaded`로 `showNoPins`를 `pinsLoaded && pins.isEmpty()`로 했다. 받기 전에는 점선 상자를 숨긴다. `loadedViewKeys`는 보기 세 개만 세므로 영향 없다.
 25. **일정 작성 화면의 [메모] 탭에서 내 정보가 없을 때**: `MemoEditViewModel`이 새 메모(`memoId == null`, 슬롯)면 닫기 신호를 보내지 않고 `loaded = true, meMissing = true`로 두어 [저장]만 막는다. 내 정보가 오면 풀린다(`MemoEditUiState.saveEnabled`가 `!meMissing`을 본다). 단독 수정 화면은 그대로 닫는다.
-26. **작성일이 자정에 낡지 않게**: `component/MemoRuntime.kt`의 `midnightTicks(clock)`(처음 한 번 + 기기 시간대 다음 자정까지 `delay`, 분 단위 ticker 아님)를 내 정보 Flow와 `combine`해 목록·상세가 표기를 다시 계산한다.
+26. **작성일이 자정에 낡지 않게**: `core:common`의 `MidnightTicker`(`ticks()`: 기기 시간대 다음 자정까지 `delay`한 뒤 한 번 내보내기를 되풀이, 분 단위 ticker 아님, 구독 시작 때는 내보내지 않음)와 실제 구현 `DeviceMidnightTicker`(Hilt `CommonModule`이 제공)를 두고, 목록·상세 ViewModel이 생성자로 받아 `onStart { emit(Unit) }`와 내 정보 Flow를 `combine`해 표기를 다시 계산한다. 테스트는 `FakeMidnightTicker`(`MutableSharedFlow`)로 시계를 옮긴 뒤 `tick()`을 직접 내보낸다. 처음에는 ViewModel 안에서 `flow { while (true) delay }`를 돌렸는데, 테스트의 Main이 테스트 디스패처라 `runTest` 끝의 `advanceUntilIdle`이 가상 시간으로 무한히 돌아 CI가 멈췄다(고침). feature·app의 다른 ViewModel에는 같은 무한 루프가 없다(grep).
 27. **상수**: `MemoListScreen`의 점선 상자 반지름은 `NoPinsRadius`(보드 `Memo.dc.html` 32행 16), `CalendarScreen`의 펼친 행 안 간격은 `RowItemGap`(보드 `Calendar.dc.html` 325행 `gap: 10px`, 간격 토큰에 없는 값)로 뺐다.
 
 ## 리뷰 기록

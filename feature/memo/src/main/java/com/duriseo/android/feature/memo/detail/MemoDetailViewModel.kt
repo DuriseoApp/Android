@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.duriseo.android.core.common.navigation.MemoRouteModel
+import com.duriseo.android.core.common.time.MidnightTicker
 import com.duriseo.android.core.designsystem.message.toMessageRes
 import com.duriseo.android.domain.error.ErrorCode
 import com.duriseo.android.domain.error.hasCode
@@ -16,13 +17,13 @@ import com.duriseo.android.domain.memo.MemoRepository
 import com.duriseo.android.domain.result.DataResult
 import com.duriseo.android.feature.memo.component.MemoAuthor
 import com.duriseo.android.feature.memo.component.guardedWrite
-import com.duriseo.android.feature.memo.component.midnightTicks
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -45,6 +46,7 @@ class MemoDetailViewModel @Inject constructor(
     private val memoRepository: MemoRepository,
     meRepository: MeRepository,
     private val clock: Clock,
+    midnightTicker: MidnightTicker,
 ) : ViewModel() {
 
     private val memoId: String = savedStateHandle.toRoute<MemoRouteModel.Detail>().memoId
@@ -63,7 +65,7 @@ class MemoDetailViewModel @Inject constructor(
     private var vanished = false
 
     /** 내 정보. 다음 자정마다 다시 내보내 작성일의 "오늘"·"어제"를 새로 계산하게 한다 (NFR-TIME-02) */
-    private val meAtMidnight = combine(meRepository.observeMe(), midnightTicks(clock)) { me, _ -> me }
+    private val meAtMidnight = combine(meRepository.observeMe(), midnightTicker.ticks().onStart { emit(Unit) }) { me, _ -> me }
 
     val uiState: StateFlow<MemoDetailUiState> = combine(
         memoRepository.observeMemo(memoId),

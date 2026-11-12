@@ -242,3 +242,12 @@ class MutableClock(var now: Instant, private val zoneId: ZoneId = ZoneId.of("Asi
     override fun withZone(zone: ZoneId): Clock = MutableClock(now, zone)
     override fun instant(): Instant = now
 }
+
+/** 테스트가 직접 자정 신호를 내보낸다 ([tick]). 무한 반복이 가상 시간을 붙잡지 않는다 */
+class FakeMidnightTicker : com.duriseo.android.core.common.time.MidnightTicker {
+    private val flow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    override fun ticks(): Flow<Unit> = flow
+    fun tick() {
+        flow.tryEmit(Unit)
+    }
+}

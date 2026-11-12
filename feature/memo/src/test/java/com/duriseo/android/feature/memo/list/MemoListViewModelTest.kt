@@ -6,6 +6,7 @@ import com.duriseo.android.domain.format.WrittenAt
 import com.duriseo.android.domain.memo.MemoView
 import com.duriseo.android.feature.memo.FakeMemoRepository
 import com.duriseo.android.feature.memo.FakeMeRepository
+import com.duriseo.android.feature.memo.FakeMidnightTicker
 import com.duriseo.android.feature.memo.MutableClock
 import com.duriseo.android.feature.memo.Offline
 import com.duriseo.android.feature.memo.PartnerId
@@ -43,7 +44,7 @@ class MemoListViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = MemoListViewModel(repo, me, TestClock)
+    private fun viewModel() = MemoListViewModel(repo, me, TestClock, FakeMidnightTicker())
 
     private fun pins(count: Int) = (1..count).map { makeMemo("p$it", pinned = true) }
 
@@ -235,13 +236,13 @@ class MemoListViewModelTest {
         // 2026-10-12 23:50(서울), 같은 날 오후 2시에 쓴 메모는 "오늘"
         val clock = MutableClock(java.time.Instant.parse("2026-10-12T14:50:00Z"))
         repo.setList(MemoView.NEWEST, listOf(makeMemo("m1", createdAt = java.time.Instant.parse("2026-10-12T05:00:00Z"))))
-        val vm = MemoListViewModel(repo, me, clock)
+        val ticker = FakeMidnightTicker()
+        val vm = MemoListViewModel(repo, me, clock, ticker)
         assertTrue(vm.uiState.value.items.single().writtenAt is WrittenAt.Today)
 
-        // 자정이 지났다: 다음 자정까지 쉬던 신호가 깨어나 "어제"로 바뀐다
+        // 자정이 지났다: 시계를 옮기고 자정 신호를 한 번 내보내면 "어제"로 바뀐다
         clock.now = java.time.Instant.parse("2026-10-12T15:10:00Z")
-        testScheduler.advanceTimeBy(20 * 60 * 1000L)
-        testScheduler.runCurrent()
+        ticker.tick()
 
         assertEquals(WrittenAt.Yesterday, vm.uiState.value.items.single().writtenAt)
     }
