@@ -25,6 +25,9 @@ import com.duriseo.android.domain.result.DataResult
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -232,7 +235,8 @@ class MemoRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun refreshAll(): DataResult<Unit> = coroutineScope {
+    // supervisorScope: 한 갈래가 예외로 끝나도 형제를 취소하지 않는다. 예외는 awaitAll이 원래 예외 그대로 던진다
+    override suspend fun refreshAll(): DataResult<Unit> = supervisorScope {
         val range = visibleRange?.takeIf { it.generation == cache.current() }
         val views = local.loadedViews().mapNotNull { name -> MemoView.entries.firstOrNull { it.name == name } }
         val jobs = buildList {
@@ -325,7 +329,9 @@ class MemoRepositoryImpl @Inject constructor(
         try {
             block()
         } catch (e: CancellationException) {
-            throw e
+            // 내 코루틴이 정말 취소됐을 때만 다시 던진다. 안쪽 갈래의 취소가 새어 나온 것이면 삼킨다
+            currentCoroutineContext().ensureActive()
+            Logger.w(TAG, "쓰기 뒤 기기 반영·다시 불러오기가 취소됐어요: ${e.javaClass.simpleName}")
         } catch (e: Exception) {
             Logger.w(TAG, "쓰기 뒤 기기 반영·다시 불러오기에 실패했어요: ${e.javaClass.simpleName}")
         }

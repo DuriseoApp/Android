@@ -1,5 +1,8 @@
 package com.duriseo.android.data.repository.memo
 
+import com.duriseo.android.data.local.memo.MemoDao
+import com.duriseo.android.data.local.memo.MemoEntity
+import com.duriseo.android.data.local.memo.MemoLocalDataSource
 import com.duriseo.android.data.repository.RepoHarness
 import com.duriseo.android.data.repository.coupleMeJson
 import com.duriseo.android.data.repository.errorJson
@@ -91,6 +94,21 @@ class MemoRepositoryTest {
 
     private suspend fun RepoHarness.datedIds(from: LocalDate = october.first, to: LocalDate = october.second): List<String> =
         memoRepository.observeDated(from, to).first().map { it.id }
+
+    /** 모든 Room 읽기·쓰기가 예외인 창구 (서버는 성공했는데 기기 반영이 실패하는 경우를 만든다) */
+    private class FailingMemoLocal(dao: MemoDao) : MemoLocalDataSource(dao) {
+        private fun fail(): Nothing = throw IllegalStateException("Room 실패")
+
+        override suspend fun nextCursor(listType: String): String? = fail()
+        override suspend fun loadedViews(): List<String> = fail()
+        override suspend fun replaceList(listType: String, items: List<MemoEntity>, nextCursor: String?, totalCount: Int, favoriteCount: Int) = fail()
+        override suspend fun appendList(listType: String, items: List<MemoEntity>, nextCursor: String?, totalCount: Int, favoriteCount: Int) = fail()
+        override suspend fun replacePinned(items: List<MemoEntity>) = fail()
+        override suspend fun replaceDated(from: LocalDate, to: LocalDate, entities: List<MemoEntity>) = fail()
+        override suspend fun replaceDetail(entity: MemoEntity) = fail()
+        override suspend fun hasDetail(memoId: String): Boolean = fail()
+        override suspend fun delete(memoId: String) = fail()
+    }
 
     /** 경로별로 응답을 정하는 서버 (쓰기 뒤 여러 요청이 따라 나가서 순서에 기대지 않는다) */
     private class PathServer(val responses: Map<String, MockResponse>) : Dispatcher() {
@@ -413,11 +431,12 @@ class MemoRepositoryTest {
                 "DELETE /api/v1/memos/n1" to MockResponse().setResponseCode(204),
             ),
         )
-        h.database.close() // 이제 Room 쓰기는 모두 예외다
+        // Room 호출이 모두 예외인 저장소 (DB를 닫는 것보다 결정적이다)
+        val repo = MemoRepositoryImpl(h.memoRemote, FailingMemoLocal(h.database.memoDao()), h.monitor, h.cache)
 
-        val created = h.memoRepository.create(NewMemo("n1", null, null))
-        val updated = h.memoRepository.update("n1", MemoPatch(title = FieldChange.Set("새 제목")))
-        val deleted = h.memoRepository.delete("n1")
+        val created = repo.create(NewMemo("n1", null, null))
+        val updated = repo.update("n1", MemoPatch(title = FieldChange.Set("새 제목")))
+        val deleted = repo.delete("n1")
 
         assertTrue(created is DataResult.Success)
         assertTrue(updated is DataResult.Success)
