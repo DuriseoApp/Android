@@ -105,7 +105,8 @@ import java.time.YearMonth
 
 // SCR-CAL-01 캘린더 홈 (FR-CAL-01, FR-COUPLE-04 AC2). 수치는 보드 `Calendar.dc.html`, `CalendarExpanded.dc.html`.
 // 토큰에 없는 수치는 이름 붙인 상수로 두고 보드 행을 적는다. 하단 탭(80)과 FAB(오른쪽 20, 탭 위 20)는 SCREENS.md 공통 표.
-// 알림 버튼은 가는 화면이 단위 7에 있어 그리지 않는다. 메모 카드·메모 점은 단위 6.
+// 알림 버튼은 가는 화면이 단위 7에 있어 그리지 않는다.
+// 메모(단위 6): 날짜 목록 맨 아래 "메모" 카드 → SCR-MEMO-03, 달력의 메모 점은 작성자 색 (D-118·D-119).
 // 기념일(단위 5): 앱바 "함께한 지 D+N ›"·"기념일 ›" → SCR-ANNIV-01, 기념일 카드, 달력의 `brand-500` 고리·막대 (D-65·D-118·D-119).
 
 /** 앱바 높이는 `DuriseoSize.Appbar`(64). 좌 20·우 8 (14행) */
@@ -180,6 +181,9 @@ private val TagGap = 5.dp
 /** 펼친 행: 높이 44, 모서리 12, 안쪽 좌우 14, 사이 10, 시간 칸 34 (소스 `rowBase`) */
 private val RowHeight = 44.dp
 private val RowRadius = 12.dp
+
+/** 펼친 행 안 요소 사이 10 (보드 `Calendar.dc.html` 325행 `rowBase`의 `gap: 10px`). 간격 토큰(8·12)에 없는 값이다 */
+private val RowItemGap = 10.dp
 private val RowTimeWidth = 34.dp
 
 /** FAB 아이콘 26 (`Calendar.dc.html` 133행). 위치: 오른쪽 20, 탭 위 20 */
@@ -208,6 +212,7 @@ fun CalendarRoute(
     padding: PaddingValues,
     onOpenMenu: () -> Unit,
     onOpenEvent: (String) -> Unit,
+    onOpenMemo: (String) -> Unit,
     onOpenCreate: (LocalDate) -> Unit,
     onOpenAnniversaries: () -> Unit,
     onShowSnackBar: (Int) -> Unit,
@@ -230,6 +235,7 @@ fun CalendarRoute(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is CalendarSideEffect.OpenEvent -> onOpenEvent(effect.id)
+                is CalendarSideEffect.OpenMemo -> onOpenMemo(effect.id)
                 is CalendarSideEffect.OpenCreate -> onOpenCreate(effect.date)
                 CalendarSideEffect.OpenAnniversaries -> onOpenAnniversaries()
                 is CalendarSideEffect.ShowMessage -> onShowSnackBar(effect.messageRes)
@@ -606,6 +612,7 @@ private fun DayCell(
     val expanded = state.expanded
     val events = if (inMonth) state.eventsByDay[date].orEmpty() else emptyList()
     val anniversaries = if (inMonth) state.anniversariesByDay[date].orEmpty() else emptyList()
+    val memos = if (inMonth) state.memosByDay[date].orEmpty() else emptyList()
     val selected = inMonth && date == state.selectedDate
     val isToday = inMonth && date == state.today
     val circle = if (expanded) ExpandedDaySize else CollapsedDaySize
@@ -623,11 +630,13 @@ private fun DayCell(
         if (anniversaries.isNotEmpty()) {
             append(resources.getString(R.string.calendar_day_anniversary_part, anniversaries.joinToString(", ") { it.name }))
         }
-        if (events.isNotEmpty()) {
-            val summary = events.joinToString(", ") {
-                resources.getString(R.string.calendar_day_event_summary, targetLabels.getValue(it.target), it.title)
-            }
-            append(resources.getString(R.string.calendar_day_events_part, events.size, summary))
+        if (events.isNotEmpty() || memos.isNotEmpty()) {
+            // 일정 다음에 메모 (보드 318행: 일정·메모를 한 목록으로 읽는다)
+            val summary = (
+                events.map { targetLabels.getValue(it.target) to it.title } +
+                    memos.map { targetLabels.getValue(it.author) to it.title }
+                ).joinToString(", ") { (who, title) -> resources.getString(R.string.calendar_day_event_summary, who, title) }
+            append(resources.getString(R.string.calendar_day_events_part, events.size + memos.size, summary))
         }
     }
     Column(
@@ -668,11 +677,12 @@ private fun DayCell(
                 color = numberColor,
             )
         }
-        if (inMonth && (events.isNotEmpty() || anniversaries.isNotEmpty())) {
+        if (inMonth && (events.isNotEmpty() || anniversaries.isNotEmpty() || memos.isNotEmpty())) {
             if (expanded) {
+                // 펼친 칸의 막대는 기념일·일정만이다: 메모 막대는 문서에 없다 (unit-6.md 결정 17)
                 DayBars(anniversaries, events)
             } else {
-                DayMarks(calendarDayMarks(hasAnniversary = anniversaries.isNotEmpty(), events = events))
+                DayMarks(calendarDayMarks(hasAnniversary = anniversaries.isNotEmpty(), events = events, memos = memos))
             }
         }
     }
@@ -916,6 +926,12 @@ private fun DayContent(
                             }
                         }
 
+                        is CalendarListItem.Memo -> {
+                            val memo = item.value
+                            val onClick = { onAction(CalendarAction.MemoClicked(memo.id)) }
+                            if (state.expanded) MemoRow(memo = memo, onClick = onClick) else MemoCard(memo = memo, onClick = onClick)
+                        }
+
                         is CalendarListItem.Event -> {
                             val event = item.value
                             if (state.expanded) {
@@ -936,6 +952,7 @@ private val CalendarListItem.key: String
     get() = when (this) {
         is CalendarListItem.Anniversary -> "anniversary-$index"
         is CalendarListItem.Event -> "event-${value.id}"
+        is CalendarListItem.Memo -> "memo-${value.id}"
     }
 
 /** 펼친 행 사이 6 (소스 `ul` gap) */
@@ -1008,6 +1025,76 @@ private fun EventCard(event: CalendarEvent, onClick: () -> Unit) {
             }
         }
         TargetTag(event.target)
+    }
+}
+
+/** 메모 카드 (D-119): 일정 카드와 같은 `surface-50` 면, 시간 칸 자리에 "메모", 제목(D-131), 작성자 사람 태그. 누르면 SCR-MEMO-03 */
+@Composable
+private fun MemoCard(memo: CalendarMemo, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .background(Surface50)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = DuriseoSpacing.Space4, vertical = CardPaddingV),
+        horizontalArrangement = Arrangement.spacedBy(CardGap),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Text(
+            text = stringResource(R.string.calendar_memo_mark),
+            modifier = Modifier.width(TimeColumnWidth),
+            style = MaterialTheme.typography.labelLarge,
+            color = Ink600,
+            maxLines = 1,
+            softWrap = false,
+        )
+        Text(
+            text = memo.title,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+            color = Ink900,
+        )
+        TargetTag(memo.author)
+    }
+}
+
+/** 펼친 메모 행: 일정 행과 같은 모양, 점은 작성자 색, 시간 칸 자리에 "메모" */
+@Composable
+private fun MemoRow(memo: CalendarMemo, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(RowHeight)
+            .clip(RoundedCornerShape(RowRadius))
+            .background(Surface50)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = RowPadding),
+        horizontalArrangement = Arrangement.spacedBy(RowItemGap),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(TagDot).background(memo.author.color(), CircleShape))
+        Text(
+            text = stringResource(R.string.calendar_memo_mark),
+            modifier = Modifier.width(RowTimeWidth),
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = Ink600,
+            maxLines = 1,
+            softWrap = false,
+        )
+        Text(
+            text = memo.title,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+            color = Ink900,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = memo.author.label(),
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = Ink600,
+        )
     }
 }
 
@@ -1102,7 +1189,7 @@ private fun EventRow(event: CalendarEvent, onClick: () -> Unit) {
             .background(Surface50)
             .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = RowPadding),
-        horizontalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space3 - 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(RowItemGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(TagDot).background(event.target.color(), CircleShape))
@@ -1140,7 +1227,7 @@ private fun AnniversaryRow(anniversary: CalendarAnniversary, onClick: () -> Unit
             .background(Brand50)
             .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = RowPadding),
-        horizontalArrangement = Arrangement.spacedBy(DuriseoSpacing.Space3 - 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(RowItemGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(TagDot).border(MarkRingStroke, Brand500, CircleShape))
@@ -1231,6 +1318,7 @@ private fun previewState(
     expanded: Boolean = false,
     events: Map<LocalDate, List<CalendarEvent>> = sampleEvents(),
     anniversaries: Map<LocalDate, List<CalendarAnniversary>> = sampleAnniversaries(),
+    memos: Map<LocalDate, List<CalendarMemo>> = emptyMap(),
     startDateSheet: CalendarStartDateSheet? = null,
     refreshing: Boolean = false,
 ) = CalendarUiState(
@@ -1241,6 +1329,7 @@ private fun previewState(
     expanded = expanded,
     eventsByDay = events,
     anniversariesByDay = anniversaries,
+    memosByDay = memos,
     startDateSheet = startDateSheet,
     refreshing = refreshing,
 )
@@ -1266,6 +1355,22 @@ private fun CalendarPreview_Anniversary() = PreviewScreen(previewState(selected 
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun CalendarPreview_AnniversaryCustom() = PreviewScreen(previewState(selected = LocalDate.of(2026, 10, 5)))
+
+/** `SCR-CAL-01.png`의 메모 카드: 12일 맨 아래 "메모" 카드(작성자 나), 16일·17일 달력 점은 작성자 색 (D-118·D-119) */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun CalendarPreview_Memo() = PreviewScreen(
+    previewState(
+        memos = mapOf(
+            PreviewToday to listOf(CalendarMemo("m1", "선물 리스트 정리하기", EventTarget.ME)),
+            LocalDate.of(2026, 10, 16) to listOf(CalendarMemo("m2", "여행 숙소 후보 정리했어", EventTarget.PARTNER)),
+            LocalDate.of(2026, 10, 17) to listOf(
+                CalendarMemo("m3", "여행 준비물", EventTarget.PARTNER),
+                CalendarMemo("m4", "충전기 챙기기", EventTarget.ME),
+            ),
+        ),
+    ),
+)
 
 /** `SCR-CAL-01--expanded.png`: 날짜 칸에 일정 막대, 기념일은 `brand-50` 면 + `brand-500` 테두리 막대 */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
@@ -1333,6 +1438,8 @@ private fun CalendarPreview_Cards() {
             AnniversaryRow(CalendarAnniversary("200일", true, 200, null, false), {})
             AnniversaryRow(CalendarAnniversary("처음 손잡은 날", false, null, EventTarget.PARTNER, true), {})
             EventRow(CalendarEvent("2", "1박 2일 여행", null, true, null, EventTarget.PARTNER), {})
+            MemoCard(CalendarMemo("m1", "선물 리스트 정리하기", EventTarget.ME), {})
+            MemoRow(CalendarMemo("m2", "여행 숙소 후보 정리했어", EventTarget.PARTNER), {})
         }
     }
 }

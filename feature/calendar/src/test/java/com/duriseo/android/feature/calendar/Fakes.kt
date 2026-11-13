@@ -28,6 +28,12 @@ import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.me.MeSpace
 import com.duriseo.android.domain.me.SpaceChange
 import com.duriseo.android.domain.me.SpaceType
+import com.duriseo.android.domain.memo.Memo
+import com.duriseo.android.domain.memo.MemoList
+import com.duriseo.android.domain.memo.MemoPatch
+import com.duriseo.android.domain.memo.MemoRepository
+import com.duriseo.android.domain.memo.MemoView
+import com.duriseo.android.domain.memo.NewMemo
 import com.duriseo.android.domain.result.DataResult
 import com.duriseo.android.domain.error.ErrorCode
 import com.duriseo.android.domain.error.hasCode
@@ -289,4 +295,61 @@ fun customAnniversary(
     daysLeft = 0,
     repeatsYearly = repeatsYearly,
     authorId = authorId,
+)
+
+/** 캘린더가 쓰는 [observeDated]·[refreshDated]·[setVisibleRange]만 흉내 낸다. 나머지는 메모 화면의 몫이라 부르면 실패한다 */
+class FakeMemoRepository(initial: List<Memo> = emptyList()) : MemoRepository {
+    val memos = MutableStateFlow(initial)
+
+    val refreshRanges = mutableListOf<Pair<LocalDate, LocalDate>>()
+    val visibleRanges = mutableListOf<Pair<LocalDate, LocalDate>>()
+    var refreshDatedResult: DataResult<Unit> = DataResult.Success(Unit)
+
+    override fun setVisibleRange(from: LocalDate, to: LocalDate) {
+        visibleRanges += from to to
+    }
+
+    override fun observeDated(from: LocalDate, to: LocalDate): Flow<List<Memo>> =
+        memos.map { list -> list.filter { m -> m.memoDate?.let { it >= from && it <= to } == true } }
+
+    override suspend fun refreshDated(from: LocalDate, to: LocalDate): DataResult<Unit> {
+        refreshRanges += from to to
+        return refreshDatedResult
+    }
+
+    override fun observeList(view: MemoView): Flow<MemoList> = error("캘린더는 쓰지 않아요")
+    override fun observeFavoriteCount(): Flow<Int> = error("캘린더는 쓰지 않아요")
+    override fun observePinned(): Flow<List<Memo>> = error("캘린더는 쓰지 않아요")
+    override fun observePinnedLoaded(): Flow<Boolean> = error("캘린더는 쓰지 않아요")
+    override fun observeMemo(id: String): Flow<Memo?> = error("캘린더는 쓰지 않아요")
+    override suspend fun refreshList(view: MemoView): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun loadMoreList(view: MemoView): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun refreshPinned(): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun refreshMemo(id: String): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun refreshAll(): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun create(memo: NewMemo): DataResult<Memo> = error("캘린더는 쓰지 않아요")
+    override suspend fun update(id: String, patch: MemoPatch): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun delete(id: String): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun setPinned(id: String, pinned: Boolean): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+    override suspend fun setFavorite(id: String, favorite: Boolean): DataResult<Unit> = error("캘린더는 쓰지 않아요")
+}
+
+fun sampleMemo(
+    id: String,
+    title: String? = "제목 $id",
+    body: String? = null,
+    memoDate: LocalDate? = LocalDate.of(2026, 10, 12),
+    authorId: String = MyId,
+    createdAt: Instant = Instant.parse("2026-10-11T01:00:00Z"),
+) = Memo(
+    id = id,
+    title = title,
+    body = body,
+    memoDate = memoDate,
+    authorId = authorId,
+    isPinned = false,
+    pinnedAt = null,
+    isFavorite = false,
+    createdAt = createdAt,
+    updatedAt = createdAt,
 )

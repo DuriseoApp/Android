@@ -14,6 +14,7 @@ import com.duriseo.android.data.local.anniversary.AnniversaryLocalDataSource
 import com.duriseo.android.data.local.event.EventLocalDataSource
 import com.duriseo.android.data.local.me.AcknowledgedSpaceLocalDataSource
 import com.duriseo.android.data.local.me.MeLocalDataSource
+import com.duriseo.android.data.local.memo.MemoLocalDataSource
 import com.duriseo.android.data.remote.anniversary.AnniversaryApi
 import com.duriseo.android.data.remote.anniversary.AnniversaryRemoteDataSource
 import com.duriseo.android.data.remote.auth.AuthApi
@@ -28,11 +29,14 @@ import com.duriseo.android.data.repository.event.EventRepositoryImpl
 import com.duriseo.android.data.remote.json.createApiJson
 import com.duriseo.android.data.remote.me.MeApi
 import com.duriseo.android.data.remote.me.MeRemoteDataSource
+import com.duriseo.android.data.remote.memo.MemoApi
+import com.duriseo.android.data.remote.memo.MemoRemoteDataSource
 import com.duriseo.android.data.repository.anniversary.AnniversaryRepositoryImpl
 import com.duriseo.android.data.repository.auth.AuthRepositoryImpl
 import com.duriseo.android.data.repository.auth.SessionManager
 import com.duriseo.android.data.repository.couple.CoupleRepositoryImpl
 import com.duriseo.android.data.repository.me.MeRepositoryImpl
+import com.duriseo.android.data.repository.memo.MemoRepositoryImpl
 import com.duriseo.android.data.repository.cache.LocalCacheGeneration
 import com.duriseo.android.data.repository.me.MeWriteLock
 import com.duriseo.android.data.repository.me.toEntity
@@ -260,14 +264,17 @@ class RepoHarness(
     val writeLock = MeWriteLock()
     val eventLocal = EventLocalDataSource(database.eventDao())
     val anniversaryLocal = AnniversaryLocalDataSource(database.anniversaryDao())
-    val meRepository = MeRepositoryImpl(meRemote, meLocal, monitor, acknowledgedSpace, session, writeLock, eventLocal, anniversaryLocal, cache)
+    val memoLocal = MemoLocalDataSource(database.memoDao())
+    val meRepository = MeRepositoryImpl(meRemote, meLocal, monitor, acknowledgedSpace, session, writeLock, eventLocal, anniversaryLocal, memoLocal, cache)
     val authRepository = AuthRepositoryImpl(authRemote, meRemote, tokens, session, meRepository, monitor, clock)
     val coupleRemote = CoupleRemoteDataSource(retrofit.create(CoupleApi::class.java), apiCaller)
-    val coupleRepository = CoupleRepositoryImpl(coupleRemote, meRepository, meLocal, monitor, writeLock, eventLocal, anniversaryLocal, cache)
+    val coupleRepository = CoupleRepositoryImpl(coupleRemote, meRepository, meLocal, monitor, writeLock, eventLocal, anniversaryLocal, memoLocal, cache)
     val eventRemote = EventRemoteDataSource(retrofit.create(EventApi::class.java), apiCaller)
     val eventRepository = EventRepositoryImpl(eventRemote, eventLocal, monitor, cache)
     val anniversaryRemote = AnniversaryRemoteDataSource(retrofit.create(AnniversaryApi::class.java), apiCaller)
     val anniversaryRepository = AnniversaryRepositoryImpl(anniversaryRemote, anniversaryLocal, monitor, cache)
+    val memoRemote = MemoRemoteDataSource(retrofit.create(MemoApi::class.java), apiCaller)
+    val memoRepository = MemoRepositoryImpl(memoRemote, memoLocal, monitor, cache)
 
     /** Room에 내 정보를, 설정 DataStore에 값을 미리 넣어 둔다 (지워지는지 보려고) */
     suspend fun preload(me: Me = fixtureMe()) {

@@ -68,4 +68,14 @@
         <item>금</item>
         <item>토</item>
     </string-array>
+
+    <!-- 작성일 표기: SCREENS.md 공통 "날짜·시각 표기" (NFR-TIME-02, D-129). 다른 해는 위의 date_year_month_day를 쓴다 -->
+    <string name="date_meridiem_am">오전</string>
+    <string name="date_meridiem_pm">오후</string>
+    <string name="written_at_today">오늘 %1$s %2$d:%3$02d</string>
+    <string name="written_at_yesterday">어제</string>
+    <string name="written_at_this_year">%1$d월 %2$d일</string>
+    <!-- 메모 날짜 칩: 올해는 "10월 17일 (토)", 다른 해는 "2027년 10월 17일 (일)" (D-129) -->
+    <string name="memo_date_chip">%1$d월 %2$d일 (%3$s)</string>
+    <string name="memo_date_chip_other_year">%1$d년 %2$d월 %3$d일 (%4$s)</string>
 </resources>

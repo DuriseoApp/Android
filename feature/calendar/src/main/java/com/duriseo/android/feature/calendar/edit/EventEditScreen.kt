@@ -19,7 +19,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
@@ -63,6 +65,7 @@ import com.duriseo.android.core.designsystem.component.StartDatePickerSheet
 import com.duriseo.android.core.designsystem.theme.Brand500
 import com.duriseo.android.core.designsystem.theme.Brand700
 import com.duriseo.android.core.designsystem.theme.Danger600
+import com.duriseo.android.core.designsystem.theme.DuriseoShadows
 import com.duriseo.android.core.designsystem.theme.DuriseoSize
 import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
@@ -76,6 +79,7 @@ import com.duriseo.android.core.designsystem.theme.OnBrand
 import com.duriseo.android.core.designsystem.theme.Surface0
 import com.duriseo.android.core.designsystem.theme.Surface100
 import com.duriseo.android.core.designsystem.theme.Surface50
+import com.duriseo.android.core.designsystem.theme.duriseoShadow
 import com.duriseo.android.domain.event.ReminderOption
 import com.duriseo.android.feature.calendar.R
 import com.duriseo.android.feature.calendar.component.formatEventDate
@@ -87,7 +91,8 @@ import java.time.YearMonth
 
 // SCR-CAL-03 일정 작성·수정 (FR-CAL-02, FR-CAL-03, FR-NOTI-04). 수치는 보드 `AddEvent.dc.html`, design-system.md "입력".
 // 날짜·시간·알림 선택 시트는 그림(`SCR-CAL-03--date-picker/time-picker/reminder-sheet.png`)대로다.
-// 종류 탭 [일정 | 메모]는 메모 화면이 있는 단위 6에서 더한다 (확인 필요 5).
+// 종류 탭 [일정 | 메모] (D-133): 새로 쓸 때만. [메모] 탭 내용은 `feature:memo`를 모르는 이 모듈 대신 앱이 슬롯([EventEditMemoTab])으로 채운다.
+// 앱바 [저장]·로딩 덮개·날짜 시트는 현재 탭 기준이다.
 
 private val ScreenPadding = DuriseoSpacing.Space5
 private val SectionGap = DuriseoSpacing.Space5
@@ -116,9 +121,12 @@ fun EventEditRoute(
     onOpenColors: () -> Unit,
     onShowSnackBar: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    memoTab: EventEditMemoTabProvider? = null,
     viewModel: EventEditViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    // 수정에는 [메모] 탭이 없어 메모 ViewModel을 만들지 않는다. 새로 쓸 때는 이 항목 안에서 만들어 탭을 오가도 입력이 남는다 (D-133)
+    val memoSlot = if (!state.isEdit && memoTab != null) memoTab(onClose, onShowSnackBar) else null
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
@@ -128,7 +136,7 @@ fun EventEditRoute(
             }
         }
     }
-    EventEditScreen(state = state, onAction = viewModel::onAction, padding = padding, modifier = modifier)
+    EventEditScreen(state = state, onAction = viewModel::onAction, padding = padding, modifier = modifier, memoTab = memoSlot)
 }
 
 @Composable
@@ -137,30 +145,39 @@ fun EventEditScreen(
     onAction: (EventEditAction) -> Unit,
     modifier: Modifier = Modifier,
     padding: PaddingValues = PaddingValues(),
+    memoTab: EventEditMemoTab? = null,
 ) {
+    // [메모] 탭이 현재 탭이다: 슬롯이 있고 새로 쓰는 중일 때만 (D-133)
+    val memo = memoTab?.takeIf { !state.isEdit && state.kind == EditKind.Memo }
     val sheet = state.sheet
-    BackHandler(enabled = sheet != null) { onAction(EventEditAction.SheetDismissed) }
+    BackHandler(enabled = memo == null && sheet != null) { onAction(EventEditAction.SheetDismissed) }
     DuriseoDialogLayer(
-        dialogVisible = sheet != null,
+        dialogVisible = if (memo != null) memo.dateSheetVisible else sheet != null,
         dialog = {
-            if (sheet != null) {
+            if (memo != null) {
+                memo.dateSheet()
+            } else if (sheet != null) {
                 DuriseoBottomSheetLayer(onDismissRequest = { onAction(EventEditAction.SheetDismissed) }) {
                     SheetContent(sheet = sheet, state = state, onAction = onAction)
                 }
             }
         },
         modifier = modifier,
-        loading = state.loading,
+        // 로딩 덮개는 현재 탭의 요청 중 상태다 (D-115)
+        loading = memo?.loading ?: state.loading,
     ) {
         Column(modifier = Modifier.fillMaxSize().background(Surface0).padding(padding)) {
-            EditHeader(state = state, onAction = onAction)
-            if (state.loaded) EditBody(state = state, onAction = onAction)
+            EditHeader(state = state, onAction = onAction, memo = memo)
+            if (state.loaded) EditBody(state = state, onAction = onAction, memoTab = memoTab, memo = memo)
         }
     }
 }
 
 @Composable
-private fun EditHeader(state: EventEditUiState, onAction: (EventEditAction) -> Unit) {
+private fun EditHeader(state: EventEditUiState, onAction: (EventEditAction) -> Unit, memo: EventEditMemoTab?) {
+    // [저장]은 현재 탭 기준: 일정 탭은 일정 입력, 메모 탭은 메모 입력의 조건을 따른다 (D-133)
+    val saveEnabled = if (memo != null) memo.saveEnabled else state.saveEnabled
+    val onSave = { if (memo != null) memo.onSave() else onAction(EventEditAction.SaveClicked) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -187,29 +204,87 @@ private fun EditHeader(state: EventEditUiState, onAction: (EventEditAction) -> U
             modifier = Modifier
                 .height(DuriseoSize.Touch)
                 .width(DuriseoSize.ButtonMd)
-                .clickable(enabled = state.saveEnabled && !state.saving, role = Role.Button) { onAction(EventEditAction.SaveClicked) },
+                .clickable(enabled = saveEnabled && !state.saving, role = Role.Button) { onSave() },
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = stringResource(R.string.event_edit_save),
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                 // 비활성 [저장]의 글자색은 문서에 없어 비활성 버튼 글자와 같은 ink-500을 쓴다
-                color = if (state.saveEnabled) Brand700 else Ink500,
+                color = if (saveEnabled) Brand700 else Ink500,
             )
         }
     }
 }
 
+/** 종류 탭 바깥 틀: 안쪽 4, 탭 사이 4, 모서리 14, `surface-100` (보드 `AddEvent.dc.html` 28행). 탭은 높이 40, 모서리 11, 글자 15 */
+private val KindTabsPadding = 4.dp
+private val KindTabsRadius = 14.dp
+private val KindTabHeight = 40.dp
+private val KindTabRadius = 11.dp
+private val KindTabFontSize = 15.sp
+
+/** 종류 탭 [일정 | 메모]. 고른 탭은 `surface-0` 면 + `shadow-sm` + 700 `ink-900`, 안 고른 탭은 면 없이 500 `ink-600` (보드 216·217행) */
 @Composable
-private fun EditBody(state: EventEditUiState, onAction: (EventEditAction) -> Unit) {
+private fun KindTabs(selected: EditKind, onSelect: (EditKind) -> Unit) {
+    val group = stringResource(R.string.event_edit_kind_group)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Surface100, RoundedCornerShape(KindTabsRadius))
+            .padding(KindTabsPadding)
+            .semantics { contentDescription = group },
+        horizontalArrangement = Arrangement.spacedBy(KindTabsPadding),
+    ) {
+        KindTab(stringResource(R.string.event_edit_kind_event), selected == EditKind.Event, { onSelect(EditKind.Event) }, Modifier.weight(1f))
+        KindTab(stringResource(R.string.event_edit_kind_memo), selected == EditKind.Memo, { onSelect(EditKind.Memo) }, Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun KindTab(text: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(KindTabRadius)
+    Box(
+        modifier = modifier
+            .height(KindTabHeight)
+            .then(if (selected) Modifier.duriseoShadow(shape, DuriseoShadows.Sm).background(Surface0, shape) else Modifier)
+            .clip(shape)
+            .selectable(selected = selected, role = Role.Tab, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = KindTabFontSize,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            ),
+            color = if (selected) Ink900 else Ink600,
+        )
+    }
+}
+
+@Composable
+private fun EditBody(
+    state: EventEditUiState,
+    onAction: (EventEditAction) -> Unit,
+    memoTab: EventEditMemoTab?,
+    memo: EventEditMemoTab?,
+) {
+    // 탭은 새로 쓸 때, 메모 탭 슬롯이 있을 때만 (D-133). 그림은 앱바 아래 8에서 시작한다
+    val showTabs = state.showKindTabs && memoTab != null
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = ScreenPadding)
-            .padding(bottom = ScreenPadding),
+            .padding(top = if (showTabs) DuriseoSpacing.Space2 else 0.dp, bottom = ScreenPadding),
         verticalArrangement = Arrangement.spacedBy(SectionGap),
     ) {
+        if (showTabs) KindTabs(selected = state.kind, onSelect = { onAction(EventEditAction.KindSelected(it)) })
+        if (memo != null) {
+            memo.form(Modifier)
+            return@Column
+        }
         LabeledField(label = stringResource(R.string.event_edit_title_label)) {
             TextInput(
                 value = state.title,
@@ -785,3 +860,18 @@ private fun EventEditPreview_ReminderSheetAllDay() = PreviewScreen(previewState(
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun EventEditPreview_Loading() = PreviewScreen(previewState().copy(saving = true, loading = true))
+
+/** 종류 탭이 있는 새 작성 화면의 [일정] 탭 (`SCR-CAL-03.png`). [메모] 탭 내용은 앱이 채워서 여기서는 자리표시다 (실제 모양은 `feature:main`의 `EventEditPreview_MemoTab`) */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun EventEditPreview_KindTabs() {
+    val stub = EventEditMemoTab(
+        saveEnabled = false,
+        loading = false,
+        dateSheetVisible = false,
+        onSave = {},
+        form = { Text(text = "메모 입력 (앱이 채워요)") },
+        dateSheet = {},
+    )
+    DuriseoTheme { EventEditScreen(state = previewState(), onAction = {}, memoTab = stub) }
+}

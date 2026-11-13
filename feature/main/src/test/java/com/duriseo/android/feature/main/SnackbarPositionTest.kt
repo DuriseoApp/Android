@@ -4,6 +4,7 @@ import com.duriseo.android.core.common.navigation.AnniversaryRouteModel
 import com.duriseo.android.core.common.navigation.CalendarRouteModel
 import com.duriseo.android.core.common.navigation.CoupleRouteModel
 import com.duriseo.android.core.common.navigation.MainRouteModel
+import com.duriseo.android.core.common.navigation.MemoRouteModel
 import com.duriseo.android.core.common.navigation.SettingsRouteModel
 import com.duriseo.android.feature.main.navigation.isSnackbarAtTop
 import kotlin.reflect.KClass
@@ -44,6 +45,16 @@ class SnackbarPositionTest {
     @Test
     fun `메모 탭의 스낵바는 위에서 40이 아니라 하단 탭 위다`() {
         assertFalse(atTop(MainRouteModel.Memo::class))
+    }
+
+    @Test
+    fun `D-126 메모 탭은 바닥 96이고 메모 하위 화면은 위 40이다`() {
+        // SCR-MEMO-01은 하단 탭이 있는 탭 루트라 바닥에서 96 (FAB은 바닥에서 161)
+        assertFalse(atTop(MainRouteModel.Memo::class))
+        // SCR-MEMO-02 고정 메모 전체, SCR-MEMO-03 상세, SCR-MEMO-04 작성·수정은 하단 탭이 없어 위에서 40
+        assertTrue(atTop(MemoRouteModel.Pinned::class))
+        assertTrue(atTop(MemoRouteModel.Detail::class))
+        assertTrue(atTop(MemoRouteModel.Edit::class))
     }
 
     @Test

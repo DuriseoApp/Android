@@ -6,12 +6,14 @@ import com.duriseo.android.data.repository.auth.SessionManager
 import com.duriseo.android.data.repository.couple.CoupleRepositoryImpl
 import com.duriseo.android.data.repository.event.EventRepositoryImpl
 import com.duriseo.android.data.repository.me.MeRepositoryImpl
+import com.duriseo.android.data.repository.memo.MemoRepositoryImpl
 import com.duriseo.android.domain.anniversary.AnniversaryRepository
 import com.duriseo.android.domain.auth.AuthRepository
 import com.duriseo.android.domain.auth.SessionEndNotifier
 import com.duriseo.android.domain.couple.CoupleRepository
 import com.duriseo.android.domain.event.EventRepository
 import com.duriseo.android.domain.me.MeRepository
+import com.duriseo.android.domain.memo.MemoRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -37,6 +39,9 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindAnniversaryRepository(impl: AnniversaryRepositoryImpl): AnniversaryRepository
+
+    @Binds
+    abstract fun bindMemoRepository(impl: MemoRepositoryImpl): MemoRepository
 
     /** `data:remote`의 Authenticator가 세션 종료를 알릴 때 쓴다 (`data:remote`는 이 모듈을 모른다) */
     @Binds

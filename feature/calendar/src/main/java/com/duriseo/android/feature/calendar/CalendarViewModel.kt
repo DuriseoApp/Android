@@ -20,6 +20,9 @@ import com.duriseo.android.domain.event.EventTime
 import com.duriseo.android.domain.me.Me
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.me.SpaceType
+import com.duriseo.android.domain.memo.Memo
+import com.duriseo.android.domain.memo.MemoRepository
+import com.duriseo.android.domain.memo.MemoTexts
 import com.duriseo.android.domain.result.DataResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -45,8 +48,8 @@ import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 /**
- * SCR-CAL-01 캘린더 홈. 화면은 Room의 내 정보·일정·기념일만 구독하고(NFR-OFF-01), 보이는 달은 화면에 들어올 때,
- * 달을 넘길 때, 당겨서 새로고침할 때 `GET /events`와 `GET /anniversaries`로 다시 불러온다 (NFR-SYNC-02, Q-16,
+ * SCR-CAL-01 캘린더 홈. 화면은 Room의 내 정보·일정·기념일·메모만 구독하고(NFR-OFF-01), 보이는 달은 화면에 들어올 때,
+ * 달을 넘길 때, 당겨서 새로고침할 때 `GET /events`와 `GET /anniversaries`와 `GET /memos/dated`로 다시 불러온다 (NFR-SYNC-02, Q-16,
  * 오프라인이면 조용히 실패). 월 조회는 앞뒤 하루 여유를 둔다 (Q-19 ②).
  * 쓰기(처음 만난 날 저장)는 온라인에서만 한다 (NFR-OFF-02).
  */
@@ -55,6 +58,7 @@ import javax.inject.Inject
 class CalendarViewModel @Inject constructor(
     private val eventRepository: EventRepository,
     private val anniversaryRepository: AnniversaryRepository,
+    private val memoRepository: MemoRepository,
     private val meRepository: MeRepository,
     private val coupleRepository: CoupleRepository,
     private val clock: Clock,
@@ -90,12 +94,22 @@ class CalendarViewModel @Inject constructor(
             anniversaryRepository.observeRange(from, to)
         }
 
+    /** 메모 날짜가 보이는 달(앞뒤 하루 포함)에 있는 메모 (D-119) */
+    private val monthMemos = local
+        .map { it.visibleMonth }
+        .distinctUntilChanged()
+        .flatMapLatest { month ->
+            val (from, to) = calendarMonthRange(month)
+            memoRepository.observeDated(from, to)
+        }
+
     val uiState: StateFlow<CalendarUiState> = combine(
         local,
         meRepository.observeMe(),
         monthEvents,
         monthAnniversaries,
-    ) { local, me, events, anniversaries ->
+        monthMemos,
+    ) { local, me, events, anniversaries, memos ->
         val today = LocalDate.now(clock)
         CalendarUiState(
             header = me?.toHeader(today) ?: CalendarHeader.Loading,
@@ -110,6 +124,7 @@ class CalendarViewModel @Inject constructor(
                 me?.id.orEmpty(),
                 me?.space?.startDate,
             ),
+            memosByDay = groupMemosByDay(local.visibleMonth, memos, me?.id.orEmpty()),
             canGoPrevious = EventRules.previousMonth(local.visibleMonth) != null,
             canGoNext = EventRules.nextMonth(local.visibleMonth) != null,
             startDateSheet = local.startDateSheet,
@@ -134,6 +149,7 @@ class CalendarViewModel @Inject constructor(
             is CalendarAction.DateSelected -> selectDate(action.date)
             CalendarAction.ToggleExpanded -> local.update { it.copy(expanded = !it.expanded) }
             is CalendarAction.EventClicked -> effectChannel.trySend(CalendarSideEffect.OpenEvent(action.id))
+            is CalendarAction.MemoClicked -> effectChannel.trySend(CalendarSideEffect.OpenMemo(action.id))
             CalendarAction.AddClicked ->
                 effectChannel.trySend(CalendarSideEffect.OpenCreate(local.value.selectedDate))
             CalendarAction.StartDatePromptClicked -> openStartDateSheet()
@@ -149,18 +165,20 @@ class CalendarViewModel @Inject constructor(
     }
 
     /**
-     * 보이는 달의 일정과 기념일을 함께 다시 불러온다. 앞뒤 하루 여유를 두고 요청한다 (Q-19 ②, 3개월 상한 안).
+     * 보이는 달의 일정과 기념일과 메모를 함께 다시 불러온다. 앞뒤 하루 여유를 두고 요청한다 (Q-19 ②, 3개월 상한 안).
      * 오프라인·실패는 조용히 넘기고 Room의 값을 그대로 보여 준다 (ARCHITECTURE.md 2장)
      */
     private fun refreshVisibleMonth(): Job {
         val (from, to) = calendarMonthRange(local.value.visibleMonth)
         // 저장소가 쓰기 뒤에 다시 불러올 범위는 보이는 달이다 (요청이 끝나기를 기다리지 않고 바로 알린다)
         anniversaryRepository.setVisibleRange(from, to)
+        memoRepository.setVisibleRange(from, to)
         // 달을 빨리 넘기면 이전 달 요청은 취소한다. 겹치는 이틀을 오래된 응답이 덮지 않게
         refreshJob?.cancel()
         return viewModelScope.launch {
             launch { eventRepository.refreshRange(from, to, zone) }
             launch { anniversaryRepository.refreshRange(from, to) }
+            launch { memoRepository.refreshDated(from, to) }
         }.also { refreshJob = it }
     }
 
@@ -196,6 +214,7 @@ class CalendarViewModel @Inject constructor(
         // 다른 달의 날짜를 골라 보이는 달이 바뀌어도 저장소가 아는 보이는 범위는 따라간다
         val (from, to) = calendarMonthRange(local.value.visibleMonth)
         anniversaryRepository.setVisibleRange(from, to)
+        memoRepository.setVisibleRange(from, to)
     }
 
     // --- 처음 만난 날 시트 (FR-COUPLE-04 AC2, 설정 화면 시트와 같은 규칙) ---
@@ -331,6 +350,29 @@ internal fun groupAnniversariesByDay(
         .filter { YearMonth.from(it.date) == month }
         .groupBy { it.date }
         .mapValues { (date, list) -> list.map { it.toCalendarAnniversary(myId, startDate, date) } }
+
+/**
+ * 보이는 달의 날짜마다 메모를 모은다 (메모 날짜가 있는 메모만). 순서는 작성 최신순, 같으면 id순 (D-119).
+ * 앞뒤 하루 여유로 받은 이웃 달 날짜는 달력에 그리지 않으므로 뺀다. 제목은 목록 제목 규칙이다 (D-131).
+ */
+internal fun groupMemosByDay(
+    month: YearMonth,
+    memos: List<Memo>,
+    myId: String,
+): Map<LocalDate, List<CalendarMemo>> =
+    memos
+        .sortedWith(compareByDescending<Memo> { it.createdAt }.thenBy { it.id })
+        .mapNotNull { memo -> memo.memoDate?.takeIf { YearMonth.from(it) == month }?.let { it to memo } }
+        .groupBy({ it.first }, { it.second })
+        .mapValues { (_, list) ->
+            list.map {
+                CalendarMemo(
+                    id = it.id,
+                    title = MemoTexts.listTitle(it),
+                    author = if (it.authorId == myId) EventTarget.ME else EventTarget.PARTNER,
+                )
+            }
+        }
 
 private fun AnniversaryOccurrence.toCalendarAnniversary(myId: String, startDate: LocalDate?, date: LocalDate) =
     CalendarAnniversary(

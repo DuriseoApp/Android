@@ -32,11 +32,24 @@ data class CalendarAnniversary(
     val repeatsYearly: Boolean,
 )
 
-/** 날짜 목록의 한 줄. 순서는 기념일 -> 종일 -> 시간 (D-119, 메모는 단위 6) */
+/**
+ * 날짜 목록·달력에 그릴 메모 한 건 (SCR-CAL-01, 메모 날짜가 있는 메모만, D-119).
+ *
+ * @property title 목록 제목 (D-131): 제목이 없으면 본문 첫 줄 50자
+ * @property author 작성자(나·상대). 메모의 점 색은 작성자의 사람 색이다 (함께 색이 아님, D-118)
+ */
+data class CalendarMemo(
+    val id: String,
+    val title: String,
+    val author: EventTarget,
+)
+
+/** 날짜 목록의 한 줄. 순서는 기념일 -> 종일 -> 시간 -> 메모 (D-119) */
 sealed interface CalendarListItem {
     /** [index]는 그날 기념일 안의 위치로 목록 키에 쓴다 */
     data class Anniversary(val index: Int, val value: CalendarAnniversary) : CalendarListItem
     data class Event(val value: CalendarEvent) : CalendarListItem
+    data class Memo(val value: CalendarMemo) : CalendarListItem
 }
 
 /** 앱바. 커플이면 "우리 둘" + D-day 줄, 개인 공간이면 "나의 캘린더" (FR-CAL-01 AC3·AC5, FR-COUPLE-04 AC2) */
@@ -74,6 +87,8 @@ data class CalendarUiState(
     val eventsByDay: Map<LocalDate, List<CalendarEvent>> = emptyMap(),
     /** 보이는 달의 날짜별 기념일. 순서는 저장소(서버 응답) 순서 그대로 (D-119). 기념일 없는 날은 키가 없다 */
     val anniversariesByDay: Map<LocalDate, List<CalendarAnniversary>> = emptyMap(),
+    /** 보이는 달의 날짜별 메모(메모 날짜가 있는 것). 순서는 작성 최신순, 같으면 id순 (D-119). 메모 없는 날은 키가 없다 */
+    val memosByDay: Map<LocalDate, List<CalendarMemo>> = emptyMap(),
     val canGoPrevious: Boolean = true,
     val canGoNext: Boolean = true,
     val startDateSheet: CalendarStartDateSheet? = null,
@@ -89,10 +104,14 @@ data class CalendarUiState(
     /** 선택한 날의 기념일 */
     val selectedAnniversaries: List<CalendarAnniversary> get() = anniversariesByDay[selectedDate].orEmpty()
 
-    /** 선택한 날의 목록: 기념일 -> 종일 일정 -> 시간 일정 (D-119) */
+    /** 선택한 날의 메모 */
+    val selectedMemos: List<CalendarMemo> get() = memosByDay[selectedDate].orEmpty()
+
+    /** 선택한 날의 목록: 기념일 -> 종일 일정 -> 시간 일정 -> 메모 (D-119) */
     val selectedItems: List<CalendarListItem>
         get() = selectedAnniversaries.mapIndexed { index, value -> CalendarListItem.Anniversary(index, value) } +
-            selectedEvents.map { CalendarListItem.Event(it) }
+            selectedEvents.map { CalendarListItem.Event(it) } +
+            selectedMemos.map { CalendarListItem.Memo(it) }
 }
 
 sealed interface CalendarAction {
@@ -103,6 +122,9 @@ sealed interface CalendarAction {
     data class DateSelected(val date: LocalDate) : CalendarAction
     data object ToggleExpanded : CalendarAction
     data class EventClicked(val id: String) : CalendarAction
+
+    /** 날짜 목록의 메모 카드: SCR-MEMO-03으로 간다 (FR-CAL-01 AC2) */
+    data class MemoClicked(val id: String) : CalendarAction
     data object AddClicked : CalendarAction
     data object StartDatePromptClicked : CalendarAction
 
@@ -122,6 +144,9 @@ sealed interface CalendarAction {
 
 sealed interface CalendarSideEffect {
     data class OpenEvent(val id: String) : CalendarSideEffect
+
+    /** SCR-MEMO-03 */
+    data class OpenMemo(val id: String) : CalendarSideEffect
 
     /** SCR-ANNIV-01 */
     data object OpenAnniversaries : CalendarSideEffect

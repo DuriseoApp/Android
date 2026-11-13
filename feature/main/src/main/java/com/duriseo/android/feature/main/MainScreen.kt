@@ -31,10 +31,11 @@ import com.duriseo.android.feature.calendar.CalendarUiState
 import com.duriseo.android.feature.couple.linkedsheet.LinkedSheetRoute
 import com.duriseo.android.feature.main.component.MainBottomBar
 import com.duriseo.android.feature.main.component.MainTab
-import com.duriseo.android.feature.main.component.MemoTabPlaceholder
 import com.duriseo.android.feature.main.navigation.MainNavHost
 import com.duriseo.android.feature.main.navigation.MainNavigator
 import com.duriseo.android.feature.main.navigation.rememberMainNavigator
+import com.duriseo.android.feature.memo.list.MemoListScreen
+import com.duriseo.android.feature.memo.list.MemoListUiState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -211,7 +212,7 @@ private fun MainScreenMemoTabPreview() {
             snackbarHostState = remember { SnackbarHostState() },
             onTabSelected = {},
         ) { padding ->
-            MemoTabPlaceholder(padding = padding)
+            MemoListScreen(state = MemoListUiState(loaded = true), onAction = {}, padding = padding)
         }
     }
 }

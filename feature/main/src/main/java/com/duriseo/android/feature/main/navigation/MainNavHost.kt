@@ -5,19 +5,17 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import com.duriseo.android.core.common.navigation.MainRouteModel
 import com.duriseo.android.feature.anniversary.navigation.anniversaryNavGraph
 import com.duriseo.android.feature.auth.navigation.authNavGraph
 import com.duriseo.android.feature.auth.start.AfterLogin
 import com.duriseo.android.feature.calendar.navigation.calendarNavGraph
 import com.duriseo.android.feature.couple.navigation.coupleNavGraph
-import com.duriseo.android.feature.main.component.MemoTabPlaceholder
+import com.duriseo.android.feature.memo.navigation.memoNavGraph
 import com.duriseo.android.feature.settings.navigation.settingsNavGraph
 
 /**
  * @param startDestination 앱을 켰을 때 첫 화면. 토큰이 있으면 캘린더, 없으면 시작 화면 (FR-AUTH-01)
- * @param snackbarVisible 스낵바가 떠 있는지. 캘린더 FAB가 스낵바 위로 올라가는 데 쓴다 (SCR-CAL-01)
+ * @param snackbarVisible 스낵바가 떠 있는지. 캘린더·메모 탭의 FAB가 스낵바 위로 올라가는 데 쓴다 (SCR-CAL-01, SCR-MEMO-01)
  * @param onShowSnackBar 스낵바를 띄운다. 인자는 문구 리소스 ID(`@StringRes`)다.
  *   기능 화면이 오프라인 안내 같은 문구를 띄울 때 쓴다 (전체 메뉴·계정 화면).
  *   시작 화면은 위에서 40에 자기 스낵바를 따로 그린다 (SCREENS.md SCR-START-01).
@@ -66,6 +64,8 @@ fun MainNavHost(
             padding = padding,
             onOpenMenu = navigator::navigateToSettings,
             onOpenEvent = navigator::navigateToEventDetail,
+            // 날짜 목록의 메모 카드 -> SCR-MEMO-03 (단위 6 묶음 C)
+            onOpenMemo = navigator::navigateToMemoDetail,
             onOpenCreate = navigator::navigateToEventCreate,
             onOpenEdit = navigator::navigateToEventEdit,
             onOpenAnniversaries = navigator::navigateToAnniversaries,
@@ -73,6 +73,8 @@ fun MainNavHost(
             onBack = navigator::navigateUp,
             onShowSnackBar = onShowSnackBar,
             snackbarVisible = snackbarVisible,
+            // 새 작성 화면의 [메모] 탭은 feature:memo 부품으로 채운다 (D-133)
+            memoTab = { onClose, onSnack -> rememberEventEditMemoTab(onClose, onSnack) },
         )
         // 기념일 (SCR-ANNIV-01·02). 캘린더(앱바·기념일 카드)에서 `navigateToAnniversaries`로 들어간다
         anniversaryNavGraph(
@@ -82,10 +84,19 @@ fun MainNavHost(
             onOpenEdit = navigator::navigateToAnniversaryEdit,
             onShowSnackBar = onShowSnackBar,
         )
-        // feature:memo(단위 6)가 생기면 그 모듈의 그래프로 바꾼다
-        composable<MainRouteModel.Memo> {
-            MemoTabPlaceholder(padding = padding)
-        }
+        // 메모 (SCR-MEMO-01 탭 루트, SCR-MEMO-02·03·04). 목록·핀 카드는 상세로, FAB은 [메모] 탭이 골라진 작성 화면(SCR-CAL-03)으로 간다 (D-133).
+        // 상세·고정 전체·수정은 하단 탭이 없다. 수정이 404면 수정과 상세를 함께 닫는다 (D-121)
+        memoNavGraph(
+            padding = padding,
+            onOpenDetail = navigator::navigateToMemoDetail,
+            onOpenPinned = navigator::navigateToPinnedMemos,
+            onOpenCreate = navigator::navigateToMemoCreate,
+            onOpenEdit = navigator::navigateToMemoEdit,
+            onBack = navigator::navigateUp,
+            onCloseEditAndDetail = navigator::closeMemoEditAndDetail,
+            onShowSnackBar = onShowSnackBar,
+            snackbarVisible = snackbarVisible,
+        )
         // 하단 탭이 아니다. 진입은 캘린더 앱바
         settingsNavGraph(
             padding = padding,
