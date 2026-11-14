@@ -31,7 +31,7 @@ open class LocalDataCleaner @Inject constructor(
             database.clearAllTables()
         }
         settings.edit { prefs ->
-            val kept = DeviceLevelKeys.ALL.mapNotNull { key -> prefs[key]?.let { key to it } }
+            val kept = DeviceLevelKeys.ALL.mapNotNull { key -> prefs[key]?.let { value -> Pair(key, value) } }
             prefs.clear()
             kept.forEach { (key, value) -> prefs[key] = value }
         }
