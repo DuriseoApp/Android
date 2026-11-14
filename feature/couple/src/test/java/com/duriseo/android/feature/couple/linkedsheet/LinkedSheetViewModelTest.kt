@@ -384,7 +384,8 @@ class LinkedSheetViewModelTest {
 
         assertEquals(1, me.acknowledgeCalls)
         assertEquals(1, me.refreshCalls)
-        assertTrue(effects.isEmpty())
+        // 오류 안내는 없다. 시트를 닫을 때의 알림 권한 요청(FR-NOTI-01 AC2)만 있다
+        assertEquals(listOf<LinkedSheetSideEffect>(LinkedSheetSideEffect.RequestNotificationPermission), effects)
     }
 
     @Test
