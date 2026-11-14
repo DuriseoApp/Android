@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.calendar.detail
 
+import com.duriseo.android.feature.calendar.FakeNotificationPermissionGate
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.duriseo.android.core.common.navigation.CalendarRouteModel
