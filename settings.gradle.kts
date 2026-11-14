@@ -32,6 +32,7 @@ rootProject.name = "Duriseo"
 include(":app")
 include(":core:designsystem")
 include(":core:common")
+include(":core:push")
 include(":domain")
 include(":data:remote")
 include(":data:local")

@@ -156,6 +156,10 @@ class FakeEventRepository(initial: List<Event> = emptyList()) : EventRepository 
     var refreshEventResult: DataResult<Unit> = DataResult.Success(Unit)
     var refreshRangeResult: DataResult<Unit> = DataResult.Success(Unit)
 
+    override suspend fun forget(id: String) {
+        events.value = events.value.filterNot { it.id == id }
+    }
+
     override fun observeEvents(from: LocalDate, to: LocalDate, zone: ZoneId): Flow<List<Event>> =
         events.map { list ->
             list.filter { e ->
@@ -317,6 +321,7 @@ class FakeMemoRepository(initial: List<Memo> = emptyList()) : MemoRepository {
         return refreshDatedResult
     }
 
+    override suspend fun forget(id: String): Unit = error("캘린더는 쓰지 않아요")
     override fun observeList(view: MemoView): Flow<MemoList> = error("캘린더는 쓰지 않아요")
     override fun observeFavoriteCount(): Flow<Int> = error("캘린더는 쓰지 않아요")
     override fun observePinned(): Flow<List<Memo>> = error("캘린더는 쓰지 않아요")

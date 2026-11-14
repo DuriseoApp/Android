@@ -11,6 +11,8 @@ import com.duriseo.android.domain.auth.SessionEndReason
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.me.SpaceChange
 import com.duriseo.android.domain.me.SpaceType
+import com.duriseo.android.domain.sync.SpaceSyncSignal
+import com.duriseo.android.domain.sync.SyncSpaceSignals
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
@@ -61,11 +63,15 @@ sealed interface MainEffect {
  *
  * 세션 끊김 알림은 구독자가 없을 때 나오면 사라지므로(`SessionManager.events`) 이 ViewModel이 만들어지자마자 구독한다.
  * 연결 해제 알림(`MeRepository.spaceChanges`)도 같다. 연결 완료 시트(SCR-COUPLE-04)를 띄울지는 [linkedSheetNeeded]다.
+ *
+ * 동기화 신호 `SPACE` `LINKED`·`UNLINKED`(API.md 6장, NFR-SYNC-01)도 여기서 듣는다: 먼저 `GET /me`를 읽고,
+ * 해제는 `refreshMe`가 저장 전에 감지해 위의 해제 알림으로 D-125 경로를 타고, 연결은 캘린더로 가 연결 완료 시트를 띄운다.
  */
 @HiltViewModel
 class MainViewModel @Inject constructor(
     authRepository: AuthRepository,
     meRepository: MeRepository,
+    syncSpaceSignals: SyncSpaceSignals,
 ) : ViewModel() {
 
     /** 토큰 저장소를 읽은 첫 결과로 정한다. 그 뒤로는 바뀌지 않는다 (이후 이동은 내비게이션이 한다) */
@@ -104,9 +110,28 @@ class MainViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            syncSpaceSignals.spaceSignals.collect { signal -> onSpaceSignal(signal, meRepository) }
+        }
+        viewModelScope.launch {
             authRepository.sessionEvents.collect { reason ->
                 effectChannel.trySend(MainEffect.SessionEnded(replaced = reason == SessionEndReason.REPLACED))
             }
+        }
+    }
+
+    /**
+     * `GET /me`를 읽은 뒤 4.5의 6단계 경로로 간다 (API.md 6장, D-125).
+     * - `UNLINKED`: `refreshMe`가 해제를 감지하면(Room이 커플이었고 받은 공간이 다름) 해제 알림이 나가 [destinationAfterUnlink]로 간다.
+     *   이미 초기화됐으면(Room이 개인 공간) 아무 일도 없다.
+     * - `LINKED`: 이 신호로 개인 공간에서 커플 공간이 됐으면 캘린더로 가고 연결 완료 시트는 [linkedSheetNeeded]가 띄운다 (D-48).
+     *   이미 커플 공간이던 기기(내가 연결한 쪽, 이미 화면 이동을 마침)는 이동하지 않는다.
+     */
+    private suspend fun onSpaceSignal(signal: SpaceSyncSignal, meRepository: MeRepository) {
+        val wasCouple = meRepository.observeMe().first()?.space?.type == SpaceType.COUPLE
+        meRepository.refreshMe()
+        if (signal == SpaceSyncSignal.LINKED && !wasCouple) {
+            val isCouple = meRepository.observeMe().first()?.space?.type == SpaceType.COUPLE
+            if (isCouple) effectChannel.trySend(MainEffect.SpaceRelinked)
         }
     }
 

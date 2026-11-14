@@ -4,6 +4,8 @@ import android.app.Activity
 import android.app.Application
 import android.os.Bundle
 import com.duriseo.android.core.common.social.SocialSdkInitializer
+import com.duriseo.android.core.push.ProcessUiState
+import com.duriseo.android.core.push.PushInitializer
 import com.duriseo.android.data.repository.auth.SessionStartup
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
@@ -18,6 +20,12 @@ class MyApp : Application() {
     @Inject
     lateinit var sessionStartup: SessionStartup
 
+    @Inject
+    lateinit var pushInitializer: PushInitializer
+
+    @Inject
+    lateinit var processUiState: ProcessUiState
+
     override fun onCreate() {
         super.onCreate()
 
@@ -26,8 +34,16 @@ class MyApp : Application() {
         socialSdkInitializer.initialize()
         // 토큰 저장소를 읽고, 로그인 상태면 뒤에서 내 정보·시간대를 갱신한다 (FR-AUTH-01, NFR-TIME-01)
         sessionStartup.start()
-        // 앱으로 돌아올 때 기기 시간대가 저장값과 다르면 다시 알린다 (Q-19 ①)
-        registerActivityLifecycleCallbacks(ForegroundCallbacks(onForeground = sessionStartup::onForeground))
+        // 알림 채널 5개를 만들고, 로그인 상태면 FCM 토큰을 서버에 등록한다 (단위 7). google-services.json이 없으면 FCM 없이 동작한다
+        pushInitializer.start()
+        // 앱으로 돌아올 때 기기 시간대가 저장값과 다르면 다시 알린다 (Q-19 ①).
+        // 화면이 한 번이라도 만들어진 프로세스만 동기화 신호(SYNC)를 처리한다 (API.md 6장 "프로세스가 살아 있을 때만")
+        registerActivityLifecycleCallbacks(
+            ForegroundCallbacks(
+                onForeground = sessionStartup::onForeground,
+                onAnyActivityCreated = processUiState::markUiStarted,
+            ),
+        )
     }
 
     private fun initTimber() {
@@ -45,7 +61,10 @@ class MyApp : Application() {
  * 프로세스의 첫 시작은 `SessionStartup.start()`가 하므로 건너뛴다. 화면 회전처럼 Activity가 다시 만들어질 때도 불리지만,
  * 시간대가 같으면 `syncTimeZone`이 요청 없이 끝나서 비용이 없다.
  */
-internal class ForegroundCallbacks(private val onForeground: () -> Unit) : Application.ActivityLifecycleCallbacks {
+internal class ForegroundCallbacks(
+    private val onForeground: () -> Unit,
+    private val onAnyActivityCreated: () -> Unit = {},
+) : Application.ActivityLifecycleCallbacks {
     private var startedCount = 0
     private var hasStartedBefore = false
 
@@ -59,7 +78,7 @@ internal class ForegroundCallbacks(private val onForeground: () -> Unit) : Appli
         startedCount--
     }
 
-    override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
+    override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = onAnyActivityCreated()
     override fun onActivityResumed(activity: Activity) = Unit
     override fun onActivityPaused(activity: Activity) = Unit
     override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit

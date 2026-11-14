@@ -28,6 +28,9 @@ interface EventRepository {
     /** `GET /events/{id}`. 응답을 Room에 넣는다 */
     suspend fun refreshEvent(id: String): DataResult<Unit>
 
+    /** 요청 없이 그 일정을 기기(Room)에서만 지운다. 동기화 신호 `EVENT` `DELETED`가 부른다 (API.md 6장) */
+    suspend fun forget(id: String)
+
     /** `POST /events` (201). `reminder`는 항상 null이라 알림은 [setReminder]로 따로 정한다 (D-59) */
     suspend fun create(event: NewEvent): DataResult<Event>
 

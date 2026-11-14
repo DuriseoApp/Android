@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- FCM 수신 서비스. 프로세스가 없어도 FCM이 깨워서 부른다 (푸시 PUSH는 여기서 그리고, SYNC는 프로세스가 살아 있을 때만 처리한다) -->
+        <service
+            android:name="com.duriseo.android.core.push.DuriseoMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+    </application>
+
+</manifest>

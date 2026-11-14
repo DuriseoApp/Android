@@ -1,5 +1,7 @@
 package com.duriseo.android.data.repository.auth
 
+import com.duriseo.android.core.common.Logger
+import com.duriseo.android.core.common.coroutines.ApplicationScope
 import com.duriseo.android.data.remote.auth.AuthRemoteDataSource
 import com.duriseo.android.data.remote.me.MeRemoteDataSource
 import com.duriseo.android.data.repository.online.runOnlineWrite
@@ -10,18 +12,22 @@ import com.duriseo.android.domain.auth.LoginResult
 import com.duriseo.android.domain.auth.SessionEndReason
 import com.duriseo.android.domain.auth.TokenState
 import com.duriseo.android.domain.auth.TokenStorage
+import com.duriseo.android.domain.device.DeviceRegistrar
 import com.duriseo.android.domain.error.DataError
 import com.duriseo.android.domain.error.ErrorCode
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.me.SocialProvider
 import com.duriseo.android.domain.network.NetworkMonitor
 import com.duriseo.android.domain.result.DataResult
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import java.time.Clock
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * 로그인·연동·로그아웃·탈퇴 (FR-AUTH-01~06). 모두 쓰기라서 `runOnlineWrite`로 감싼다 (NFR-OFF-02, D-86).
@@ -37,6 +43,8 @@ class AuthRepositoryImpl @Inject constructor(
     private val meRepository: MeRepository,
     private val networkMonitor: NetworkMonitor,
     private val clock: Clock,
+    private val deviceRegistrar: DeviceRegistrar,
+    @ApplicationScope private val scope: CoroutineScope,
 ) : AuthRepository {
 
     override val authState: Flow<AuthState> = tokenStorage.state
@@ -134,6 +142,17 @@ class AuthRepositoryImpl @Inject constructor(
     private suspend fun afterLogin() {
         meRepository.refreshMe()
         meRepository.syncTimeZone(clock.zone.id)
+        // 새 기기의 FCM 토큰을 등록한다 (API.md 4.2의 5단계·4.7의 6단계). FCM 토큰을 얻는 데 걸리는 시간이 로그인을 늦추지 않게
+        // 뒤에서 하고, 실패는 다음 앱 시작 때 다시 등록한다
+        scope.launch {
+            try {
+                deviceRegistrar.registerCurrentToken()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Logger.w(TAG, "기기 등록에 실패했어요: ${e.javaClass.simpleName}")
+            }
+        }
     }
 
     /**
@@ -161,4 +180,8 @@ class AuthRepositoryImpl @Inject constructor(
 
     private fun DataResult<*>.isApiError(code: ErrorCode): Boolean =
         ((this as? DataResult.Failure)?.error as? DataError.ApiError)?.knownCode == code
+
+    private companion object {
+        const val TAG = "auth"
+    }
 }

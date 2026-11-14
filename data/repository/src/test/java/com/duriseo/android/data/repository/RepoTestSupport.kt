@@ -35,6 +35,12 @@ import com.duriseo.android.data.repository.anniversary.AnniversaryRepositoryImpl
 import com.duriseo.android.data.repository.auth.AuthRepositoryImpl
 import com.duriseo.android.data.repository.auth.SessionManager
 import com.duriseo.android.data.repository.couple.CoupleRepositoryImpl
+import com.duriseo.android.data.repository.device.DeviceRegistrarImpl
+import com.duriseo.android.data.repository.notification.NotificationRepositoryImpl
+import com.duriseo.android.data.remote.notification.NotificationApi
+import com.duriseo.android.data.remote.notification.NotificationRemoteDataSource
+import com.duriseo.android.data.local.notification.NotificationLocalDataSource
+import com.duriseo.android.domain.device.PushTokenProvider
 import com.duriseo.android.data.repository.me.MeRepositoryImpl
 import com.duriseo.android.data.repository.memo.MemoRepositoryImpl
 import com.duriseo.android.data.repository.cache.LocalCacheGeneration
@@ -101,6 +107,11 @@ class FakeTokenStorage(initial: AuthTokens? = null) : TokenStorage {
     override suspend fun clear() {
         mutableState.value = TokenState.Empty
     }
+}
+
+/** FCM 토큰 대신 정해 둔 값을 준다. 기본은 null(FCM 꺼짐)이라 로그인 뒤 기기 등록 요청이 나가지 않는다 */
+class FakePushTokenProvider(var token: String? = null) : PushTokenProvider {
+    override suspend fun currentToken(): String? = token
 }
 
 class FakeSocialCleaner : SocialSessionCleaner {
@@ -221,7 +232,7 @@ class RepoHarness(
         DuriseoDatabase::class.java,
     ).allowMainThreadQueries().build() // Robolectric 테스트 스레드는 메인 스레드라서
 
-    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val settings: DataStore<Preferences> = PreferenceDataStoreFactory.create(
         scope = ioScope,
         produceFile = { File(tempDir, "settings.preferences_pb") },
@@ -266,7 +277,9 @@ class RepoHarness(
     val anniversaryLocal = AnniversaryLocalDataSource(database.anniversaryDao())
     val memoLocal = MemoLocalDataSource(database.memoDao())
     val meRepository = MeRepositoryImpl(meRemote, meLocal, monitor, acknowledgedSpace, session, writeLock, eventLocal, anniversaryLocal, memoLocal, cache)
-    val authRepository = AuthRepositoryImpl(authRemote, meRemote, tokens, session, meRepository, monitor, clock)
+    val pushTokens = FakePushTokenProvider()
+    val deviceRegistrar = DeviceRegistrarImpl(meRemote, tokens, monitor, pushTokens)
+    val authRepository = AuthRepositoryImpl(authRemote, meRemote, tokens, session, meRepository, monitor, clock, deviceRegistrar, ioScope)
     val coupleRemote = CoupleRemoteDataSource(retrofit.create(CoupleApi::class.java), apiCaller)
     val coupleRepository = CoupleRepositoryImpl(coupleRemote, meRepository, meLocal, monitor, writeLock, eventLocal, anniversaryLocal, memoLocal, cache)
     val eventRemote = EventRemoteDataSource(retrofit.create(EventApi::class.java), apiCaller)
@@ -275,6 +288,9 @@ class RepoHarness(
     val anniversaryRepository = AnniversaryRepositoryImpl(anniversaryRemote, anniversaryLocal, monitor, cache)
     val memoRemote = MemoRemoteDataSource(retrofit.create(MemoApi::class.java), apiCaller)
     val memoRepository = MemoRepositoryImpl(memoRemote, memoLocal, monitor, cache)
+    val notificationLocal = NotificationLocalDataSource(database.notificationDao())
+    val notificationRemote = NotificationRemoteDataSource(retrofit.create(NotificationApi::class.java), apiCaller)
+    val notificationRepository = NotificationRepositoryImpl(notificationRemote, notificationLocal, monitor, cache, clock, ioScope)
 
     /** Room에 내 정보를, 설정 DataStore에 값을 미리 넣어 둔다 (지워지는지 보려고) */
     suspend fun preload(me: Me = fixtureMe()) {

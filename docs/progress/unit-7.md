@@ -1,6 +1,6 @@
 # 단위 7: 알림 — FCM, 동기화 신호, 알림 권한, SCR-NOTI-01, SCR-SET-02
 
-> 브랜치: `feat/7-notification` · PR: (draft 때 채움) · 상태: 진행 중 (2026-11-14 범위 승인, 확인 필요 1~5 추천안대로)
+> 브랜치: `feat/7-notification` · PR: #18 · 상태: 진행 중 (2026-11-14 범위 승인, 확인 필요 1~5 추천안대로)
 > 기준: PRD v0.12 (FR-NOTI-01~05, FR-CAL-01 AC4, NFR-SYNC-01·02, D-39·D-43·D-70·D-85·D-127·D-129·D-136·D-141~D-145), SCREENS.md 공통 표(푸시 진입·알림 목록·알림 권한·날짜·시각 표기·요청 중 35~46행)·SCR-CAL-01 알림 버튼·SCR-NOTI-01·SCR-SET-02, API.md 1.1·3.1(`PUT /me/devices`, `/me/notification-settings`)·3.5·6장(SYNC 수신 시 앱 동작)·7장(푸시 형식)
 > Docs 기준 커밋: DuriseoApp/Docs main `cee0885`
 > 앞 단위: 단위 6 머지됨 (main `ed18952`). 서버 단위 6(알림·SYNC·푸시)·7(사진) 머지됨
@@ -89,6 +89,25 @@
 ## 결정
 
 구현하면서 정한 것 중 문서에 없는 것. 문서에 있어야 할 결정이면 여기 적지 말고 작업을 멈추고 보고한다.
+
+묶음 A·B·C(데이터 부분) 구현 결정:
+
+1. **모듈 이름**: MODULES.md 계획의 `push`를 `core:push`로 만들었다 (feature가 아니라 앱 전체가 쓰는 부품). `MODULES.md` 1장을 고침.
+2. **google-services (확인 필요 1)**: `app/build.gradle.kts`가 `app/google-services.json`이 있을 때만 플러그인을 적용한다. 없으면 `FcmAvailability`가 false라 토큰 등록·`PushInitializer`의 등록을 건너뛰고 경고 로그 한 줄. CI는 Secret `GOOGLE_SERVICES_JSON`(base64)이 있을 때만 파일을 만든다. Firebase BoM 34.4.0·google-services 4.4.3은 Gradle을 못 돌리는 환경이라 **버전 존재를 못 확인**했다 (CI로 확인).
+3. **`GET /space`는 부르지 않는다**: API.md 6장은 `SPACE` `UPDATED`에 `GET /me`·`GET /space`를 다시 읽으라 하지만, 앱에는 `GET /space`를 쓰는 곳이 없고(단위 3 결정 3) 구성원 닉네임·사람 색·처음 만난 날·연결한 날은 `GET /me`의 `MeSpace`가 담는다. 그래서 `GET /me`와 기념일만 다시 읽는다. **문서와 코드가 다른 점**이라 리드가 판단해 달라 (`GET /space`가 필요해지는 화면이 생기면 그때 더한다).
+4. **1초 묶기**: 처음 신호가 온 뒤 1초 고정 창(디바운스처럼 계속 늘리지 않음, 지연 최대 1초). 같은 리소스·id는 마지막 신호만 처리한다 (`EVENT` `UPDATED` 뒤 `DELETED`면 `DELETED`). 신호가 올 때만 코루틴이 생긴다.
+5. **프로세스가 살아 있을 때만 (확인 필요 5)**: 이 프로세스에서 Activity가 한 번이라도 만들어졌으면(`ProcessUiState`, `MyApp`이 표시) 살아 있던 앱으로 보고 `SYNC`를 처리한다. FCM이 깨우려고 새로 만든 프로세스(화면 없음)의 `SYNC`는 무시한다. `PUSH`는 어느 쪽이든 그린다.
+6. **`LINKED`·`UNLINKED`**: `SyncDispatcher`는 `SyncSpaceSignals`로 알리기만 하고, `GET /me`와 이동은 `MainViewModel`이 한다. 해제는 `refreshMe`가 저장 전에 감지해 기존 `spaceChanges` → D-125 경로로 가고, 이미 초기화돼 있으면(Room이 개인 공간) 아무 일도 없다. 연결은 "개인 공간 → 커플 공간"으로 바뀐 기기만 캘린더로 보내고(`SpaceRelinked`, 시트는 기존 상태가 띄움), 이미 커플이던 기기(내가 연결한 쪽)는 이동하지 않는다 (백스택을 또 비우지 않게). 구독자(`MainViewModel`)가 없을 때 온 신호는 버려진다.
+7. **알림 안 읽은 개수 (D-141, FR-NOTI-05 AC7)**: `observeUnreadCount`는 온라인이고 서버 개수를 받은 적이 있으면 서버 값, 아니면 기기에 저장된 30일 안(`created_at > now − 30일`)의 안 읽은 알림 개수다. 30일 지난 행은 목록에서 빼고 불러오기 때마다 지운다. 일시는 Room에 epoch 밀리초로 저장한다.
+8. **알림 지우기**: 알림은 사용자 것이라 공간이 바뀌어도 지우지 않는다(`MeRepositoryImpl`을 고치지 않음). 로그아웃·계정 전환·세션 끊김은 `clearAllTables`가 지운다. 해제 때 서버가 알림을 정리(D-45)하므로 화면이 들어올 때 첫 페이지를 다시 받아 맞춘다 (`SyncDispatcher`는 `LINKED`·`UNLINKED`에서 알림을 따로 다시 읽지 않고, 서버가 보내는 `NOTIFICATION` 신호에 맡긴다).
+9. **`markRead`**: 기기 Room을 먼저 읽음으로 바꾸고(안 읽음이었으면 개수 -1) 바로 돌아온다. 오프라인이면 요청을 보내지 않고, 온라인이면 `@ApplicationScope`에서 `PUT`을 보낸다. 실패(404 포함)는 로그만. 성공하면 `unread-count`를 서버 값으로 다시 읽는다. 목록에 없는 id(푸시로 들어옴, D-142)도 서버에는 보낸다. 서버 값이 오기 전에 첫 페이지를 다시 받으면 잠깐 안 읽음으로 보일 수 있다 (D-127 "다음 불러오기에서 서버 값으로").
+10. **기기 등록**: 로그인 직후는 `AuthRepositoryImpl.afterLogin`이 뒤에서(`@ApplicationScope`) 부르고(게스트·소셜·switch 공통, 토큰 얻기가 로그인을 늦추지 않게), 앱 시작은 `MyApp` → `PushInitializer.start()`, 토큰 갱신은 `DuriseoMessagingService.onNewToken`. 모두 `DeviceRegistrarImpl`이 토큰 저장소에 토큰이 있을 때만 보낸다. 앱 시작마다 `PUT`이 한 번 나간다 (문서: "앱 실행 때 부른다").
+11. **푸시 Intent (확인 필요 2·D 묶음 연결)**: 컴포넌트는 런처 Intent에서 찾아 `MAIN`·`LAUNCHER` 없이 `NEW_TASK | CLEAR_TOP | SINGLE_TOP`으로 보낸다 (이미 떠 있는 앱에 엑스트라가 전달되도록 `onNewIntent`). 엑스트라 이름 `notificationId`·`kind`·`targetType`·`targetId`와 읽기 `Intent.toPushTapTarget()`은 `core:common`의 `push` 패키지(`PushIntentExtras`). `MainActivity.handlePushIntent`가 D가 채울 자리다. 알림 PendingIntent 요청 코드는 알림 ID의 해시, 알림은 태그(알림 ID)로 구분한다.
+12. **작은 아이콘 (확인 필요 2)**: 앱의 `ic_launcher_foreground` 모양을 흰 한 색으로 옮긴 `ic_stat_duriseo`, 강조색은 `NotificationAccentArgb`(= `Brand500`, `core:designsystem`). 지금 런처 아이콘이 아직 템플릿 모양(안드로이드 로봇)이라 알림 아이콘도 그 모양이다 — 앱 아이콘이 확정되면 같이 바꿔야 한다 (Docs `/design-sync` 후속).
+13. **채널 (확인 필요 4)**: ID `event_reminder`·`partner_created`·`memo_pinned`·`anniversary`·`couple`, 중요도 기본. `COUPLE_LINKED`·`COUPLE_UNLINKED`는 `couple` 채널 하나.
+14. **`POST_NOTIFICATIONS`**: 매니페스트에 선언만 했다 (없으면 Android 13+에서 알림이 안 그려진다). 요청 시점은 E 묶음. 권한이 없으면 `PushNotifier.show`는 그리지 않고 false를 돌려준다 (알림 목록에는 영향 없음).
+15. **`forget`**: `EventRepository`·`MemoRepository`에 `forget(id)`(요청 없이 기기에서만 지움)를 더했다 (`SYNC` `DELETED`용). 단건 새로고침 `refreshEvent`·`refreshMemo`와 404 지우기는 이미 있었다. 이 인터페이스를 구현하는 feature 테스트 가짜 3곳(`feature:calendar`·`feature:memo`의 `Fakes.kt`)에 함수를 더했다.
+16. **Room 버전 6**: `notification`·`notification_state`. 스키마 JSON(`data/local/schemas/6.json`)은 빌드가 만들어 주므로 맥에서 커밋해야 한다 (사람).
 
 ## 리뷰 기록
 

@@ -235,6 +235,8 @@ class MemoRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun forget(id: String) = forgetLocally(id)
+
     // supervisorScope: 한 갈래가 예외로 끝나도 형제를 취소하지 않는다. 예외는 awaitAll이 원래 예외 그대로 던진다
     override suspend fun refreshAll(): DataResult<Unit> = supervisorScope {
         val range = visibleRange?.takeIf { it.generation == cache.current() }

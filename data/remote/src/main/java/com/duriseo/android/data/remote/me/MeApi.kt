@@ -21,7 +21,7 @@ interface MeApi {
     @DELETE("me")
     suspend fun deleteMe(): Response<Unit>
 
-    /** 204. FCM 토큰 등록·갱신. 호출하는 쪽은 단위 7이다 */
+    /** 204. FCM 토큰 등록·갱신. `DeviceRegistrar`(단위 7)가 부른다 */
     @PUT("me/devices")
     suspend fun putDevice(@Body request: RegisterDeviceRequest): Response<Unit>
 }
