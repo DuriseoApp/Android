@@ -6,6 +6,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- 푸시 알림 표시 (Android 13 이상). 선언만 한다. 요청 시점은 단위 7의 E 묶음(D-144) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- 카카오톡 설치 여부 확인 (Android 11 이상 패키지 가시성). SDK 매니페스트와 합쳐져도 문제없다 -->
     <queries>
         <package android:name="com.kakao.talk" />

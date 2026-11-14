@@ -55,6 +55,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.compose.runtime.DisposableEffect
 import com.duriseo.android.core.designsystem.R as DesignR
+import com.duriseo.android.core.designsystem.permission.LocalNotificationPermissionRequester
 import com.duriseo.android.core.designsystem.component.DuriseoButtonStyle
 import com.duriseo.android.core.designsystem.component.DuriseoDialog
 import com.duriseo.android.core.designsystem.component.DuriseoDialogLayer
@@ -135,6 +136,7 @@ fun EventDetailRoute(
     viewModel: EventDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val permissionRequester = LocalNotificationPermissionRequester.current
 
     DisposableEffect(lifecycleOwner, viewModel) {
         val observer = LifecycleEventObserver { _, event ->
@@ -149,6 +151,7 @@ fun EventDetailRoute(
                 EventDetailSideEffect.Close -> onClose()
                 is EventDetailSideEffect.OpenEdit -> onOpenEdit(effect.id)
                 is EventDetailSideEffect.ShowMessage -> onShowSnackBar(effect.messageRes)
+                EventDetailSideEffect.RequestNotificationPermission -> permissionRequester.request()
             }
         }
     }

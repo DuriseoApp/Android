@@ -5,6 +5,7 @@ import com.duriseo.android.core.common.navigation.CalendarRouteModel
 import com.duriseo.android.core.common.navigation.CoupleRouteModel
 import com.duriseo.android.core.common.navigation.MainRouteModel
 import com.duriseo.android.core.common.navigation.MemoRouteModel
+import com.duriseo.android.core.common.navigation.NotificationRouteModel
 import com.duriseo.android.core.common.navigation.SettingsRouteModel
 import com.duriseo.android.feature.main.navigation.isSnackbarAtTop
 import kotlin.reflect.KClass
@@ -72,5 +73,12 @@ class SnackbarPositionTest {
         assertTrue(atTop(MainRouteModel.Calendar::class, linkedSheetVisible = true))
         // 시트가 없으면 탭 화면은 그대로 하단 탭 위
         assertFalse(atTop(MainRouteModel.Calendar::class, linkedSheetVisible = false))
+    }
+
+    @Test
+    fun `D-126 알림 목록과 알림 설정은 위 40이다`() {
+        // SCR-NOTI-01·SCR-SET-02는 하단 탭이 없는 화면이라 스낵바가 위에서 40에 뜬다
+        assertTrue(atTop(NotificationRouteModel.Notifications::class))
+        assertTrue(atTop(SettingsRouteModel.NotificationSettings::class))
     }
 }

@@ -57,6 +57,9 @@ interface MemoRepository {
     /** `GET /memos/{id}`: 상세를 저장한다. 404면 기기에서 그 메모를 지운다 (D-121) */
     suspend fun refreshMemo(id: String): DataResult<Unit>
 
+    /** 요청 없이 그 메모를 기기(Room)에서만 지운다. 동기화 신호 `MEMO` `DELETED`가 부른다 (API.md 6장). 목록·고정은 이어서 [refreshAll]로 맞춘다 */
+    suspend fun forget(id: String)
+
     /**
      * 지금까지 받은 보기들의 첫 페이지와 고정 목록, 보이는 캘린더 범위를 다시 불러온다 (당겨서 새로고침, 403 뒤).
      * 하나라도 실패하면 첫 실패를 돌려준다.

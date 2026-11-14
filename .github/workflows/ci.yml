@@ -24,6 +24,18 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v5
+      # Firebase 설정 파일. Secret GOOGLE_SERVICES_JSON(base64)이 있으면 만들고, 없으면(포크 PR 등) 건너뛴다.
+      # 파일이 없으면 google-services 플러그인을 적용하지 않아 FCM이 꺼진 채 빌드된다 (app/build.gradle.kts)
+      - name: google-services.json 만들기 (Secret이 있을 때만)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" | base64 -d > app/google-services.json
+            echo "google-services.json을 만들었어요"
+          else
+            echo "::notice title=Firebase::GOOGLE_SERVICES_JSON Secret이 없어 FCM 없이 빌드해요"
+          fi
       # local.properties 설정값은 CI에 없다. 빌드는 빈 값으로 되고, 설정값이 필요한 테스트는 가짜 값을 쓴다
       - name: ./gradlew assembleDebug testDebugUnitTest
         run: |

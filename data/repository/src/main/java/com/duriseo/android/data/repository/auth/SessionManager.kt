@@ -8,6 +8,7 @@ import com.duriseo.android.domain.auth.SessionEndNotifier
 import com.duriseo.android.domain.auth.SessionEndReason
 import com.duriseo.android.domain.auth.SocialSessionCleaner
 import com.duriseo.android.domain.auth.TokenStorage
+import com.duriseo.android.domain.notification.DrawnNotificationCleaner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -34,6 +35,7 @@ class SessionManager @Inject constructor(
     private val social: SocialSessionCleaner,
     @ApplicationScope private val scope: CoroutineScope,
     private val cache: LocalCacheGeneration,
+    private val drawnNotifications: DrawnNotificationCleaner,
 ) : SessionEndNotifier {
 
     private val eventChannel = Channel<SessionEndReason>(Channel.BUFFERED)
@@ -60,9 +62,10 @@ class SessionManager @Inject constructor(
         }
     }
 
-    /** 토큰, Room, 설정, 소셜 SDK 상태를 모두 지운다. 한 단계가 실패해도 나머지는 계속한다. */
+    /** 토큰, Room, 설정, 소셜 SDK 상태, 알림창의 푸시 알림을 모두 지운다. 한 단계가 실패해도 나머지는 계속한다. */
     suspend fun clearAll() {
         attempt("토큰") { tokenStorage.clear() }
+        clearDrawnNotifications()
         clearUserData()
         attempt("소셜 SDK 상태") { social.clear() }
     }
@@ -72,6 +75,8 @@ class SessionManager @Inject constructor(
      * 실패하면 false다: 이전 사용자 데이터가 남은 채 새 계정으로 들어가면 안 되므로 호출한 쪽이 로그인을 실패로 처리한다.
      */
     suspend fun clearUserDataOrFail(): Boolean = try {
+        // 이전 사용자의 알림이 새 계정에 남지 않게 한다 (실패해도 로그인은 이어간다)
+        clearDrawnNotifications()
         cache.clearing { localData.clearUserData() }
         true
     } catch (e: CancellationException) {
@@ -84,6 +89,15 @@ class SessionManager @Inject constructor(
     /** Room과 설정만 지운다. 토큰과 소셜 SDK 상태는 그대로 둔다. */
     suspend fun clearUserData() {
         attempt("로컬 데이터") { cache.clearing { localData.clearUserData() } }
+    }
+
+    /** 알림창에 그려진 푸시 알림을 모두 지운다 (NFR-SEC-02). 앱 시작 때 토큰이 없을 때도 부른다 */
+    fun clearDrawnNotifications() {
+        try {
+            drawnNotifications.cancelAll()
+        } catch (e: Exception) {
+            Logger.w(TAG, "알림 정리에 실패했어요: ${e.javaClass.simpleName}")
+        }
     }
 
     private suspend fun attempt(what: String, block: suspend () -> Unit) {

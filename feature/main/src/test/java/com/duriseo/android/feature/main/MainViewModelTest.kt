@@ -15,6 +15,8 @@ import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.me.SocialProvider
 import com.duriseo.android.domain.me.SpaceChange
+import com.duriseo.android.domain.sync.SpaceSyncSignal
+import com.duriseo.android.domain.sync.SyncSpaceSignals
 import com.duriseo.android.domain.result.DataResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -57,7 +59,17 @@ class MainViewModelTest {
         val sheetNeeded = MutableStateFlow(false)
 
         override fun observeMe(): Flow<Me?> = me
-        override suspend fun refreshMe(): DataResult<Unit> = DataResult.Success(Unit)
+
+        /** `refreshMe`가 부를 때 하는 일 (GET /me가 Room을 바꾸거나 해제를 감지하는 것을 흉내 낸다) */
+        var onRefresh: suspend () -> Unit = {}
+        var refreshCount = 0
+
+        override suspend fun refreshMe(): DataResult<Unit> {
+            refreshCount++
+            onRefresh()
+            return DataResult.Success(Unit)
+        }
+
         override val spaceChanges: Flow<SpaceChange> = changes
         override fun observeLinkedSheetNeeded(): Flow<Boolean> = sheetNeeded
         override suspend fun acknowledgeSpace() = Unit
@@ -65,7 +77,14 @@ class MainViewModelTest {
         override suspend fun syncTimeZone(zoneId: String): DataResult<Unit> = DataResult.Success(Unit)
     }
 
+    private class FakeSyncSpaceSignals : SyncSpaceSignals {
+        val signals = MutableSharedFlow<SpaceSyncSignal>(extraBufferCapacity = 4)
+        override val spaceSignals: Flow<SpaceSyncSignal> = signals
+    }
+
     private val meRepository = FakeMeRepository()
+    private val syncSignals = FakeSyncSpaceSignals()
+    private val tapHandler = FakeNotificationTapHandler()
 
     @Before
     fun setUp() {
@@ -79,14 +98,14 @@ class MainViewModelTest {
 
     @Test
     fun `FR-AUTH-01 AC2 저장된 토큰이 있으면 시작 화면 없이 캘린더로 간다`() = runTest {
-        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository, syncSignals, tapHandler)
 
         assertEquals(MainStart.Home, vm.start.value)
     }
 
     @Test
     fun `FR-AUTH-01 AC3 저장된 토큰이 없으면 시작 화면을 보여 준다`() = runTest {
-        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedOut), meRepository)
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedOut), meRepository, syncSignals, tapHandler)
 
         assertEquals(MainStart.Start, vm.start.value)
     }
@@ -94,7 +113,7 @@ class MainViewModelTest {
     @Test
     fun `FR-AUTH-01 토큰 저장소를 읽는 동안은 빈 화면이다`() = runTest {
         val auth = FakeAuthRepository(AuthState.Unknown)
-        val vm = MainViewModel(auth, meRepository)
+        val vm = MainViewModel(auth, meRepository, syncSignals, tapHandler)
         assertEquals(MainStart.Loading, vm.start.value)
 
         auth.authState.value = AuthState.SignedIn
@@ -105,7 +124,7 @@ class MainViewModelTest {
     @Test
     fun `FR-AUTH-01 시작 분기는 처음 읽은 결과로 정하고 그 뒤 로그아웃에도 바뀌지 않는다`() = runTest {
         val auth = FakeAuthRepository(AuthState.SignedIn)
-        val vm = MainViewModel(auth, meRepository)
+        val vm = MainViewModel(auth, meRepository, syncSignals, tapHandler)
 
         auth.authState.value = AuthState.SignedOut
 
@@ -116,7 +135,7 @@ class MainViewModelTest {
     @Test
     fun `FR-AUTH-02 AC3 SESSION_REPLACED로 끊기면 안내가 있는 시작 화면으로 보낸다`() = runTest {
         val auth = FakeAuthRepository(AuthState.SignedIn)
-        val vm = MainViewModel(auth, meRepository)
+        val vm = MainViewModel(auth, meRepository, syncSignals, tapHandler)
         vm.effects.test {
             auth.events.emit(SessionEndReason.REPLACED)
 
@@ -127,7 +146,7 @@ class MainViewModelTest {
     @Test
     fun `FR-AUTH-02 AC3 SESSION_INVALID면 안내 없이 시작 화면으로 간다`() = runTest {
         val auth = FakeAuthRepository(AuthState.SignedIn)
-        val vm = MainViewModel(auth, meRepository)
+        val vm = MainViewModel(auth, meRepository, syncSignals, tapHandler)
         vm.effects.test {
             auth.events.emit(SessionEndReason.INVALID)
 
@@ -138,7 +157,7 @@ class MainViewModelTest {
     @Test
     fun `FR-AUTH-02 AC3 화면이 아직 구독하기 전에 끊겨도 알림이 사라지지 않는다`() = runTest {
         val auth = FakeAuthRepository(AuthState.SignedIn)
-        val vm = MainViewModel(auth, meRepository)
+        val vm = MainViewModel(auth, meRepository, syncSignals, tapHandler)
 
         // 화면(MainScreen)이 효과를 구독하기 전에 세션이 끊긴 경우
         auth.events.emit(SessionEndReason.REPLACED)
@@ -150,7 +169,7 @@ class MainViewModelTest {
 
     @Test
     fun `FR-COUPLE-05 AC3 연결 해제를 알면 초기화가 끝난 뒤 커플 연결 화면으로 가라고 알린다`() = runTest {
-        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository, syncSignals, tapHandler)
         vm.effects.test {
             meRepository.changes.emit(SpaceChange.UNLINKED)
 
@@ -160,7 +179,7 @@ class MainViewModelTest {
 
     @Test
     fun `FR-COUPLE-05 AC3 화면이 아직 구독하기 전에 해제를 알아도 알림이 사라지지 않는다`() = runTest {
-        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository, syncSignals, tapHandler)
 
         meRepository.changes.emit(SpaceChange.UNLINKED)
 
@@ -171,7 +190,7 @@ class MainViewModelTest {
 
     @Test
     fun `D-125 초기화 뒤 이미 다른 사람과 연결돼 있으면 캘린더로 가서 연결 완료 시트를 띄운다`() = runTest {
-        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository, syncSignals, tapHandler)
         vm.effects.test {
             // 초기화가 GET /me로 받아 저장한 내 정보가 커플 공간이다 (시트가 필요하다고 저장소가 알린다)
             meRepository.me.value = meWithColors("pick-orange", "pick-blue", "pick-purple")
@@ -185,7 +204,7 @@ class MainViewModelTest {
 
     @Test
     fun `D-125 초기화 뒤 내 정보가 개인 공간이면 커플 연결 화면으로 간다`() = runTest {
-        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository, syncSignals, tapHandler)
         vm.effects.test {
             meRepository.me.value = meWithColors("pick-orange", null, null)
             meRepository.changes.emit(SpaceChange.UNLINKED)
@@ -196,7 +215,7 @@ class MainViewModelTest {
 
     @Test
     fun `D-125 초기화 뒤 GET me가 실패해 내 정보가 없으면 기존처럼 커플 연결 화면으로 간다`() = runTest {
-        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository, syncSignals, tapHandler)
         vm.effects.test {
             meRepository.me.value = null
             meRepository.changes.emit(SpaceChange.UNLINKED)
@@ -207,7 +226,7 @@ class MainViewModelTest {
 
     @Test
     fun `FR-COUPLE-03 AC4 연결 완료 시트가 필요한지는 내 정보 리포지토리가 알려 준 대로다`() = runTest {
-        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository, syncSignals, tapHandler)
         assertFalse(vm.linkedSheetNeeded.value)
 
         meRepository.sheetNeeded.value = true
@@ -215,6 +234,89 @@ class MainViewModelTest {
 
         meRepository.sheetNeeded.value = false
         assertFalse(vm.linkedSheetNeeded.value)
+    }
+
+    @Test
+    fun `NFR-SYNC-01 LINKED 신호를 받으면 GET me로 확인하고 캘린더와 연결 완료 시트로 간다`() = runTest {
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository, syncSignals, tapHandler)
+        // 아직 개인 공간이다. GET me가 커플 공간을 가져온다
+        meRepository.me.value = meWithColors("pick-orange", null, null)
+        meRepository.onRefresh = {
+            meRepository.me.value = meWithColors("pick-orange", "pick-blue", "pick-purple")
+            meRepository.sheetNeeded.value = true
+        }
+        vm.effects.test {
+            syncSignals.signals.emit(SpaceSyncSignal.LINKED)
+
+            assertEquals(MainEffect.SpaceRelinked, awaitItem())
+            assertEquals(1, meRepository.refreshCount)
+            assertTrue(vm.linkedSheetNeeded.value)
+        }
+    }
+
+    @Test
+    fun `NFR-SYNC-01 같은 공간의 LINKED 신호가 겹쳐도 캘린더는 한 번만 연다`() = runTest {
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository, syncSignals, tapHandler)
+        meRepository.me.value = meWithColors("pick-orange", null, null)
+        // 두 신호가 모두 "아직 개인 공간"일 때 읽는 경주 상황: 두 번째 GET me도 같은 커플 공간을 가져온다
+        meRepository.onRefresh = {
+            meRepository.me.value = meWithColors("pick-orange", "pick-blue", "pick-purple")
+        }
+        vm.effects.test {
+            syncSignals.signals.emit(SpaceSyncSignal.LINKED)
+            assertEquals(MainEffect.SpaceRelinked, awaitItem())
+
+            // 경주를 흉내 낸다: 두 번째 신호 처리 때 Room이 다시 개인 공간으로 보인다
+            meRepository.me.value = meWithColors("pick-orange", null, null)
+            syncSignals.signals.emit(SpaceSyncSignal.LINKED)
+
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `NFR-SYNC-01 LINKED 신호가 와도 이미 커플 공간이던 기기는 이동하지 않는다`() = runTest {
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository, syncSignals, tapHandler)
+        // 내가 연결한 쪽: 연결 응답으로 이미 Room이 커플이고 화면 이동도 마쳤다
+        meRepository.me.value = meWithColors("pick-orange", "pick-blue", "pick-purple")
+        vm.effects.test {
+            syncSignals.signals.emit(SpaceSyncSignal.LINKED)
+
+            assertEquals(1, meRepository.refreshCount)
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `NFR-SYNC-01 UNLINKED 신호를 받으면 D-125 경로로 간다`() = runTest {
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository, syncSignals, tapHandler)
+        meRepository.me.value = meWithColors("pick-orange", "pick-blue", "pick-purple")
+        // GET me가 해제를 감지한다 (실제 저장소는 저장 전에 해제를 보고 알림을 낸다): 받은 내 정보는 개인 공간이다
+        meRepository.onRefresh = {
+            meRepository.me.value = meWithColors("pick-orange", null, null)
+            meRepository.changes.emit(SpaceChange.UNLINKED)
+        }
+        vm.effects.test {
+            syncSignals.signals.emit(SpaceSyncSignal.UNLINKED)
+
+            assertEquals(1, meRepository.refreshCount)
+            assertEquals(MainEffect.SpaceUnlinked, awaitItem())
+        }
+    }
+
+    @Test
+    fun `NFR-SYNC-01 UNLINKED 신호 뒤 이미 다른 사람과 연결돼 있으면 캘린더로 간다 D-125`() = runTest {
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository, syncSignals, tapHandler)
+        meRepository.me.value = meWithColors("pick-orange", "pick-blue", "pick-purple")
+        meRepository.onRefresh = {
+            meRepository.sheetNeeded.value = true
+            meRepository.changes.emit(SpaceChange.UNLINKED)
+        }
+        vm.effects.test {
+            syncSignals.signals.emit(SpaceSyncSignal.UNLINKED)
+
+            assertEquals(MainEffect.SpaceRelinked, awaitItem())
+        }
     }
 
     private fun meWithColors(my: String, partner: String?, together: String?) = Me(
@@ -238,13 +340,13 @@ class MainViewModelTest {
 
     @Test
     fun `FR-CAL-04 AC1 내 정보가 오기 전에는 기본 사람 색이다`() = runTest {
-        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository, syncSignals, tapHandler)
         assertEquals(DefaultPersonColors, vm.personColors.value)
     }
 
     @Test
     fun `FR-CAL-04 AC1 내 정보의 색으로 DuriseoTheme에 PersonColors를 넣는다`() = runTest {
-        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository, syncSignals, tapHandler)
         meRepository.me.value = meWithColors("pick-rose", "pick-blue", "pick-purple")
 
         val colors = vm.personColors.value
@@ -255,7 +357,7 @@ class MainViewModelTest {
 
     @Test
     fun `FR-CAL-04 AC1 색을 바꾸면 캘린더 일정 색이 바뀐다`() = runTest {
-        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository, syncSignals, tapHandler)
         meRepository.me.value = meWithColors("pick-rose", "pick-blue", "pick-purple")
         meRepository.me.value = meWithColors("pick-green", "pick-blue", "pick-purple")
 
@@ -264,7 +366,7 @@ class MainViewModelTest {
 
     @Test
     fun `FR-CAL-04 AC1 개인 공간은 나 색만 바꾸고 나머지는 기본 사람 색이다`() = runTest {
-        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository, syncSignals, tapHandler)
         meRepository.me.value = meWithColors("pick-teal", null, null)
 
         val colors = vm.personColors.value
@@ -275,7 +377,7 @@ class MainViewModelTest {
 
     @Test
     fun `FR-CAL-04 AC1 모르는 팔레트 키는 기본 사람 색으로 그린다`() = runTest {
-        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository)
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository, syncSignals, tapHandler)
         meRepository.me.value = meWithColors("pick-unknown", "pick-blue", "nope")
 
         assertEquals(DefaultPersonColors.me, vm.personColors.value.me)

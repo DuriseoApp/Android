@@ -10,6 +10,7 @@ import com.duriseo.android.data.remote.event.EventApi
 import com.duriseo.android.data.remote.json.createApiJson
 import com.duriseo.android.data.remote.me.MeApi
 import com.duriseo.android.data.remote.memo.MemoApi
+import com.duriseo.android.data.remote.notification.NotificationApi
 import com.duriseo.android.data.remote.network.AndroidNetworkMonitor
 import com.duriseo.android.data.remote.network.AuthInterceptor
 import com.duriseo.android.data.remote.network.Authed
@@ -167,6 +168,10 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideMemoApi(@Authed retrofit: Retrofit): MemoApi = retrofit.create(MemoApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideNotificationApi(@Authed retrofit: Retrofit): NotificationApi = retrofit.create(NotificationApi::class.java)
 }
 
 @Module

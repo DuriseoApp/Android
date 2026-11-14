@@ -18,6 +18,13 @@ interface MeRepository {
      */
     suspend fun refreshMe(): DataResult<Unit>
 
+    /**
+     * `GET /space` -> Room의 내 정보에 합친다 (API.md 6장 `SPACE` `UPDATED`, 3.2 `Space`): 구성원의 닉네임·사람 색·사진 유무,
+     * '함께' 색, 처음 만난 날, 연결한 날. 응답의 공간 ID가 Room의 공간과 다르면(그 사이 공간이 바뀜) 저장하지 않고 성공으로 돌려준다
+     * (공간이 바뀐 것은 `GET /me`가 처리한다). 오프라인이면 요청 없이 `Offline`. 기본 구현은 아무것도 하지 않는다(테스트 가짜용).
+     */
+    suspend fun refreshSpace(): DataResult<Unit> = DataResult.Success(Unit)
+
     /** 해제를 알았을 때의 알림 (구독자는 하나, 구독자가 없을 때 난 것은 첫 구독자에게 전달) */
     val spaceChanges: Flow<SpaceChange>
 

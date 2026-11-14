@@ -1,0 +1,8 @@
+<resources>
+    <!-- 알림 채널 이름 5개 (PRD D-136: 알림 종류 이름과 같다. SCR-SET-02 스위치 이름과 같다) -->
+    <string name="push_channel_event_reminder">일정 알림</string>
+    <string name="push_channel_partner_created">상대 일정·메모 추가</string>
+    <string name="push_channel_memo_pinned">메모 고정</string>
+    <string name="push_channel_anniversary">기념일</string>
+    <string name="push_channel_couple">연결·해제</string>
+</resources>

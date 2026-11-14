@@ -105,13 +105,19 @@ import java.time.YearMonth
 
 // SCR-CAL-01 캘린더 홈 (FR-CAL-01, FR-COUPLE-04 AC2). 수치는 보드 `Calendar.dc.html`, `CalendarExpanded.dc.html`.
 // 토큰에 없는 수치는 이름 붙인 상수로 두고 보드 행을 적는다. 하단 탭(80)과 FAB(오른쪽 20, 탭 위 20)는 SCREENS.md 공통 표.
-// 알림 버튼은 가는 화면이 단위 7에 있어 그리지 않는다.
+// 알림 버튼(단위 7): 안 읽은 알림이 있으면 점, 누르면 SCR-NOTI-01 (FR-CAL-01 AC4).
 // 메모(단위 6): 날짜 목록 맨 아래 "메모" 카드 → SCR-MEMO-03, 달력의 메모 점은 작성자 색 (D-118·D-119).
 // 기념일(단위 5): 앱바 "함께한 지 D+N ›"·"기념일 ›" → SCR-ANNIV-01, 기념일 카드, 달력의 `brand-500` 고리·막대 (D-65·D-118·D-119).
 
 /** 앱바 높이는 `DuriseoSize.Appbar`(64). 좌 20·우 8 (14행) */
 private val AppBarStart = DuriseoSpacing.Space5
 private val AppBarEnd = DuriseoSpacing.Space2
+
+/** 알림 버튼의 안 읽음 점: 지름 8, 가장자리 흰 고리 2, 버튼(48x48) 위에서 11·오른쪽에서 12 (보드 `Calendar.dc.html` 43행) */
+private val UnreadDotSize = 8.dp
+private val UnreadDotRing = 2.dp
+private val UnreadDotTop = 11.dp
+private val UnreadDotEnd = 12.dp
 
 /** 아바타 지름 32 + 가장자리 흰 고리 2 (70행 `box-shadow: 0 0 0 2px`), 아바타와 글 사이 12 (16행) */
 private val AvatarRing = 2.dp
@@ -215,6 +221,7 @@ fun CalendarRoute(
     onOpenMemo: (String) -> Unit,
     onOpenCreate: (LocalDate) -> Unit,
     onOpenAnniversaries: () -> Unit,
+    onOpenNotifications: () -> Unit,
     onShowSnackBar: (Int) -> Unit,
     modifier: Modifier = Modifier,
     snackbarVisible: Boolean = false,
@@ -238,6 +245,7 @@ fun CalendarRoute(
                 is CalendarSideEffect.OpenMemo -> onOpenMemo(effect.id)
                 is CalendarSideEffect.OpenCreate -> onOpenCreate(effect.date)
                 CalendarSideEffect.OpenAnniversaries -> onOpenAnniversaries()
+                CalendarSideEffect.OpenNotifications -> onOpenNotifications()
                 is CalendarSideEffect.ShowMessage -> onShowSnackBar(effect.messageRes)
             }
         }
@@ -293,7 +301,9 @@ fun CalendarScreen(
             Column(modifier = Modifier.fillMaxSize()) {
                 CalendarAppBar(
                     header = state.header,
+                    hasUnreadNotifications = state.hasUnreadNotifications,
                     onOpenMenu = onOpenMenu,
+                    onNotificationsClick = { onAction(CalendarAction.NotificationsClicked) },
                     onAnniversariesClick = { onAction(CalendarAction.AnniversariesClicked) },
                     onStartDatePromptClick = { onAction(CalendarAction.StartDatePromptClicked) },
                 )
@@ -315,7 +325,9 @@ fun CalendarScreen(
 @Composable
 private fun CalendarAppBar(
     header: CalendarHeader,
+    hasUnreadNotifications: Boolean,
     onOpenMenu: () -> Unit,
+    onNotificationsClick: () -> Unit,
     onAnniversariesClick: () -> Unit,
     onStartDatePromptClick: () -> Unit,
 ) {
@@ -358,12 +370,42 @@ private fun CalendarAppBar(
                 }
             }
         }
+        NotificationButton(hasUnread = hasUnreadNotifications, onClick = onNotificationsClick)
         IconButton(onClick = onOpenMenu, modifier = Modifier.size(DuriseoSize.ButtonMd)) {
             Icon(
                 painter = painterResource(DesignR.drawable.ic_menu),
                 contentDescription = stringResource(R.string.calendar_menu_description),
                 modifier = Modifier.size(DuriseoSize.Icon),
                 tint = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+/** 알림 버튼 (SCR-CAL-01 앱바). 안 읽은 알림이 있으면 점이 보이고 접근성 라벨이 그 사실도 읽어 준다 (FR-CAL-01 AC4) */
+@Composable
+private fun NotificationButton(hasUnread: Boolean, onClick: () -> Unit) {
+    val description = stringResource(
+        if (hasUnread) R.string.calendar_notifications_unread_description else R.string.calendar_notifications_description,
+    )
+    Box(modifier = Modifier.size(DuriseoSize.ButtonMd)) {
+        IconButton(onClick = onClick, modifier = Modifier.size(DuriseoSize.ButtonMd)) {
+            Icon(
+                painter = painterResource(DesignR.drawable.ic_bell),
+                contentDescription = description,
+                modifier = Modifier.size(DuriseoSize.Icon),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        if (hasUnread) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = UnreadDotTop, end = UnreadDotEnd)
+                    .border(UnreadDotRing, Surface0, CircleShape)
+                    .size(UnreadDotSize + UnreadDotRing * 2)
+                    .padding(UnreadDotRing)
+                    .background(Brand500, CircleShape),
             )
         }
     }
@@ -1321,6 +1363,7 @@ private fun previewState(
     memos: Map<LocalDate, List<CalendarMemo>> = emptyMap(),
     startDateSheet: CalendarStartDateSheet? = null,
     refreshing: Boolean = false,
+    unread: Boolean = false,
 ) = CalendarUiState(
     header = header,
     today = PreviewToday,
@@ -1332,6 +1375,7 @@ private fun previewState(
     memosByDay = memos,
     startDateSheet = startDateSheet,
     refreshing = refreshing,
+    hasUnreadNotifications = unread,
 )
 
 @Composable
@@ -1345,6 +1389,11 @@ private fun PreviewScreen(state: CalendarUiState) {
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun CalendarPreview_Default() = PreviewScreen(previewState())
+
+/** `SCR-CAL-01.png`: 안 읽은 알림이 있어 알림 버튼에 점이 보인다 (FR-CAL-01 AC4) */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun CalendarPreview_UnreadDot() = PreviewScreen(previewState(unread = true))
 
 /** `SCR-CAL-01--anniversary.png`: 기념일이 있는 날(자동 200일, D+200)을 골랐다 */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)

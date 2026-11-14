@@ -1,7 +1,9 @@
 package com.duriseo.android.feature.main
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.theme.DefaultPersonColors
 import com.duriseo.android.core.designsystem.theme.PersonColors
 import com.duriseo.android.core.designsystem.theme.personColorsOf
@@ -11,6 +13,12 @@ import com.duriseo.android.domain.auth.SessionEndReason
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.me.SpaceChange
 import com.duriseo.android.domain.me.SpaceType
+import com.duriseo.android.domain.notification.NotificationDestination
+import com.duriseo.android.domain.notification.NotificationTapHandler
+import com.duriseo.android.domain.notification.PushTapTarget
+import com.duriseo.android.feature.main.component.MainTab
+import com.duriseo.android.domain.sync.SpaceSyncSignal
+import com.duriseo.android.domain.sync.SyncSpaceSignals
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
@@ -53,7 +61,42 @@ sealed interface MainEffect {
      * SCR-COUPLE-01 대신 캘린더(SCR-CAL-01)로 가고, 연결 완료 시트(SCR-COUPLE-04)는 [MainViewModel.linkedSheetNeeded]가 띄운다
      */
     data object SpaceRelinked : MainEffect
+
+    /** 푸시를 눌렀는데 로그인 세션이 없다: SCR-START-01로 간다 (FR-NOTI-03 AC3, D-143). 읽음 처리는 하지 않는다 */
+    data object PushToStart : MainEffect
+
+    /** 푸시를 눌러 들어왔다: 홈을 뒤에 두고 대상 화면으로 간다 (FR-NOTI-03 AC3, D-143). 이미 읽음 처리를 시작했다 */
+    data class PushOpen(val entry: PushEntry) : MainEffect
 }
+
+/**
+ * 푸시 진입 계획 (SCREENS.md 공통 "푸시 진입", FR-NOTI-03).
+ *
+ * @property destination 홈 위에 쌓을 대상. 삭제된 대상([NotificationDestination.EventDeleted]·[NotificationDestination.MemoDeleted])과
+ *   갈 곳 없음은 쌓지 않고 홈에 머문다
+ * @property homeTab 뒤에 둘 홈: 메모 대상(상대 메모 추가·메모 고정, 삭제된 메모)은 메모 탭, 그 밖(일정·기념일·연결·해제)은 캘린더 탭
+ *   (unit-7.md 확인 필요 3)
+ * @property messageRes 홈에 머물며 보일 스낵바 문구. 삭제된 일정·메모일 때만 있다
+ */
+data class PushEntry(
+    val destination: NotificationDestination,
+    val homeTab: MainTab,
+    @StringRes val messageRes: Int?,
+)
+
+/** 누른 알림 처리 결과로 푸시 진입 계획을 세운다 */
+internal fun pushEntryOf(destination: NotificationDestination): PushEntry = PushEntry(
+    destination = destination,
+    homeTab = when (destination) {
+        is NotificationDestination.MemoDetail, NotificationDestination.MemoDeleted -> MainTab.MEMO
+        else -> MainTab.CALENDAR
+    },
+    messageRes = when (destination) {
+        NotificationDestination.EventDeleted -> DesignR.string.notification_event_deleted
+        NotificationDestination.MemoDeleted -> DesignR.string.notification_memo_deleted
+        else -> null
+    },
+)
 
 /**
  * 앱 전체 로그인 상태를 지킨다. 시작 분기(앱 시작 때 한 번)와 세션 끊김 알림을 맡는다.
@@ -61,11 +104,19 @@ sealed interface MainEffect {
  *
  * 세션 끊김 알림은 구독자가 없을 때 나오면 사라지므로(`SessionManager.events`) 이 ViewModel이 만들어지자마자 구독한다.
  * 연결 해제 알림(`MeRepository.spaceChanges`)도 같다. 연결 완료 시트(SCR-COUPLE-04)를 띄울지는 [linkedSheetNeeded]다.
+ *
+ * 동기화 신호 `SPACE` `LINKED`·`UNLINKED`(API.md 6장, NFR-SYNC-01)도 여기서 듣는다: 먼저 `GET /me`를 읽고,
+ * 해제는 `refreshMe`가 저장 전에 감지해 위의 해제 알림으로 D-125 경로를 타고, 연결은 캘린더로 가 연결 완료 시트를 띄운다.
+ *
+ * 푸시를 눌러 들어오면(`MainActivity`가 [onPushTapped]를 부른다, 앱이 꺼져 있었든 떠 있었든) 그 알림을 읽음 처리하고
+ * 홈을 뒤에 둔 대상 화면으로 가는 효과를 낸다 (FR-NOTI-03, D-142·D-143).
  */
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    authRepository: AuthRepository,
+    private val authRepository: AuthRepository,
     meRepository: MeRepository,
+    syncSpaceSignals: SyncSpaceSignals,
+    private val notificationTapHandler: NotificationTapHandler,
 ) : ViewModel() {
 
     /** 토큰 저장소를 읽은 첫 결과로 정한다. 그 뒤로는 바뀌지 않는다 (이후 이동은 내비게이션이 한다) */
@@ -93,19 +144,48 @@ class MainViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, DefaultPersonColors)
 
     private val effectChannel = Channel<MainEffect>(Channel.BUFFERED)
+
+    /** 캘린더로 보낸 마지막 공간 ID. 같은 연결로 캘린더를 두 번 열지 않게 한다. 해제하면 비운다 (같은 공간으로 다시 연결할 수 있다) */
+    private val relinkedSpaceId = java.util.concurrent.atomic.AtomicReference<String?>(null)
     val effects = effectChannel.receiveAsFlow()
 
     init {
         viewModelScope.launch {
             meRepository.spaceChanges.collect { change ->
                 when (change) {
-                    SpaceChange.UNLINKED -> effectChannel.trySend(destinationAfterUnlink(meRepository))
+                    SpaceChange.UNLINKED -> {
+                        relinkedSpaceId.set(null)
+                        effectChannel.trySend(destinationAfterUnlink(meRepository))
+                    }
                 }
             }
         }
         viewModelScope.launch {
+            syncSpaceSignals.spaceSignals.collect { signal -> onSpaceSignal(signal, meRepository) }
+        }
+        viewModelScope.launch {
             authRepository.sessionEvents.collect { reason ->
                 effectChannel.trySend(MainEffect.SessionEnded(replaced = reason == SessionEndReason.REPLACED))
+            }
+        }
+    }
+
+    /**
+     * `GET /me`를 읽은 뒤 4.5의 6단계 경로로 간다 (API.md 6장, D-125).
+     * - `UNLINKED`: `refreshMe`가 해제를 감지하면(Room이 커플이었고 받은 공간이 다름) 해제 알림이 나가 [destinationAfterUnlink]로 간다.
+     *   이미 초기화됐으면(Room이 개인 공간) 아무 일도 없다.
+     * - `LINKED`: 이 신호로 개인 공간에서 커플 공간이 됐으면 캘린더로 가고 연결 완료 시트는 [linkedSheetNeeded]가 띄운다 (D-48).
+     *   이미 커플 공간이던 기기(내가 연결한 쪽, 이미 화면 이동을 마침)는 이동하지 않는다.
+     */
+    private suspend fun onSpaceSignal(signal: SpaceSyncSignal, meRepository: MeRepository) {
+        val wasCouple = meRepository.observeMe().first()?.space?.type == SpaceType.COUPLE
+        if (signal == SpaceSyncSignal.UNLINKED) relinkedSpaceId.set(null)
+        meRepository.refreshMe()
+        if (signal == SpaceSyncSignal.LINKED && !wasCouple) {
+            val space = meRepository.observeMe().first()?.space
+            // 연결 코드 화면의 5초 확인과 같은 시점에 신호가 와도 같은 공간으로는 한 번만 캘린더를 연다
+            if (space?.type == SpaceType.COUPLE && relinkedSpaceId.getAndSet(space.id) != space.id) {
+                effectChannel.trySend(MainEffect.SpaceRelinked)
             }
         }
     }
@@ -118,5 +198,22 @@ class MainViewModel @Inject constructor(
     private suspend fun destinationAfterUnlink(meRepository: MeRepository): MainEffect {
         val me = meRepository.observeMe().first()
         return if (me?.space?.type == SpaceType.COUPLE) MainEffect.SpaceRelinked else MainEffect.SpaceUnlinked
+    }
+
+    /**
+     * 푸시 알림을 눌렀다 (FR-NOTI-03). 로그인 세션이 없으면 SCR-START-01로 간다(D-143). 있으면 알림 목록에서 누른 것과 같은
+     * [NotificationTapHandler]로 읽음 처리(기기 먼저, 덮개 없음)와 대상 확인을 하고, 홈을 뒤에 둔 이동을 효과로 낸다.
+     * 처음 켤 때는 토큰 저장소를 다 읽은 뒤에 판단한다 (읽는 동안은 세션 여부를 모른다).
+     */
+    fun onPushTapped(tap: PushTapTarget) {
+        viewModelScope.launch {
+            val state = authRepository.authState.first { it != AuthState.Unknown }
+            if (state != AuthState.SignedIn) {
+                effectChannel.trySend(MainEffect.PushToStart)
+                return@launch
+            }
+            val destination = notificationTapHandler.open(tap.notificationId, tap.kind, tap.target)
+            effectChannel.trySend(MainEffect.PushOpen(pushEntryOf(destination)))
+        }
     }
 }

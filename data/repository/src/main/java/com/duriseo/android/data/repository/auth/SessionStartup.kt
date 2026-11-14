@@ -36,6 +36,7 @@ class SessionStartup @Inject constructor(
         if (authRepository.authState.first() != AuthState.SignedIn) {
             // 로그아웃 상태인데 이전 사용자의 Room·설정이 남아 있으면 지운다 (로그아웃·탈퇴·세션 끊김 정리가 중간에 끊긴 경우)
             sessionManager.clearUserData()
+            sessionManager.clearDrawnNotifications()
             return
         }
         meRepository.refreshMe()
