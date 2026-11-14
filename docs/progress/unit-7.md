@@ -1,6 +1,6 @@
 # 단위 7: 알림 — FCM, 동기화 신호, 알림 권한, SCR-NOTI-01, SCR-SET-02
 
-> 브랜치: `feat/7-notification` · PR: #18 · 상태: 진행 중 (2026-11-14 범위 승인, 확인 필요 1~5 추천안대로)
+> 브랜치: `feat/7-notification` · PR: #18 · 상태: PR 완료 (2026-11-14 범위 승인, 확인 필요 1~5 추천안대로)
 > 기준: PRD v0.12 (FR-NOTI-01~05, FR-CAL-01 AC4, NFR-SYNC-01·02, D-39·D-43·D-70·D-85·D-127·D-129·D-136·D-141~D-145), SCREENS.md 공통 표(푸시 진입·알림 목록·알림 권한·날짜·시각 표기·요청 중 35~46행)·SCR-CAL-01 알림 버튼·SCR-NOTI-01·SCR-SET-02, API.md 1.1·3.1(`PUT /me/devices`, `/me/notification-settings`)·3.5·6장(SYNC 수신 시 앱 동작)·7장(푸시 형식)
 > Docs 기준 커밋: DuriseoApp/Docs main `cee0885`
 > 앞 단위: 단위 6 머지됨 (main `ed18952`). 서버 단위 6(알림·SYNC·푸시)·7(사진) 머지됨
