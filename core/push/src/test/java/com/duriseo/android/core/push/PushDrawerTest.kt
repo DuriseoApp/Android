@@ -28,7 +28,8 @@ class PushDrawerTest {
     private val manager = context.getSystemService(NotificationManager::class.java)
 
     private class FakeTokenStorage(initial: TokenState) : TokenStorage {
-        override val state: StateFlow<TokenState> = MutableStateFlow(initial)
+        val mutableState = MutableStateFlow(initial)
+        override val state: StateFlow<TokenState> = mutableState
         override suspend fun restore() = Unit
         override suspend fun save(tokens: AuthTokens) = Unit
         override suspend fun clear() = Unit
@@ -78,6 +79,24 @@ class PushDrawerTest {
 
         PushNotificationCleaner(context).cancelAll()
 
+        assertEquals(0, shadowOf(manager).allNotifications.size)
+    }
+
+    @Test
+    fun `NFR-SEC-02 그리는 사이 로그아웃되면 그린 알림을 지운다`() = runBlocking {
+        val storage = FakeTokenStorage(TokenState.Present(tokens()))
+        // 세션을 확인한 뒤 그리는 도중에 로그아웃(토큰 삭제)이 끼어든 상황
+        val notifier = object : PushNotifier() {
+            override fun show(context: Context, message: PushMessage.Visible): Boolean {
+                val drawn = super.show(context, message)
+                storage.mutableState.value = TokenState.Empty
+                return drawn
+            }
+        }
+
+        val drawn = PushDrawer(notifier, storage).draw(context, message)
+
+        assertFalse(drawn)
         assertEquals(0, shadowOf(manager).allNotifications.size)
     }
 }

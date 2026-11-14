@@ -23,7 +23,14 @@ class PushDrawer @Inject constructor(
             tokenStorage.state.first { it != TokenState.Loading }
         }
         if (state !is TokenState.Present) return false
-        return notifier.show(context, message)
+        val drawn = notifier.show(context, message)
+        // 확인과 그리기 사이에 로그아웃이 끼면 `clearAll`(토큰 삭제 뒤 알림 전부 지우기)이 이 알림을 놓칠 수 있다.
+        // 토큰이 먼저 지워지므로, 그린 직후 다시 보아 세션이 없으면 방금 그린 알림을 지운다 (NFR-SEC-02)
+        if (drawn && tokenStorage.state.value !is TokenState.Present) {
+            notifier.cancel(context, message.notificationId)
+            return false
+        }
+        return drawn
     }
 
     private companion object {

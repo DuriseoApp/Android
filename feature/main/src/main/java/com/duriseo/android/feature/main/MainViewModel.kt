@@ -190,7 +190,6 @@ class MainViewModel @Inject constructor(
         }
     }
 
-
     /**
      * 초기화(`MeRepository.resetAfterUnlink`·`refreshMe`)는 `GET /me`를 받아 Room에 저장한 뒤 알림을 낸다 (D-125).
      * 저장된 내 정보의 공간이 커플이면 이미 다른 사람과 연결된 것이라 캘린더로 가고, 개인 공간이면 SCR-COUPLE-01이다.

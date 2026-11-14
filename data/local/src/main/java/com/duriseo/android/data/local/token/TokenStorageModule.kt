@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.duriseo.android.data.local.cleanup.LocalDataCleaner
 import com.duriseo.android.domain.auth.TokenStorage
+import com.duriseo.android.domain.notification.DrawnNotificationCleaner
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -39,10 +40,15 @@ object TokenStorageModule {
         @ApplicationContext context: Context,
         // Room을 토큰 저장소를 만드는 시점에 열지 않으려고 Provider로 늦게 받는다
         localData: Provider<LocalDataCleaner>,
+        drawnNotifications: Provider<DrawnNotificationCleaner>,
     ): TokenStorage = EncryptedTokenStorage(
         dataStore = createTokenDataStore { context.preferencesDataStoreFile(TOKEN_DATASTORE_NAME) },
         aeadProvider = { createKeystoreAead(context) },
         resetKeys = { resetKeystoreKeyset(context) },
-        clearUserData = { localData.get().clearUserData() },
+        // 토큰을 못 쓰게 된 기기: 이전 사용자의 알림창 푸시도 함께 지운다 (NFR-SEC-02). 지우기가 실패해도 알림은 먼저 지운다
+        clearUserData = {
+            drawnNotifications.get().cancelAll()
+            localData.get().clearUserData()
+        },
     )
 }

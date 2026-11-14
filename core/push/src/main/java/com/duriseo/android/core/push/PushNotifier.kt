@@ -18,11 +18,11 @@ import javax.inject.Singleton
  * 푸시를 누른 뒤의 읽음 처리·이동은 `MainActivity`가 한다 (D 묶음). 제목·본문·ID를 로그에 남기지 않는다.
  */
 @Singleton
-class PushNotifier @Inject constructor() {
+open class PushNotifier @Inject constructor() {
 
     /** 알림 권한이 없으면(Android 13 이상 거부) 그리지 않고 false다. 권한은 알림 목록에는 영향이 없다 */
     @SuppressLint("MissingPermission") // areNotificationsEnabled()로 확인한 뒤에만 notify한다
-    fun show(context: Context, message: PushMessage.Visible): Boolean {
+    open fun show(context: Context, message: PushMessage.Visible): Boolean {
         val manager = NotificationManagerCompat.from(context)
         if (!manager.areNotificationsEnabled()) return false
         // 채널이 없으면(앱이 시작 전에 FCM이 먼저 깨운 경우) 먼저 만든다. 이미 있으면 그대로다
@@ -41,6 +41,11 @@ class PushNotifier @Inject constructor() {
         // 같은 알림 ID는 같은 알림을 갱신한다 (태그 = 알림 ID)
         manager.notify(message.notificationId, NOTIFY_ID, notification)
         return true
+    }
+
+    /** [show]로 그린 알림 하나를 지운다 (태그 = 알림 ID) */
+    fun cancel(context: Context, notificationId: String) {
+        NotificationManagerCompat.from(context).cancel(notificationId, NOTIFY_ID)
     }
 
     private fun createContentIntent(context: Context, message: PushMessage.Visible): PendingIntent? {

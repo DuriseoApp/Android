@@ -128,12 +128,15 @@
 31. **누른 알림의 삭제 확인** (리뷰 Major): 온라인이면 Room에 있어도 단건 `GET`을 항상 한다. 404 `NOT_FOUND`면 삭제로 보고(단건 읽기가 Room에서도 지움) 오프라인이거나 그 밖의 오류면 확인 없이 이동한다.
 32. **연결 신호 중복 이동 방지** (리뷰 Minor): `MainViewModel`은 같은 공간으로 `SpaceRelinked`를 한 번만 낸다(해제하면 초기화). `MainNavigator.navigateToHomeIfNeeded`는 이미 캘린더 하나만 남았으면 다시 열지 않는다(연결 코드 화면의 5초 확인과 겹칠 때).
 33. **알림 설정 응답 번호** (리뷰 Minor): 늦게 온 옛 `GET` 응답이 방금 한 `PATCH` 값을 덮지 않게 `NotificationSettingsRepositoryImpl`이 요청 번호를 매긴다(`GET`은 그 뒤에 시작한 요청이 없을 때만 저장, `PATCH`는 더 새 `PATCH`가 없을 때 저장). 화면(`NotificationSettingsViewModel`)은 Room 값만 구독하므로 덮어쓰기가 일어나는 저장소에서 막았다.
+34. **그리는 사이 로그아웃** (재리뷰 Major): `PushDrawer`가 `show` 직후 세션을 다시 보고 `Present`가 아니면 방금 그린 알림을 지운다(`PushNotifier.cancel`). `clearAll`은 토큰을 먼저 지우고 알림을 지우므로, 이 순서와 합치면 어느 끼어듦에서도 알림이 남지 않는다(Mutex 없이). 토큰이 깨져 Room을 지우는 경로(`EncryptedTokenStorage`의 `clearUserData`)도 `TokenStorageModule`에서 알림을 먼저 지운다.
+35. **`GET /space` 응답 번호** (재리뷰 Minor): `MeRepositoryImpl`이 내 정보 저장 횟수(`meVersion`)를 요청 전에 적고, 응답 때 달라졌으면(그 사이 `GET /me`·`PATCH /me`가 저장됨) 버린다. `PushIntentTrust`의 첫 값 저장은 `commit()`으로 마친다.
 
 ## 리뷰 기록
 
 | 회차 | Critical | Major | 비고 |
 | --- | --- | --- | --- |
 | 1 (sonnet) | 1 | 3 | Critical: 로그아웃 뒤에도 알림창에 푸시가 남음(결정 28·29). Major: 권한 기록이 로그아웃에 지워짐(21), `SPACE UPDATED`가 `GET /space`를 안 부름(3), 알림 누를 때 Room만 보고 삭제 판단(31). Minor 4건(30·32·33 외 `LAUNCHED_FROM_HISTORY`)은 반영, 재리뷰 대기 |
+| 2 (sonnet) | 0 | 1 | Major: `PushDrawer`가 확인과 그리기 사이 로그아웃에 알림을 남김(34). Minor: 토큰 손상 경로 알림 지우기·`PushIntentTrust` `commit()`·늦은 `GET /space` 응답 버리기(35)·빈 줄 반영 |
 
 ## 남은 일
 

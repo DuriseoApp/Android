@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -44,6 +45,9 @@ class MeRepositoryImpl @Inject constructor(
     private val cache: LocalCacheGeneration,
 ) : MeRepository {
 
+    /** 내 정보를 Room에 저장한 횟수 ([MeWriteLock] 안에서만 올림). 늦게 온 `GET /space` 응답을 버리는 데 쓴다 */
+    private val meVersion = AtomicLong(0)
+
     private val changeChannel = Channel<SpaceChange>(Channel.BUFFERED)
 
     /** 구독자가 없을 때 난 것은 버퍼에 남았다가 첫 구독자에게 간다 (`SessionManager.events`와 같다) */
@@ -62,10 +66,12 @@ class MeRepositoryImpl @Inject constructor(
     override suspend fun refreshSpace(): DataResult<Unit> {
         if (!networkMonitor.isOnlineNow()) return DataResult.Failure(DataError.Offline)
         val generation = cache.current()
+        // 요청 번호: 요청 전에 내 정보 저장 횟수를 적어 둔다. 그 사이 `GET /me`·`PATCH /me` 응답이 저장됐으면 이 응답은 더 낡은 것이라 버린다
+        val version = meVersion.get()
         return when (val result = remote.getSpace()) {
             is DataResult.Success -> {
                 writeLock.withLock {
-                    if (generation == cache.current()) mergeSpaceLocked(result.value)
+                    if (generation == cache.current() && version == meVersion.get()) mergeSpaceLocked(result.value)
                 }
                 DataResult.Success(Unit)
             }
@@ -196,6 +202,7 @@ class MeRepositoryImpl @Inject constructor(
                 memos.clear()
             }
         }
+        meVersion.incrementAndGet()
         local.replace(fresh.toEntity())
         when {
             // 저장 시점 1: 개인 공간을 받을 때마다 (처음 설치·로그인, 초기화 포함. 3번 "초기화 때"도 이것으로 채워진다)
