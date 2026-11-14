@@ -10,6 +10,7 @@ import com.duriseo.android.data.repository.auth.SessionManager
 import com.duriseo.android.data.repository.cache.LocalCacheGeneration
 import com.duriseo.android.data.repository.online.runOnlineWrite
 import com.duriseo.android.domain.error.DataError
+import com.duriseo.android.domain.couple.Space
 import com.duriseo.android.domain.me.Me
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.me.SpaceChange
@@ -56,6 +57,47 @@ class MeRepositoryImpl @Inject constructor(
         // 요청 전에 캐시 세대를 적어 둔다. 응답이 오기 전에 초기화·로그아웃·공간 변경으로 캐시가 지워졌으면 저장하지 않는다
         val generation = cache.current()
         return save(remote.getMe(), generation)
+    }
+
+    override suspend fun refreshSpace(): DataResult<Unit> {
+        if (!networkMonitor.isOnlineNow()) return DataResult.Failure(DataError.Offline)
+        val generation = cache.current()
+        return when (val result = remote.getSpace()) {
+            is DataResult.Success -> {
+                writeLock.withLock {
+                    if (generation == cache.current()) mergeSpaceLocked(result.value)
+                }
+                DataResult.Success(Unit)
+            }
+
+            is DataResult.Failure -> result
+        }
+    }
+
+    /**
+     * `GET /space` 응답을 Room의 내 정보에 합친다. 저장된 내 정보가 없거나 공간이 다르면 아무것도 하지 않는다.
+     * 나는 `members`에서 내 ID로 찾고, 상대는 나머지 구성원이다. 개인 공간(구성원 1명)이면 상대는 그대로 비어 있다.
+     * [MeWriteLock] 안에서만 부른다.
+     */
+    private suspend fun mergeSpaceLocked(space: Space) {
+        val current = local.get() ?: return
+        if (current.spaceId != space.id) return
+        val mine = space.members.firstOrNull { it.userId == current.id }
+        val partner = space.members.firstOrNull { it.userId != current.id }
+        local.replace(
+            current.copy(
+                nickname = mine?.nickname ?: current.nickname,
+                hasProfileImage = mine?.hasProfileImage ?: current.hasProfileImage,
+                myColor = mine?.color ?: current.myColor,
+                partnerId = partner?.userId ?: current.partnerId,
+                partnerNickname = partner?.nickname ?: current.partnerNickname,
+                partnerColor = partner?.color ?: current.partnerColor,
+                partnerHasProfileImage = partner?.hasProfileImage ?: current.partnerHasProfileImage,
+                togetherColor = space.togetherColor,
+                startDate = space.startDate?.toString(),
+                linkedAt = space.linkedAt?.toEpochMilli(),
+            ),
+        )
     }
 
     override fun observeLinkedSheetNeeded(): Flow<Boolean> =

@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import com.duriseo.android.data.local.cleanup.DeviceLevelKeys
 import com.duriseo.android.domain.notification.NotificationSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -12,7 +13,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * 설정 DataStore에 두는 알림 관련 값 두 가지 (로그아웃·탈퇴·세션 끊김 때 설정과 함께 지워진다, `LocalDataCleaner`).
+ * 설정 DataStore에 두는 알림 관련 값 두 가지 (로그아웃·탈퇴·세션 끊김 때 ②는 설정과 함께 지워지고 ①은 기기 단위라 남는다, `LocalDataCleaner`·`DeviceLevelKeys`).
  * ① 알림 권한을 "이미 물었는지" 기록 하나 (FR-NOTI-01 AC3, D-144). ② 마지막으로 서버에서 받은 알림 설정 4개 (D-145).
  */
 @Singleton
@@ -53,7 +54,7 @@ class NotificationPreferencesLocalDataSource @Inject constructor(
     }
 
     private companion object {
-        val PERMISSION_ASKED = booleanPreferencesKey("notification_permission_asked")
+        val PERMISSION_ASKED = DeviceLevelKeys.NOTIFICATION_PERMISSION_ASKED
         val EVENT_REMINDER = booleanPreferencesKey("notification_setting_event_reminder")
         val PARTNER_CREATED = booleanPreferencesKey("notification_setting_partner_created")
         val MEMO_PINNED = booleanPreferencesKey("notification_setting_memo_pinned")

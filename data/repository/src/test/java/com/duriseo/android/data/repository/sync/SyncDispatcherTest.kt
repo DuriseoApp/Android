@@ -163,8 +163,8 @@ class SyncDispatcherTest {
         dispatcher.receive(signal(SyncResource.SPACE, SyncAction.UPDATED))
         settle()
 
-        // GET /me의 MeSpace가 공간 정보(구성원·사람 색·처음 만난 날)를 담는다 (진행 기록 결정)
-        assertEquals(listOf("anniversary.refreshAll()", "me.refreshMe()"), calls.sorted())
+        // API.md 6장: GET /me, GET /space, 기념일을 다시 읽는다 (진행 기록 결정 3)
+        assertEquals(listOf("anniversary.refreshAll()", "me.refreshMe()", "me.refreshSpace()"), calls.sorted())
     }
 
     @Test

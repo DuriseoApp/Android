@@ -77,7 +77,7 @@ fun MainScreen(
                 // 연결 해제를 알았다: 앱 초기화가 끝났으니 SCR-COUPLE-01 하나로 다시 만든다 (D-37, D-103)
                 MainEffect.SpaceUnlinked -> navigator.navigateToCoupleConnect()
                 // 그 사이 이미 다른 사람과 연결돼 있다: 캘린더로 가고 연결 완료 시트가 뜬다 (D-125)
-                MainEffect.SpaceRelinked -> navigator.navigateToHome()
+                MainEffect.SpaceRelinked -> navigator.navigateToHomeIfNeeded()
                 // 푸시를 눌렀는데 세션이 없다: SCR-START-01 (D-143)
                 MainEffect.PushToStart -> navigator.navigateToStart()
                 // 푸시를 눌렀다: 홈을 뒤에 두고 대상 화면으로. 삭제된 대상이면 홈에 머물며 스낵바 (FR-NOTI-03 AC3, D-143)

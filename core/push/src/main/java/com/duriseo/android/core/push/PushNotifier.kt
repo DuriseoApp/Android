@@ -7,6 +7,7 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.duriseo.android.core.common.push.PushIntentExtras
+import com.duriseo.android.core.common.push.PushIntentTrust
 import com.duriseo.android.core.designsystem.theme.NotificationAccentArgb
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -67,6 +68,8 @@ internal fun pushLaunchIntent(context: Context, message: PushMessage.Visible): I
     val component = context.packageManager.getLaunchIntentForPackage(context.packageName)?.component ?: return null
     return Intent().apply {
         setComponent(component)
+        // 우리 알림이 만든 Intent만 받게 표시한다 (`MainActivity`가 확인한다, 위조 방지)
+        PushIntentTrust.stamp(context, this)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         putExtra(PushIntentExtras.NOTIFICATION_ID, message.notificationId)
         putExtra(PushIntentExtras.KIND, message.kind.name)

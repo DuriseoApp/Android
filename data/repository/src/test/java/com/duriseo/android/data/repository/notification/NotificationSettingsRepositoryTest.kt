@@ -9,7 +9,13 @@ import com.duriseo.android.domain.notification.NotificationSettingKind
 import com.duriseo.android.domain.notification.NotificationSettings
 import com.duriseo.android.domain.result.DataResult
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import okhttp3.mockwebserver.Dispatcher
+import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
+import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -92,6 +98,28 @@ class NotificationSettingsRepositoryTest {
 
         assertTrue(result is DataResult.Failure)
         assertTrue(h.notificationSettingsRepository.observe().first()!!.anniversary)
+    }
+
+    @Test
+    fun `FR-NOTI-02 AC2 PATCH 뒤에 늦게 온 옛 GET 응답은 저장하지 않는다`() = runTestWithTimeout {
+        val h = harness()
+        // GET은 느리게 옛 값(메모 켜짐)을 돌려주고, 그 사이 보낸 PATCH는 바로 새 값(메모 꺼짐)을 돌려준다
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse =
+                if (request.method == "GET") {
+                    jsonResponse(200, settingsJson(m = true)).setHeadersDelay(500, TimeUnit.MILLISECONDS)
+                } else {
+                    jsonResponse(200, settingsJson(m = false))
+                }
+        }
+
+        val slowGet = async(Dispatchers.IO) { h.notificationSettingsRepository.refresh() }
+        // GET 요청이 서버에 닿은 뒤에 PATCH를 보낸다
+        assertEquals("GET", server.takeRequest().method)
+        h.notificationSettingsRepository.update(NotificationSettingKind.MEMO_PINNED, false)
+        slowGet.await()
+
+        assertFalse(h.notificationSettingsRepository.observe().first()!!.memoPinned)
     }
 
     @Test

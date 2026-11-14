@@ -144,13 +144,19 @@ class MainViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, DefaultPersonColors)
 
     private val effectChannel = Channel<MainEffect>(Channel.BUFFERED)
+
+    /** 캘린더로 보낸 마지막 공간 ID. 같은 연결로 캘린더를 두 번 열지 않게 한다. 해제하면 비운다 (같은 공간으로 다시 연결할 수 있다) */
+    private val relinkedSpaceId = java.util.concurrent.atomic.AtomicReference<String?>(null)
     val effects = effectChannel.receiveAsFlow()
 
     init {
         viewModelScope.launch {
             meRepository.spaceChanges.collect { change ->
                 when (change) {
-                    SpaceChange.UNLINKED -> effectChannel.trySend(destinationAfterUnlink(meRepository))
+                    SpaceChange.UNLINKED -> {
+                        relinkedSpaceId.set(null)
+                        effectChannel.trySend(destinationAfterUnlink(meRepository))
+                    }
                 }
             }
         }
@@ -173,12 +179,17 @@ class MainViewModel @Inject constructor(
      */
     private suspend fun onSpaceSignal(signal: SpaceSyncSignal, meRepository: MeRepository) {
         val wasCouple = meRepository.observeMe().first()?.space?.type == SpaceType.COUPLE
+        if (signal == SpaceSyncSignal.UNLINKED) relinkedSpaceId.set(null)
         meRepository.refreshMe()
         if (signal == SpaceSyncSignal.LINKED && !wasCouple) {
-            val isCouple = meRepository.observeMe().first()?.space?.type == SpaceType.COUPLE
-            if (isCouple) effectChannel.trySend(MainEffect.SpaceRelinked)
+            val space = meRepository.observeMe().first()?.space
+            // 연결 코드 화면의 5초 확인과 같은 시점에 신호가 와도 같은 공간으로는 한 번만 캘린더를 연다
+            if (space?.type == SpaceType.COUPLE && relinkedSpaceId.getAndSet(space.id) != space.id) {
+                effectChannel.trySend(MainEffect.SpaceRelinked)
+            }
         }
     }
+
 
     /**
      * 초기화(`MeRepository.resetAfterUnlink`·`refreshMe`)는 `GET /me`를 받아 Room에 저장한 뒤 알림을 낸다 (D-125).

@@ -65,6 +65,26 @@ class SessionManagerTest {
     }
 
     @Test
+    fun `NFR-SEC-02 로그아웃하면 그려진 알림을 모두 지운다`() = runTestWithTimeout {
+        val h = harness()
+
+        h.session.clearAll()
+
+        assertEquals(1, h.drawnNotifications.cancelCount.get())
+    }
+
+    @Test
+    fun `NFR-SEC-02 세션이 끝나면 그려진 알림을 모두 지운다`() = runTestWithTimeout {
+        val h = harness()
+        val event = async(start = CoroutineStart.UNDISPATCHED) { h.session.events.take(1).toList() }
+
+        h.session.end(SessionEndReason.REPLACED)
+
+        withTimeoutOrNull(5_000) { event.await() }
+        assertEquals(1, h.drawnNotifications.cancelCount.get())
+    }
+
+    @Test
     fun `FR-AUTH-02 AC3 SESSION_INVALID로 끝나면 INVALID를 알린다`() = runTestWithTimeout {
         val h = harness()
         val event = async(start = CoroutineStart.UNDISPATCHED) { h.session.events.take(1).toList() }

@@ -255,6 +255,26 @@ class MainViewModelTest {
     }
 
     @Test
+    fun `NFR-SYNC-01 같은 공간의 LINKED 신호가 겹쳐도 캘린더는 한 번만 연다`() = runTest {
+        val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository, syncSignals, tapHandler)
+        meRepository.me.value = meWithColors("pick-orange", null, null)
+        // 두 신호가 모두 "아직 개인 공간"일 때 읽는 경주 상황: 두 번째 GET me도 같은 커플 공간을 가져온다
+        meRepository.onRefresh = {
+            meRepository.me.value = meWithColors("pick-orange", "pick-blue", "pick-purple")
+        }
+        vm.effects.test {
+            syncSignals.signals.emit(SpaceSyncSignal.LINKED)
+            assertEquals(MainEffect.SpaceRelinked, awaitItem())
+
+            // 경주를 흉내 낸다: 두 번째 신호 처리 때 Room이 다시 개인 공간으로 보인다
+            meRepository.me.value = meWithColors("pick-orange", null, null)
+            syncSignals.signals.emit(SpaceSyncSignal.LINKED)
+
+            expectNoEvents()
+        }
+    }
+
+    @Test
     fun `NFR-SYNC-01 LINKED 신호가 와도 이미 커플 공간이던 기기는 이동하지 않는다`() = runTest {
         val vm = MainViewModel(FakeAuthRepository(AuthState.SignedIn), meRepository, syncSignals, tapHandler)
         // 내가 연결한 쪽: 연결 응답으로 이미 Room이 커플이고 화면 이동도 마쳤다

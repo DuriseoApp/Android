@@ -81,6 +81,16 @@ class MainNavigator(
         navController.navigate(MainTab.START.route) { clearBackStack() }
     }
 
+    /**
+     * 이미 캘린더 하나만 남아 있으면 다시 열지 않는다. 연결 코드 화면의 5초 확인이 먼저 캘린더로 보냈는데
+     * 연결 신호가 뒤따라 와도 캘린더가 두 번 열려 깜박이지 않게 한다 (D-48).
+     */
+    fun navigateToHomeIfNeeded() {
+        val atHomeOnly = navController.currentDestination?.hasRoute<MainRouteModel.Calendar>() == true &&
+            navController.previousBackStackEntry == null
+        if (!atHomeOnly) navigateToHome()
+    }
+
     /** 커플 연결(SCR-COUPLE-01)로 간다. 백스택을 비운다 (신규 회원 로그인 직후, 연결 해제 뒤 앱 초기화) */
     fun navigateToCoupleConnect() {
         navController.navigateToConnect(navOptions { clearBackStack() })

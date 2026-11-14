@@ -12,7 +12,6 @@ import com.duriseo.android.domain.notification.NotificationTapHandler
 import com.duriseo.android.domain.notification.NotificationTarget
 import com.duriseo.android.domain.notification.destinationOf
 import com.duriseo.android.domain.result.DataResult
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -34,29 +33,21 @@ class NotificationTapHandlerImpl @Inject constructor(
         notifications.markRead(notificationId)
         return when (val destination = destinationOf(kind, target)) {
             is NotificationDestination.EventDetail ->
-                if (exists(
-                        inRoom = { events.observeEvent(destination.eventId).first() != null },
-                        refresh = { events.refreshEvent(destination.eventId) },
-                    )
-                ) destination else NotificationDestination.EventDeleted
+                if (exists { events.refreshEvent(destination.eventId) }) destination else NotificationDestination.EventDeleted
 
             is NotificationDestination.MemoDetail ->
-                if (exists(
-                        inRoom = { memos.observeMemo(destination.memoId).first() != null },
-                        refresh = { memos.refreshMemo(destination.memoId) },
-                    )
-                ) destination else NotificationDestination.MemoDeleted
+                if (exists { memos.refreshMemo(destination.memoId) }) destination else NotificationDestination.MemoDeleted
 
             else -> destination
         }
     }
 
     /**
-     * 기기(Room)에 있으면 있는 것이다. 없으면 온라인일 때 단건을 읽어 보고 404 `NOT_FOUND`면 삭제된 대상이다.
-     * 오프라인이거나 그 밖의 오류면 그냥 이동한다(대상 화면이 자기 오류를 처리한다).
+     * 온라인이면 Room에 있어도 단건을 읽어 확인한다: 상대가 지운 일정·메모가 기기에 남아 있을 수 있어서다.
+     * 404 `NOT_FOUND`면 삭제된 대상이고, 단건 읽기가 Room에서도 지운다 (기기에서 사라짐, R-01).
+     * 오프라인이거나 그 밖의 오류면 확인 없이 이동한다: 대상 화면이 Room만 보고 자기 오류를 처리한다 (FR-NOTI-05 AC6).
      */
-    private suspend fun exists(inRoom: suspend () -> Boolean, refresh: suspend () -> DataResult<Unit>): Boolean {
-        if (inRoom()) return true
+    private suspend fun exists(refresh: suspend () -> DataResult<Unit>): Boolean {
         if (!networkMonitor.isOnlineNow()) return true
         return when (val result = refresh()) {
             is DataResult.Success -> true

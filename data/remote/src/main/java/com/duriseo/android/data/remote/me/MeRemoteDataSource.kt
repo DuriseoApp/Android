@@ -1,6 +1,8 @@
 package com.duriseo.android.data.remote.me
 
 import com.duriseo.android.data.remote.call.ApiCaller
+import com.duriseo.android.data.remote.couple.toDomain
+import com.duriseo.android.domain.couple.Space
 import com.duriseo.android.domain.me.Me
 import com.duriseo.android.domain.notification.NotificationSettingKind
 import com.duriseo.android.domain.notification.NotificationSettings
@@ -26,6 +28,9 @@ class MeRemoteDataSource @Inject constructor(
     /** `PUT /me/devices {fcmToken, platform}` (204, 멱등 upsert). 토큰은 로그에 남기지 않는다 (NFR-SEC-01) */
     suspend fun putDevice(fcmToken: String): DataResult<Unit> =
         apiCaller.callUnit { api.putDevice(RegisterDeviceRequest(fcmToken = fcmToken, platform = "ANDROID")) }
+
+    /** `GET /space` (API.md 3.2) */
+    suspend fun getSpace(): DataResult<Space> = apiCaller.call { api.getSpace() }.map { it.toDomain() }
 
     /** `GET /me/notification-settings` (API.md 3.1) */
     suspend fun getNotificationSettings(): DataResult<NotificationSettings> =

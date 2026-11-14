@@ -80,6 +80,31 @@ class NotificationTapHandlerTest {
     }
 
     @Test
+    fun `FR-NOTI-05 AC5 Room에 있어도 서버가 404면 삭제로 본다`() = runTestWithTimeout {
+        val h = harness()
+        // 기기에 일정이 이미 있다 (단건 GET 200으로 Room에 저장)
+        server.enqueue(
+            jsonResponse(
+                200,
+                """{"id":"e1","title":"일정","note":null,"isAllDay":false,"start":"2026-10-12T10:30:00Z","end":"2026-10-12T12:30:00Z",
+                    "isTogether":false,"authorId":"11111111-1111-1111-1111-111111111111","updatedBy":null,"reminder":null,
+                    "createdAt":"2026-10-01T00:00:00Z","updatedAt":"2026-10-02T00:00:00Z"}""",
+            ),
+        )
+        h.eventRepository.refreshEvent("e1")
+        assertTrue(h.eventRepository.observeEvent("e1").first() != null)
+        answerByPath() // 이제 서버에서는 404
+
+        val destination = h.notificationTapHandler.open(
+            "n1", NotificationKind.EVENT_REMINDER, NotificationTarget(NotificationTargetType.EVENT, "e1"),
+        )
+
+        assertEquals(NotificationDestination.EventDeleted, destination)
+        // 기기에서도 사라진다
+        assertEquals(null, h.eventRepository.observeEvent("e1").first())
+    }
+
+    @Test
     fun `FR-NOTI-05 AC5 단건 GET이 404면 삭제된 메모다`() = runTestWithTimeout {
         val h = harness()
         answerByPath()

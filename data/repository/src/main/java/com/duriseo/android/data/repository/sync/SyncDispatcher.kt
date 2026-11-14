@@ -101,7 +101,11 @@ class SyncDispatcher internal constructor(
 
             SyncResource.SPACE -> when (signal.action) {
                 SyncAction.UPDATED -> supervisorScope {
-                    launch { quietly { me.refreshMe() } }
+                    // API.md 6장: `GET /me`·`GET /space`·기념일. 공간이 바뀌었으면 `GET /me`가 처리하므로 먼저, `GET /space`는 그 뒤에 합친다
+                    launch {
+                        quietly { me.refreshMe() }
+                        quietly { me.refreshSpace() }
+                    }
                     launch { quietly { anniversaries.refreshAll() } }
                 }
 

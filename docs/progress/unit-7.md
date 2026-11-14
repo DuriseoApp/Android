@@ -94,7 +94,7 @@
 
 1. **모듈 이름**: MODULES.md 계획의 `push`를 `core:push`로 만들었다 (feature가 아니라 앱 전체가 쓰는 부품). `MODULES.md` 1장을 고침.
 2. **google-services (확인 필요 1)**: `app/build.gradle.kts`가 `app/google-services.json`이 있을 때만 플러그인을 적용한다. 없으면 `FcmAvailability`가 false라 토큰 등록·`PushInitializer`의 등록을 건너뛰고 경고 로그 한 줄. CI는 Secret `GOOGLE_SERVICES_JSON`(base64)이 있을 때만 파일을 만든다. Firebase BoM 34.4.0·google-services 4.4.3은 Gradle을 못 돌리는 환경이라 **버전 존재를 못 확인**했다 (CI로 확인).
-3. **`GET /space`는 부르지 않는다**: API.md 6장은 `SPACE` `UPDATED`에 `GET /me`·`GET /space`를 다시 읽으라 하지만, 앱에는 `GET /space`를 쓰는 곳이 없고(단위 3 결정 3) 구성원 닉네임·사람 색·처음 만난 날·연결한 날은 `GET /me`의 `MeSpace`가 담는다. 그래서 `GET /me`와 기념일만 다시 읽는다. **문서와 코드가 다른 점**이라 리드가 판단해 달라 (`GET /space`가 필요해지는 화면이 생기면 그때 더한다).
+3. **`SPACE` `UPDATED`는 `GET /me`·`GET /space`·기념일을 다시 읽는다** (API.md 6장, 리뷰 반영): `MeApi`·`MeRemoteDataSource`에 `GET /space`(3.2 `Space`)를 더하고 `MeRepository.refreshSpace()`가 응답을 Room의 내 정보에 합친다(구성원 닉네임·사람 색·사진 유무, 함께 색, 처음 만난 날, 연결한 날). `GET /me` 뒤에 부르고, 저장된 내 정보의 공간 ID와 다르면(그 사이 공간이 바뀜) 저장하지 않는다(공간이 바뀐 것은 `GET /me`가 처리). `MeWriteLock`·캐시 세대로 늦은 응답을 버린다. **사진 버전은 Room에 필드가 없어 반영하지 못한다**(단위 8의 사진 화면 때 더한다).
 4. **1초 묶기**: 처음 신호가 온 뒤 1초 고정 창(디바운스처럼 계속 늘리지 않음, 지연 최대 1초). 같은 리소스·id는 마지막 신호만 처리한다 (`EVENT` `UPDATED` 뒤 `DELETED`면 `DELETED`). 신호가 올 때만 코루틴이 생긴다.
 5. **프로세스가 살아 있을 때만 (확인 필요 5)**: 이 프로세스에서 Activity가 한 번이라도 만들어졌으면(`ProcessUiState`, `MyApp`이 표시) 살아 있던 앱으로 보고 `SYNC`를 처리한다. FCM이 깨우려고 새로 만든 프로세스(화면 없음)의 `SYNC`는 무시한다. `PUSH`는 어느 쪽이든 그린다.
 6. **`LINKED`·`UNLINKED`**: `SyncDispatcher`는 `SyncSpaceSignals`로 알리기만 하고, `GET /me`와 이동은 `MainViewModel`이 한다. 해제는 `refreshMe`가 저장 전에 감지해 기존 `spaceChanges` → D-125 경로로 가고, 이미 초기화돼 있으면(Room이 개인 공간) 아무 일도 없다. 연결은 "개인 공간 → 커플 공간"으로 바뀐 기기만 캘린더로 보내고(`SpaceRelinked`, 시트는 기존 상태가 띄움), 이미 커플이던 기기(내가 연결한 쪽)는 이동하지 않는다 (백스택을 또 비우지 않게). 구독자(`MainViewModel`)가 없을 때 온 신호는 버려진다.
@@ -115,18 +115,25 @@
 18. **알림 목록 문구**: 안내 문장 "최근 30일 알림이에요. 누르면 관련 화면으로 가요."·빈 상태 "최근 30일 동안 받은 알림이 없어요"·종류 이름 7개(일정 알림, 상대 일정 추가, 상대 메모 추가, 메모 고정, 기념일, 연결, 연결 해제)는 SCREENS.md에는 없고 보드·이미지(`Notifications.dc.html`)에만 있다. 보드 그대로 썼다. `PARTNER_CREATED`는 대상이 메모면 "상대 메모 추가"(메모 아이콘), 아니면 "상대 일정 추가"(달력 아이콘). 보드의 접근성 라벨(`안 읽음, 종류, 시각`은 제목·본문을 가린다) 대신 항목을 하나로 합쳐 읽고 안 읽음은 상태 설명("안 읽음")으로 읽게 했다.
 19. **받은 적 없는 알림 목록**: `NotificationList.isLoaded`가 false인 빈 목록(첫 페이지를 한 번도 못 받음)은 빈 상태 문구를 보이지 않고 앱바만 보인다. 문서에 정해진 것이 없는 자리다.
 20. **알림 설정 마지막 값 저장**: 설정 DataStore에 4개 boolean(`notification_setting_*`)로 저장하고 4개가 다 있어야 "받은 적 있음"이다. 로그아웃·탈퇴·세션 끊김 때 `LocalDataCleaner`가 설정을 지우므로 계정이 바뀌면 처음부터다. 읽기 실패는 저장된 값이 없을 때만 공통 오류 스낵바(오프라인이어도 공통 오류, 문서 그대로). 쓰기 실패는 `toMessageResOrNull`(오프라인은 "인터넷 연결이 필요해요").
-21. **알림 권한 "이미 물었는지"**: 같은 설정 DataStore의 `notification_permission_asked` 하나. 한 번의 `edit`에서 읽고 쓰므로 동시에 불러도 `true`는 한 번이다. **설정 DataStore는 로그아웃·탈퇴 때 지워지므로 계정이 바뀌면 다시 묻는다**(문서에 정해진 것 없음, 시스템은 두 번 거부하면 알아서 막는다).
+21. **알림 권한 "이미 물었는지"**: 설정 DataStore의 `notification_permission_asked` 하나. 한 번의 `edit`에서 읽고 쓰므로 동시에 불러도 `true`는 한 번이다. **기기 단위 기록이라 로그아웃·탈퇴·세션 끊김에도 남긴다**(리뷰 반영): `LocalDataCleaner.clearUserData()`가 같은 `edit` 안에서 `DeviceLevelKeys`(이 키 하나)를 빼고 지운다. 별도 DataStore 파일을 만들지 않은 까닭은 파일·Hilt 제공 코드가 늘어서다. 계정이 바뀌어도 같은 기기에서는 다시 묻지 않는다(시스템 권한창을 반복해 띄우지 않음, D-144).
 22. **알림 권한 요청 위치**: `core:designsystem`의 `ProvideNotificationPermissionRequester`를 `MainActivity`가 맨 위층에 한 번 두고(`LocalNotificationPermissionRequester`), ViewModel은 `RequestNotificationPermission` 효과만 낸다. 화면이 곧 닫혀도(기념일 저장 뒤) 요청이 끊기지 않게 맨 위층의 런처를 쓴다. Android 13 미만·이미 허용이면 요청하지 않는다. 결과는 쓰지 않는다.
 23. **세 시점**: SCR-CAL-02는 "없음"이 아닌 알림을 서버에 저장한 성공 뒤, SCR-CAL-03은 시트에서 "없음"이 아닌 칩을 누른 순간(시트는 [완료]까지 열려 있음. 저장 전이지만 "고른 뒤"로 봄), 연결 완료 시트는 닫는 순간(`[시작하기]`·닫기·뒤로 가기 모두, 시트가 사라지면 효과 수집도 멈추므로 `acknowledgeSpace` 직전에 효과를 냄), 직접 기념일은 작성·수정 저장 성공 직후(삭제는 아님, 화면이 닫히기 직전에 효과를 냄).
 24. **푸시 진입 홈 탭(확인 필요 3)**: 메모 대상(상대 메모 추가·메모 고정, 삭제된 메모)은 메모 탭, 그 밖은 캘린더 탭. 푸시마다 백스택을 비우고 홈부터 다시 쌓는다(작성 중이던 화면은 닫힘). 세션 없으면 읽음 처리도 하지 않고 SCR-START-01. 처음 켤 때는 토큰 저장소를 다 읽은 뒤(`authState != Unknown`)에 판단한다. 효과는 `Channel`이라 NavHost가 준비되기 전에 와도 쌓였다가 처리된다.
 25. **알림 버튼 점**: `NotificationRepository.observeUnreadCount() > 0`. 접근성 라벨은 보드 그대로 "알림" / "알림, 안 읽은 알림 있음". 점 위치는 보드(위 11·오른쪽 12, 지름 8, 흰 고리 2)이고 고리는 점 바깥에 붙어 보드보다 2씩 안쪽이다.
 26. **알림 설정 스위치**: Material3 `Switch`(꺼짐 트랙 `line-300`은 design-system 매핑). 비활성(값을 한 번도 못 받음)은 보드대로 트랙 `line-100`·손잡이 `surface-0`+`line-200` 테두리. 줄 전체를 `toggleable(role = Switch)`로 만들어 글이 이름으로 읽힌다.
 27. **빌드 확인 불가**: Gradle을 돌리지 않았다. import·시그니처는 눈으로만 확인했으므로 CI 결과를 봐야 한다.
+28. **푸시는 로그인 세션이 있을 때만 그린다** (리뷰 Critical): `core:push`의 `PushDrawer`가 토큰 저장소 상태를 보고(읽는 중이면 최대 5초 기다림) `Present`일 때만 `PushNotifier.show`를 부른다. `DuriseoMessagingService`는 `PushDrawer`를 쓴다(FCM 작업 스레드라 `runBlocking`).
+29. **로그아웃·탈퇴·세션 끊김·계정 전환 때 그려진 알림을 모두 지운다** (리뷰 Critical): domain `DrawnNotificationCleaner.cancelAll()`(Android를 몰라서 인터페이스), 구현 `core:push`의 `PushNotificationCleaner`(`NotificationManagerCompat.cancelAll`). `SessionManager.clearAll`·`clearUserDataOrFail`과 앱 시작 때 토큰이 없을 때(`SessionStartup`)에 부른다. 연결 해제 초기화(`resetLocked`, 로그인 유지)에서는 부르지 않는다.
+30. **푸시 Intent 신뢰 표시** (리뷰 Minor): `MainActivity`는 런처 때문에 외부에 열려 있어 다른 앱이 엑스트라를 위조할 수 있다. **기기에 한 번 만든 무작위 값**을 앱 전용 SharedPreferences에 두고(`core:common`의 `PushIntentTrust`) 알림 Intent에 `pushTrust` 엑스트라로 넣어, `MainActivity`가 같은 값일 때만 처리한다. 프로세스마다 새 값을 쓰는 방식은 프로세스가 죽은 뒤 알림을 눌렀을 때 값이 달라 쓸 수 없어 버렸다(비공개 트램펄린 Activity는 매니페스트·화면이 늘어 더 복잡하다). 최근 앱 기록에서 다시 연 Intent(`LAUNCHED_FROM_HISTORY`)는 무시하고, 처리했거나 걸러낸 Intent는 푸시 엑스트라를 지운다.
+31. **누른 알림의 삭제 확인** (리뷰 Major): 온라인이면 Room에 있어도 단건 `GET`을 항상 한다. 404 `NOT_FOUND`면 삭제로 보고(단건 읽기가 Room에서도 지움) 오프라인이거나 그 밖의 오류면 확인 없이 이동한다.
+32. **연결 신호 중복 이동 방지** (리뷰 Minor): `MainViewModel`은 같은 공간으로 `SpaceRelinked`를 한 번만 낸다(해제하면 초기화). `MainNavigator.navigateToHomeIfNeeded`는 이미 캘린더 하나만 남았으면 다시 열지 않는다(연결 코드 화면의 5초 확인과 겹칠 때).
+33. **알림 설정 응답 번호** (리뷰 Minor): 늦게 온 옛 `GET` 응답이 방금 한 `PATCH` 값을 덮지 않게 `NotificationSettingsRepositoryImpl`이 요청 번호를 매긴다(`GET`은 그 뒤에 시작한 요청이 없을 때만 저장, `PATCH`는 더 새 `PATCH`가 없을 때 저장). 화면(`NotificationSettingsViewModel`)은 Room 값만 구독하므로 덮어쓰기가 일어나는 저장소에서 막았다.
 
 ## 리뷰 기록
 
 | 회차 | Critical | Major | 비고 |
 | --- | --- | --- | --- |
+| 1 (sonnet) | 1 | 3 | Critical: 로그아웃 뒤에도 알림창에 푸시가 남음(결정 28·29). Major: 권한 기록이 로그아웃에 지워짐(21), `SPACE UPDATED`가 `GET /space`를 안 부름(3), 알림 누를 때 Room만 보고 삭제 판단(31). Minor 4건(30·32·33 외 `LAUNCHED_FROM_HISTORY`)은 반영, 재리뷰 대기 |
 
 ## 남은 일
 
