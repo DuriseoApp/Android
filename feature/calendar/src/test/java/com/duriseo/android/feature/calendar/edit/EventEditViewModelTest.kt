@@ -49,7 +49,8 @@ class EventEditViewModelTest {
 
     private val me = FakeMeRepository(coupleMe())
     private val events = FakeEventRepository()
-    private val gate = FakeNotificationPermissionGate()
+    /** 기본은 이미 물은 상태: 알림 권한과 상관없는 테스트의 효과 목록이 흔들리지 않게. FR-NOTI-01 테스트만 새로 만든다 */
+    private var gate = FakeNotificationPermissionGate(asked = true)
 
     /** 2026-10-12(월) 오전 10:20, 서울 */
     private val clock = Clock.fixed(Instant.parse("2026-10-12T01:20:00Z"), ZoneId.of("Asia/Seoul"))
@@ -687,6 +688,7 @@ class EventEditViewModelTest {
 
     @Test
     fun `FR-NOTI-01 AC1 일정 알림에서 없음이 아닌 값을 처음 고르면 권한 요청 효과를 낸다`() = runTest {
+        gate = FakeNotificationPermissionGate()
         val vm = create()
         vm.effects.test {
             vm.onAction(EventEditAction.ReminderSelected(ReminderOption.MIN_10))
@@ -700,6 +702,7 @@ class EventEditViewModelTest {
 
     @Test
     fun `FR-NOTI-01 AC1 없음을 고르거나 종류가 맞지 않는 값이면 권한을 묻지 않는다`() = runTest {
+        gate = FakeNotificationPermissionGate()
         val vm = create()
         vm.effects.test {
             vm.onAction(EventEditAction.ReminderSelected(null))

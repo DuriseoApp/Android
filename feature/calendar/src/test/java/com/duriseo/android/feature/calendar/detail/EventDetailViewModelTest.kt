@@ -49,7 +49,8 @@ class EventDetailViewModelTest {
 
     private val me = FakeMeRepository(coupleMe())
     private val events = FakeEventRepository()
-    private val gate = FakeNotificationPermissionGate()
+    /** 기본은 이미 물은 상태: 알림 권한과 상관없는 테스트의 효과 목록이 흔들리지 않게. FR-NOTI-01 테스트만 새로 만든다 */
+    private var gate = FakeNotificationPermissionGate(asked = true)
     private val clock = Clock.fixed(Instant.parse("2026-10-12T01:20:00Z"), ZoneId.of("Asia/Seoul"))
 
     @Before
@@ -326,6 +327,7 @@ class EventDetailViewModelTest {
 
     @Test
     fun `FR-NOTI-01 AC1 없음이 아닌 알림을 처음 고르면 권한 요청 효과를 낸다`() = runTest {
+        gate = FakeNotificationPermissionGate()
         events.events.value = listOf(sampleEvent())
         val vm = viewModel()
         vm.effects.test {
@@ -340,6 +342,7 @@ class EventDetailViewModelTest {
 
     @Test
     fun `FR-NOTI-01 AC1 없음을 고르거나 저장이 실패하면 권한을 묻지 않는다`() = runTest {
+        gate = FakeNotificationPermissionGate()
         events.events.value = listOf(sampleEvent(reminder = ReminderOption.HOUR_1))
         val vm = viewModel()
         vm.effects.test {
