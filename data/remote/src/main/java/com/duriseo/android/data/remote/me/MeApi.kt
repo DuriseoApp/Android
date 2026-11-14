@@ -24,4 +24,12 @@ interface MeApi {
     /** 204. FCM 토큰 등록·갱신. `DeviceRegistrar`(단위 7)가 부른다 */
     @PUT("me/devices")
     suspend fun putDevice(@Body request: RegisterDeviceRequest): Response<Unit>
+
+    /** 200 `NotificationSettings` (API.md 3.1) */
+    @GET("me/notification-settings")
+    suspend fun getNotificationSettings(): Response<NotificationSettingsDto>
+
+    /** 200 `NotificationSettings`(전체 설정). 보낸 필드만 바꾼다. `null`은 보내지 않는다 */
+    @PATCH("me/notification-settings")
+    suspend fun patchNotificationSettings(@Body request: UpdateNotificationSettingsRequest): Response<NotificationSettingsDto>
 }

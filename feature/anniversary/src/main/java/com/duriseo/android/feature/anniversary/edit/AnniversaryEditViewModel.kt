@@ -15,6 +15,7 @@ import com.duriseo.android.domain.error.ErrorCode
 import com.duriseo.android.domain.error.hasCode
 import com.duriseo.android.domain.event.EventRules
 import com.duriseo.android.domain.me.MeRepository
+import com.duriseo.android.domain.notification.NotificationPermissionGate
 import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.domain.result.DataResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -47,6 +48,7 @@ class AnniversaryEditViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val anniversaryRepository: AnniversaryRepository,
     private val meRepository: MeRepository,
+    private val notificationPermissionGate: NotificationPermissionGate,
     private val clock: Clock,
 ) : ViewModel() {
 
@@ -195,7 +197,7 @@ class AnniversaryEditViewModel @Inject constructor(
         val id = anniversaryId ?: return
         viewModelScope.launch {
             when (val result = anniversaryRepository.update(id, patch)) {
-                is DataResult.Success -> closeAfterRequest()
+                is DataResult.Success -> closeAfterSave()
                 is DataResult.Failure -> fail(result.error)
             }
         }
@@ -204,7 +206,7 @@ class AnniversaryEditViewModel @Inject constructor(
     private suspend fun create(name: String, s: AnniversaryEditUiState) {
         val result = anniversaryRepository.create(NewAnniversary(name = name, date = s.date, repeatsYearly = s.repeatsYearly))
         when (result) {
-            is DataResult.Success -> closeAfterRequest()
+            is DataResult.Success -> closeAfterSave()
             is DataResult.Failure -> fail(result.error)
         }
     }
@@ -218,6 +220,17 @@ class AnniversaryEditViewModel @Inject constructor(
                 is DataResult.Failure -> fail(result.error)
             }
         }
+    }
+
+    /**
+     * 저장에 성공했다: 알림 권한을 아직 묻지 않았으면 처음 한 번 묻는다 (FR-NOTI-01 AC1, D-144). 요청은 앱 맨 위층의 요청기가 해서
+     * 이 화면이 곧 닫혀도 이어지므로 "권한 요청" 효과를 먼저 내고 닫는다
+     */
+    private suspend fun closeAfterSave() {
+        if (notificationPermissionGate.shouldAskNow()) {
+            effectChannel.trySend(AnniversaryEditSideEffect.RequestNotificationPermission)
+        }
+        closeAfterRequest()
     }
 
     /** 요청이 성공했다: 로딩 덮개를 먼저 걷고 닫는다 (D-115). `saving`은 닫힐 때까지 켜 둬 입력을 막는다 */

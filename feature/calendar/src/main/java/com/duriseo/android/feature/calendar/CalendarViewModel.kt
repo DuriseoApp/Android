@@ -23,6 +23,7 @@ import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.domain.memo.Memo
 import com.duriseo.android.domain.memo.MemoRepository
 import com.duriseo.android.domain.memo.MemoTexts
+import com.duriseo.android.domain.notification.NotificationRepository
 import com.duriseo.android.domain.result.DataResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -61,6 +62,7 @@ class CalendarViewModel @Inject constructor(
     private val memoRepository: MemoRepository,
     private val meRepository: MeRepository,
     private val coupleRepository: CoupleRepository,
+    private val notificationRepository: NotificationRepository,
     private val clock: Clock,
 ) : ViewModel() {
 
@@ -130,6 +132,9 @@ class CalendarViewModel @Inject constructor(
             startDateSheet = local.startDateSheet,
             refreshing = local.refreshing,
         )
+    }.combine(notificationRepository.observeUnreadCount()) { state, unreadCount ->
+        // 안 읽은 알림이 있으면 알림 버튼에 점 (FR-CAL-01 AC4)
+        state.copy(hasUnreadNotifications = unreadCount > 0)
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
@@ -141,8 +146,12 @@ class CalendarViewModel @Inject constructor(
 
     fun onAction(action: CalendarAction) {
         when (action) {
-            CalendarAction.Shown -> refreshVisibleMonth()
+            CalendarAction.Shown -> {
+                refreshVisibleMonth()
+                refreshUnreadCount()
+            }
             CalendarAction.Refresh -> pullToRefresh()
+            CalendarAction.NotificationsClicked -> effectChannel.trySend(CalendarSideEffect.OpenNotifications)
             CalendarAction.AnniversariesClicked -> effectChannel.trySend(CalendarSideEffect.OpenAnniversaries)
             CalendarAction.PreviousMonth -> moveMonth(forward = false)
             CalendarAction.NextMonth -> moveMonth(forward = true)
@@ -184,10 +193,16 @@ class CalendarViewModel @Inject constructor(
 
     private var refreshJob: Job? = null
 
+    /** 안 읽은 알림 개수를 서버 값으로 다시 맞춘다 (캘린더 진입·당겨서 새로고침, FR-CAL-01 AC4). 실패·오프라인은 조용히 넘긴다 */
+    private fun refreshUnreadCount() {
+        viewModelScope.launch { notificationRepository.refreshUnreadCount() }
+    }
+
     /** 당겨서 새로고침 (Q-16): 다시 불러오는 동안 표시를 켠다. 요청 중 또 당겨도 한 번만 한다 */
     private fun pullToRefresh() {
         if (local.value.refreshing) return
         local.update { it.copy(refreshing = true) }
+        refreshUnreadCount()
         viewModelScope.launch {
             refreshVisibleMonth().join()
             local.update { it.copy(refreshing = false) }

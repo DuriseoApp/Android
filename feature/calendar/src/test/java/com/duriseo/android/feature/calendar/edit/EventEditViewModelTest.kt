@@ -48,6 +48,7 @@ class EventEditViewModelTest {
 
     private val me = FakeMeRepository(coupleMe())
     private val events = FakeEventRepository()
+    private val gate = FakeNotificationPermissionGate()
 
     /** 2026-10-12(월) 오전 10:20, 서울 */
     private val clock = Clock.fixed(Instant.parse("2026-10-12T01:20:00Z"), ZoneId.of("Asia/Seoul"))
@@ -65,7 +66,7 @@ class EventEditViewModelTest {
 
     private fun create(date: String? = "2026-10-12"): EventEditViewModel {
         val args = buildMap<String, Any?> { if (date != null) put(CalendarRouteModel.EventEdit::date.name, date) }
-        return EventEditViewModel(SavedStateHandle(args), events, me, clock)
+        return EventEditViewModel(SavedStateHandle(args), events, me, gate, clock)
     }
 
     /** [utc] 시각에 연 작성 화면 (서울) */
@@ -73,11 +74,12 @@ class EventEditViewModelTest {
         SavedStateHandle(mapOf(CalendarRouteModel.EventEdit::date.name to date)),
         events,
         me,
+        gate,
         Clock.fixed(Instant.parse(utc), seoul),
     )
 
     private fun edit(id: String = "e1"): EventEditViewModel =
-        EventEditViewModel(SavedStateHandle(mapOf(CalendarRouteModel.EventEdit::eventId.name to id)), events, me, clock)
+        EventEditViewModel(SavedStateHandle(mapOf(CalendarRouteModel.EventEdit::eventId.name to id)), events, me, gate, clock)
 
     private fun EventEditViewModel.fill(title: String = "저녁 데이트") = onAction(EventEditAction.TitleChanged(title))
 
@@ -92,6 +94,7 @@ class EventEditViewModelTest {
             ),
             events,
             me,
+            gate,
             clock,
         )
         assertTrue(vm.uiState.value.loaded)
@@ -115,6 +118,7 @@ class EventEditViewModelTest {
             SavedStateHandle(mapOf(CalendarRouteModel.EventEdit::startOnMemo.name to true)),
             events,
             me,
+            gate,
             clock,
         )
         assertEquals(EditKind.Memo, vm.uiState.value.kind)
@@ -678,5 +682,27 @@ class EventEditViewModelTest {
             assertEquals(EventEditSideEffect.Close, awaitItem())
         }
         assertTrue(events.created.isEmpty())
+    }
+
+    @Test
+    fun `FR-NOTI-01 AC1 일정 알림에서 없음이 아닌 값을 처음 고르면 권한 요청 효과를 낸다`() = runTest {
+        val vm = create()
+        vm.effects.test {
+            vm.onAction(EventEditAction.ReminderSelected(ReminderOption.MIN_10))
+            assertEquals(EventEditSideEffect.RequestNotificationPermission, awaitItem())
+
+            // 한 번 물었으면 다시 묻지 않는다 (FR-NOTI-01 AC3)
+            vm.onAction(EventEditAction.ReminderSelected(ReminderOption.HOUR_1))
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `FR-NOTI-01 AC1 없음을 고르거나 종류가 맞지 않는 값이면 권한을 묻지 않는다`() = runTest {
+        val vm = create()
+        vm.effects.test {
+            vm.onAction(EventEditAction.ReminderSelected(null))
+            expectNoEvents()
+        }
     }
 }

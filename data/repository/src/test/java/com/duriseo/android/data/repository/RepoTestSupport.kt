@@ -40,6 +40,10 @@ import com.duriseo.android.data.repository.notification.NotificationRepositoryIm
 import com.duriseo.android.data.remote.notification.NotificationApi
 import com.duriseo.android.data.remote.notification.NotificationRemoteDataSource
 import com.duriseo.android.data.local.notification.NotificationLocalDataSource
+import com.duriseo.android.data.local.notification.NotificationPreferencesLocalDataSource
+import com.duriseo.android.data.repository.notification.NotificationPermissionGateImpl
+import com.duriseo.android.data.repository.notification.NotificationSettingsRepositoryImpl
+import com.duriseo.android.data.repository.notification.NotificationTapHandlerImpl
 import com.duriseo.android.domain.device.PushTokenProvider
 import com.duriseo.android.data.repository.me.MeRepositoryImpl
 import com.duriseo.android.data.repository.memo.MemoRepositoryImpl
@@ -291,6 +295,10 @@ class RepoHarness(
     val notificationLocal = NotificationLocalDataSource(database.notificationDao())
     val notificationRemote = NotificationRemoteDataSource(retrofit.create(NotificationApi::class.java), apiCaller)
     val notificationRepository = NotificationRepositoryImpl(notificationRemote, notificationLocal, monitor, cache, clock, ioScope)
+    val notificationPreferences = NotificationPreferencesLocalDataSource(settings)
+    val notificationSettingsRepository = NotificationSettingsRepositoryImpl(meRemote, notificationPreferences, monitor)
+    val notificationPermissionGate = NotificationPermissionGateImpl(notificationPreferences)
+    val notificationTapHandler = NotificationTapHandlerImpl(notificationRepository, eventRepository, memoRepository, monitor)
 
     /** Room에 내 정보를, 설정 DataStore에 값을 미리 넣어 둔다 (지워지는지 보려고) */
     suspend fun preload(me: Me = fixtureMe()) {

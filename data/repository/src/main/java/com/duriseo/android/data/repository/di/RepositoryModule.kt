@@ -8,7 +8,10 @@ import com.duriseo.android.data.repository.device.DeviceRegistrarImpl
 import com.duriseo.android.data.repository.event.EventRepositoryImpl
 import com.duriseo.android.data.repository.me.MeRepositoryImpl
 import com.duriseo.android.data.repository.memo.MemoRepositoryImpl
+import com.duriseo.android.data.repository.notification.NotificationPermissionGateImpl
 import com.duriseo.android.data.repository.notification.NotificationRepositoryImpl
+import com.duriseo.android.data.repository.notification.NotificationSettingsRepositoryImpl
+import com.duriseo.android.data.repository.notification.NotificationTapHandlerImpl
 import com.duriseo.android.data.repository.sync.SyncDispatcher
 import com.duriseo.android.domain.anniversary.AnniversaryRepository
 import com.duriseo.android.domain.auth.AuthRepository
@@ -18,7 +21,10 @@ import com.duriseo.android.domain.device.DeviceRegistrar
 import com.duriseo.android.domain.event.EventRepository
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.memo.MemoRepository
+import com.duriseo.android.domain.notification.NotificationPermissionGate
 import com.duriseo.android.domain.notification.NotificationRepository
+import com.duriseo.android.domain.notification.NotificationSettingsRepository
+import com.duriseo.android.domain.notification.NotificationTapHandler
 import com.duriseo.android.domain.sync.SyncSignalReceiver
 import com.duriseo.android.domain.sync.SyncSpaceSignals
 import dagger.Binds
@@ -52,6 +58,18 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindNotificationRepository(impl: NotificationRepositoryImpl): NotificationRepository
+
+    /** 알림 설정 `GET`·`PATCH /me/notification-settings` (SCR-SET-02, D-145) */
+    @Binds
+    abstract fun bindNotificationSettingsRepository(impl: NotificationSettingsRepositoryImpl): NotificationSettingsRepository
+
+    /** 알림 권한 "이미 물었는지" 기록 (D-144) */
+    @Binds
+    abstract fun bindNotificationPermissionGate(impl: NotificationPermissionGateImpl): NotificationPermissionGate
+
+    /** 누른 알림 처리: 읽음 + 갈 곳 (목록·푸시 진입 공통, FR-NOTI-03·05) */
+    @Binds
+    abstract fun bindNotificationTapHandler(impl: NotificationTapHandlerImpl): NotificationTapHandler
 
     /** 로그인 직후·토큰 갱신·앱 시작에 `PUT /me/devices` (단위 7). FCM 토큰은 `PushTokenProvider`(`core:push`)가 준다 */
     @Binds

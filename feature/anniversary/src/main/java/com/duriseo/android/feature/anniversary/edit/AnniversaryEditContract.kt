@@ -62,4 +62,7 @@ sealed interface AnniversaryEditSideEffect {
     /** 저장·삭제를 마쳤거나 닫는다 */
     data object Close : AnniversaryEditSideEffect
     data class ShowMessage(@StringRes val messageRes: Int) : AnniversaryEditSideEffect
+
+    /** 알림 권한을 요청한다 (Android 13 이상, 저장 성공 직후 처음 한 번, FR-NOTI-01 AC1) */
+    data object RequestNotificationPermission : AnniversaryEditSideEffect
 }

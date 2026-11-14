@@ -17,6 +17,7 @@ import com.duriseo.android.domain.event.NewEvent
 import com.duriseo.android.domain.event.NoteChange
 import com.duriseo.android.domain.event.ReminderOption
 import com.duriseo.android.domain.me.MeRepository
+import com.duriseo.android.domain.notification.NotificationPermissionGate
 import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.domain.result.DataResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -51,6 +52,7 @@ class EventEditViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val eventRepository: EventRepository,
     private val meRepository: MeRepository,
+    private val notificationPermissionGate: NotificationPermissionGate,
     private val clock: Clock,
 ) : ViewModel() {
 
@@ -165,9 +167,13 @@ class EventEditViewModel @Inject constructor(
                 _uiState.update { it.copy(sheet = EditSheet.TimePicker(action.field, time)) }
             }
             EventEditAction.ReminderRowClicked -> _uiState.update { it.copy(sheet = EditSheet.Reminder) }
-            is EventEditAction.ReminderSelected -> _uiState.update {
+            is EventEditAction.ReminderSelected -> {
                 // 칩을 눌러도 시트는 열려 있고 [완료]가 닫는다 (그림 `SCR-CAL-03--reminder-sheet.png`)
-                it.copy(reminder = action.option.takeIf { option -> option == null || option.forAllDay == it.isAllDay })
+                _uiState.update {
+                    it.copy(reminder = action.option.takeIf { option -> option == null || option.forAllDay == it.isAllDay })
+                }
+                // "없음"이 아닌 값을 골랐으면 알림 권한을 처음 한 번 묻는다 (FR-NOTI-01 AC1, D-144)
+                if (_uiState.value.reminder != null) askNotificationPermissionOnce()
             }
 
             EventEditAction.DatePreviousMonth -> moveSheetMonth(forward = false)
@@ -200,6 +206,15 @@ class EventEditViewModel @Inject constructor(
         _uiState.update { state ->
             val sheet = state.sheet as? EditSheet.DatePicker ?: return@update state
             state.copy(sheet = block(sheet))
+        }
+    }
+
+    /** 아직 묻지 않았으면 "권한 요청" 효과를 낸다. 물었다는 기록은 세 시점이 하나를 같이 쓴다 (D-144) */
+    private fun askNotificationPermissionOnce() {
+        viewModelScope.launch {
+            if (notificationPermissionGate.shouldAskNow()) {
+                effectChannel.trySend(EventEditSideEffect.RequestNotificationPermission)
+            }
         }
     }
 

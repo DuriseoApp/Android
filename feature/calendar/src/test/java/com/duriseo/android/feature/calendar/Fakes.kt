@@ -358,3 +358,38 @@ fun sampleMemo(
     createdAt = createdAt,
     updatedAt = createdAt,
 )
+
+/** 알림 저장소 가짜: 안 읽은 개수만 쓴다 (SCR-CAL-01 알림 버튼 점, FR-CAL-01 AC4) */
+class FakeNotificationRepository : com.duriseo.android.domain.notification.NotificationRepository {
+    val unread = MutableStateFlow(0)
+    var refreshUnreadCountCalls = 0
+
+    override fun observeNotifications(): Flow<com.duriseo.android.domain.notification.NotificationList> =
+        MutableStateFlow(com.duriseo.android.domain.notification.NotificationList())
+
+    override fun observeUnreadCount(): Flow<Int> = unread
+
+    override suspend fun refreshFirstPage(): DataResult<Unit> = DataResult.Success(Unit)
+
+    override suspend fun loadMore(): DataResult<Unit> = DataResult.Success(Unit)
+
+    override suspend fun refreshUnreadCount(): DataResult<Unit> {
+        refreshUnreadCountCalls++
+        return DataResult.Success(Unit)
+    }
+
+    override suspend fun markRead(id: String) = Unit
+
+    override fun setListOpen(open: Boolean) = Unit
+
+    override val isListOpen: Boolean = false
+}
+
+/** 알림 권한 "이미 물었는지" 가짜: 처음 한 번만 true (FR-NOTI-01 AC3) */
+class FakeNotificationPermissionGate(private var asked: Boolean = false) : com.duriseo.android.domain.notification.NotificationPermissionGate {
+    override suspend fun shouldAskNow(): Boolean {
+        if (asked) return false
+        asked = true
+        return true
+    }
+}

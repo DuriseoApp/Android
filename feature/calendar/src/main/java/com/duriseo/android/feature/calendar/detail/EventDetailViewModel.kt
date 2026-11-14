@@ -14,6 +14,7 @@ import com.duriseo.android.domain.event.EventRules
 import com.duriseo.android.domain.event.EventTime
 import com.duriseo.android.domain.me.Me
 import com.duriseo.android.domain.me.MeRepository
+import com.duriseo.android.domain.notification.NotificationPermissionGate
 import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.domain.result.DataResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -40,6 +41,7 @@ class EventDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val eventRepository: EventRepository,
     private val meRepository: MeRepository,
+    private val notificationPermissionGate: NotificationPermissionGate,
     private val clock: Clock,
 ) : ViewModel() {
 
@@ -127,7 +129,12 @@ class EventDetailViewModel @Inject constructor(
         viewModelScope.launch {
             val result = eventRepository.setReminder(eventId, option)
             local.update { it.copy(reminderSaving = false) }
-            if (result is DataResult.Failure) showFailure(result)
+            if (result is DataResult.Failure) {
+                showFailure(result)
+            } else if (option != null && notificationPermissionGate.shouldAskNow()) {
+                // "없음"이 아닌 알림을 처음 정했다: 알림 권한을 한 번 묻는다 (FR-NOTI-01 AC1, D-144)
+                effectChannel.trySend(EventDetailSideEffect.RequestNotificationPermission)
+            }
         }
     }
 

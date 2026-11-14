@@ -5,11 +5,17 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
+import com.duriseo.android.core.common.push.toPushTapTarget
+import com.duriseo.android.core.designsystem.permission.ProvideNotificationPermissionRequester
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    /** `MainScreen`의 `hiltViewModel()`과 같은 인스턴스다 (둘 다 이 Activity의 저장소) */
+    private val mainViewModel: MainViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -17,7 +23,10 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) handlePushIntent(intent)
         setContent {
             DuriseoTheme {
-                MainScreen()
+                // 알림 권한 요청기는 맨 위층에서 한 번 만든다: 화면이 닫혀도 요청이 끊기지 않는다 (FR-NOTI-01, D-144)
+                ProvideNotificationPermissionRequester {
+                    MainScreen()
+                }
             }
         }
     }
@@ -30,10 +39,12 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * 푸시 알림을 눌러 들어온 Intent를 받는 자리 (FR-NOTI-03, D-142·D-143). **단위 7의 D 묶음이 채운다.**
-     * 엑스트라는 `com.duriseo.android.core.common.push.PushIntentExtras`의 `notificationId`·`kind`·`targetType`·`targetId`이고,
-     * `Intent.toPushTapTarget()`이 `PushTapTarget`으로 읽어 준다. 푸시 Intent가 아니면(`PushIntentExtras.isPushIntent`) 아무것도 하지 않는다.
+     * 푸시 알림을 눌러 들어온 Intent를 읽어 [MainViewModel]에 넘긴다 (FR-NOTI-03, D-142·D-143). 처음 켤 때(`onCreate`)와
+     * 앱이 떠 있을 때(`onNewIntent`) 모두 여기로 온다. 푸시 Intent가 아니면(엑스트라 없음, 모르는 종류) 아무것도 하지 않는다.
+     * 읽음 처리·이동·삭제 안내는 ViewModel과 `MainScreen`이 한다.
      */
-    @Suppress("UNUSED_PARAMETER")
-    private fun handlePushIntent(intent: Intent?) = Unit
+    private fun handlePushIntent(intent: Intent?) {
+        val tap = intent?.toPushTapTarget() ?: return
+        mainViewModel.onPushTapped(tap)
+    }
 }

@@ -109,6 +109,20 @@
 15. **`forget`**: `EventRepository`·`MemoRepository`에 `forget(id)`(요청 없이 기기에서만 지움)를 더했다 (`SYNC` `DELETED`용). 단건 새로고침 `refreshEvent`·`refreshMemo`와 404 지우기는 이미 있었다. 이 인터페이스를 구현하는 feature 테스트 가짜 3곳(`feature:calendar`·`feature:memo`의 `Fakes.kt`)에 함수를 더했다.
 16. **Room 버전 6**: `notification`·`notification_state`. 스키마 JSON(`data/local/schemas/6.json`)은 빌드가 만들어 주므로 맥에서 커밋해야 한다 (사람).
 
+묶음 C(화면)·D·E 구현 결정:
+
+17. **누른 알림 처리 `NotificationTapHandler`**(domain 인터페이스, `data:repository` 구현): `markRead`(기기 먼저) → 갈 곳 확인. 일정·메모는 Room에 있으면 그대로 이동, 없으면 온라인일 때 단건 `GET`을 해 보고 404 `NOT_FOUND`면 삭제된 대상, 오프라인·그 밖의 오류면 그냥 이동(대상 화면이 자기 오류를 처리). 알림 목록과 푸시 진입이 같은 함수를 쓰고 홈을 뒤에 두는지만 다르다(`MainNavigator.openFromPush` / `openFromNotificationList`). 대상이 Room에 없을 때만 목록 클릭이 단건 `GET` 한 번을 기다린다(덮개 없음).
+18. **알림 목록 문구**: 안내 문장 "최근 30일 알림이에요. 누르면 관련 화면으로 가요."·빈 상태 "최근 30일 동안 받은 알림이 없어요"·종류 이름 7개(일정 알림, 상대 일정 추가, 상대 메모 추가, 메모 고정, 기념일, 연결, 연결 해제)는 SCREENS.md에는 없고 보드·이미지(`Notifications.dc.html`)에만 있다. 보드 그대로 썼다. `PARTNER_CREATED`는 대상이 메모면 "상대 메모 추가"(메모 아이콘), 아니면 "상대 일정 추가"(달력 아이콘). 보드의 접근성 라벨(`안 읽음, 종류, 시각`은 제목·본문을 가린다) 대신 항목을 하나로 합쳐 읽고 안 읽음은 상태 설명("안 읽음")으로 읽게 했다.
+19. **받은 적 없는 알림 목록**: `NotificationList.isLoaded`가 false인 빈 목록(첫 페이지를 한 번도 못 받음)은 빈 상태 문구를 보이지 않고 앱바만 보인다. 문서에 정해진 것이 없는 자리다.
+20. **알림 설정 마지막 값 저장**: 설정 DataStore에 4개 boolean(`notification_setting_*`)로 저장하고 4개가 다 있어야 "받은 적 있음"이다. 로그아웃·탈퇴·세션 끊김 때 `LocalDataCleaner`가 설정을 지우므로 계정이 바뀌면 처음부터다. 읽기 실패는 저장된 값이 없을 때만 공통 오류 스낵바(오프라인이어도 공통 오류, 문서 그대로). 쓰기 실패는 `toMessageResOrNull`(오프라인은 "인터넷 연결이 필요해요").
+21. **알림 권한 "이미 물었는지"**: 같은 설정 DataStore의 `notification_permission_asked` 하나. 한 번의 `edit`에서 읽고 쓰므로 동시에 불러도 `true`는 한 번이다. **설정 DataStore는 로그아웃·탈퇴 때 지워지므로 계정이 바뀌면 다시 묻는다**(문서에 정해진 것 없음, 시스템은 두 번 거부하면 알아서 막는다).
+22. **알림 권한 요청 위치**: `core:designsystem`의 `ProvideNotificationPermissionRequester`를 `MainActivity`가 맨 위층에 한 번 두고(`LocalNotificationPermissionRequester`), ViewModel은 `RequestNotificationPermission` 효과만 낸다. 화면이 곧 닫혀도(기념일 저장 뒤) 요청이 끊기지 않게 맨 위층의 런처를 쓴다. Android 13 미만·이미 허용이면 요청하지 않는다. 결과는 쓰지 않는다.
+23. **세 시점**: SCR-CAL-02는 "없음"이 아닌 알림을 서버에 저장한 성공 뒤, SCR-CAL-03은 시트에서 "없음"이 아닌 칩을 누른 순간(시트는 [완료]까지 열려 있음. 저장 전이지만 "고른 뒤"로 봄), 연결 완료 시트는 닫는 순간(`[시작하기]`·닫기·뒤로 가기 모두, 시트가 사라지면 효과 수집도 멈추므로 `acknowledgeSpace` 직전에 효과를 냄), 직접 기념일은 작성·수정 저장 성공 직후(삭제는 아님, 화면이 닫히기 직전에 효과를 냄).
+24. **푸시 진입 홈 탭(확인 필요 3)**: 메모 대상(상대 메모 추가·메모 고정, 삭제된 메모)은 메모 탭, 그 밖은 캘린더 탭. 푸시마다 백스택을 비우고 홈부터 다시 쌓는다(작성 중이던 화면은 닫힘). 세션 없으면 읽음 처리도 하지 않고 SCR-START-01. 처음 켤 때는 토큰 저장소를 다 읽은 뒤(`authState != Unknown`)에 판단한다. 효과는 `Channel`이라 NavHost가 준비되기 전에 와도 쌓였다가 처리된다.
+25. **알림 버튼 점**: `NotificationRepository.observeUnreadCount() > 0`. 접근성 라벨은 보드 그대로 "알림" / "알림, 안 읽은 알림 있음". 점 위치는 보드(위 11·오른쪽 12, 지름 8, 흰 고리 2)이고 고리는 점 바깥에 붙어 보드보다 2씩 안쪽이다.
+26. **알림 설정 스위치**: Material3 `Switch`(꺼짐 트랙 `line-300`은 design-system 매핑). 비활성(값을 한 번도 못 받음)은 보드대로 트랙 `line-100`·손잡이 `surface-0`+`line-200` 테두리. 줄 전체를 `toggleable(role = Switch)`로 만들어 글이 이름으로 읽힌다.
+27. **빌드 확인 불가**: Gradle을 돌리지 않았다. import·시그니처는 눈으로만 확인했으므로 CI 결과를 봐야 한다.
+
 ## 리뷰 기록
 
 | 회차 | Critical | Major | 비고 |

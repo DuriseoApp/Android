@@ -22,14 +22,18 @@ import com.duriseo.android.feature.couple.navigation.navigateToConnect
 import com.duriseo.android.feature.couple.navigation.navigateToInviteCreate
 import com.duriseo.android.feature.couple.navigation.navigateToInviteEnter
 import com.duriseo.android.feature.main.MainStart
+import com.duriseo.android.feature.main.PushEntry
 import com.duriseo.android.feature.main.component.MainTab
+import com.duriseo.android.domain.notification.NotificationDestination
 import com.duriseo.android.feature.memo.navigation.closeMemoEditAndDetail
+import com.duriseo.android.feature.notification.navigation.navigateToNotifications
 import com.duriseo.android.feature.memo.navigation.navigateToMemoDetail
 import com.duriseo.android.feature.memo.navigation.navigateToMemoEdit
 import com.duriseo.android.feature.memo.navigation.navigateToPinnedMemos
 import com.duriseo.android.feature.settings.navigation.navigateToAccount
 import com.duriseo.android.feature.settings.navigation.navigateToColors
 import com.duriseo.android.feature.settings.navigation.navigateToConnectionInfo
+import com.duriseo.android.feature.settings.navigation.navigateToNotificationSettings
 import com.duriseo.android.feature.settings.navigation.navigateToSettings
 
 class MainNavigator(
@@ -141,6 +145,44 @@ class MainNavigator(
     fun navigateToColors() = navController.navigateToColors()
 
     fun navigateToConnectionInfo() = navController.navigateToConnectionInfo()
+
+    /** 알림 설정 (SCR-SET-02). 전체 메뉴의 알림 설정 행 */
+    fun navigateToNotificationSettings() = navController.navigateToNotificationSettings()
+
+    /** 알림 목록 (SCR-NOTI-01). 캘린더 앱바의 알림 버튼 */
+    fun navigateToNotifications() = navController.navigateToNotifications()
+
+    /**
+     * 알림 목록에서 항목을 눌러 읽음 처리한 뒤 대상 화면으로 간다 (SCR-NOTI-01 이동 표). 목록 위에 쌓는다.
+     * 푸시 진입([openFromPush])과 같은 이동 함수를 쓰고 차이는 홈을 뒤에 두는지 하나뿐이다 (SCREENS.md 공통 "푸시 진입").
+     * 삭제된 대상은 목록 ViewModel이 스낵바로 안내하고 목록에 머물러서 여기까지 오지 않는다.
+     */
+    fun openFromNotificationList(destination: NotificationDestination) =
+        openNotificationDestination(destination)
+
+    /**
+     * 푸시를 눌러 들어왔다: 홈(캘린더 또는 메모 탭)을 뒤에 두고 대상 화면으로 간다 (FR-NOTI-03 AC3). 백스택을 비우고 홈부터 다시 쌓는다.
+     * 삭제된 대상이나 갈 곳 없음이면 홈에만 머문다(스낵바는 호출한 쪽이 띄운다).
+     */
+    fun openFromPush(entry: PushEntry) {
+        navigateToHome()
+        if (entry.homeTab == MainTab.MEMO) navigate(MainTab.MEMO)
+        openNotificationDestination(entry.destination)
+    }
+
+    /** 알림 대상 화면을 지금 화면 위에 쌓는다. 삭제된 대상·갈 곳 없음은 쌓지 않는다 */
+    private fun openNotificationDestination(destination: NotificationDestination) {
+        when (destination) {
+            is NotificationDestination.EventDetail -> navigateToEventDetail(destination.eventId)
+            is NotificationDestination.MemoDetail -> navigateToMemoDetail(destination.memoId)
+            NotificationDestination.Anniversaries -> navigateToAnniversaries()
+            NotificationDestination.Settings -> navigateToSettings()
+            NotificationDestination.EventDeleted,
+            NotificationDestination.MemoDeleted,
+            NotificationDestination.None,
+            -> Unit
+        }
+    }
 
     fun navigateUp() {
         navController.popBackStack()

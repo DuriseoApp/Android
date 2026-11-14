@@ -36,6 +36,7 @@ class CalendarViewModelTest {
     private val events = FakeEventRepository()
     private val anniversaries = FakeAnniversaryRepository()
     private val memos = FakeMemoRepository()
+    private val notifications = FakeNotificationRepository()
 
     /** 2026-10-12(월) 오전 10:20, 서울 */
     private val clock = Clock.fixed(Instant.parse("2026-10-12T01:20:00Z"), ZoneId.of("Asia/Seoul"))
@@ -52,7 +53,7 @@ class CalendarViewModelTest {
     }
 
     private fun TestScope.viewModel(): CalendarViewModel {
-        val vm = CalendarViewModel(events, anniversaries, memos, me, couple, clock)
+        val vm = CalendarViewModel(events, anniversaries, memos, me, couple, notifications, clock)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect { } }
         return vm
     }
@@ -534,5 +535,38 @@ class CalendarViewModelTest {
             expectNoEvents()
         }
         assertEquals(1, vm.uiState.value.selectedMemos.size)
+    }
+
+    @Test
+    fun `FR-CAL-01 AC4 안 읽은 알림이 있으면 알림 버튼에 점이 보인다`() = runTest {
+        val vm = viewModel()
+        assertFalse(vm.uiState.value.hasUnreadNotifications)
+
+        notifications.unread.value = 2
+        assertTrue(vm.uiState.value.hasUnreadNotifications)
+
+        // 모두 읽으면 점이 사라진다
+        notifications.unread.value = 0
+        assertFalse(vm.uiState.value.hasUnreadNotifications)
+    }
+
+    @Test
+    fun `FR-CAL-01 AC4 캘린더에 들어오거나 당겨서 새로고침하면 안 읽은 개수를 다시 읽는다`() = runTest {
+        val vm = viewModel()
+
+        vm.onAction(CalendarAction.Shown)
+        assertEquals(1, notifications.refreshUnreadCountCalls)
+
+        vm.onAction(CalendarAction.Refresh)
+        assertEquals(2, notifications.refreshUnreadCountCalls)
+    }
+
+    @Test
+    fun `FR-CAL-01 AC4 알림 버튼을 누르면 알림 목록으로 간다`() = runTest {
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(CalendarAction.NotificationsClicked)
+            assertEquals(CalendarSideEffect.OpenNotifications, awaitItem())
+        }
     }
 }

@@ -7,6 +7,7 @@ import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.domain.anniversary.AnniversaryPatch
 import com.duriseo.android.feature.anniversary.FakeAnniversaryRepository
 import com.duriseo.android.feature.anniversary.FakeMeRepository
+import com.duriseo.android.feature.anniversary.FakeNotificationPermissionGate
 import com.duriseo.android.feature.anniversary.Offline
 import com.duriseo.android.feature.anniversary.PartnerId
 import com.duriseo.android.feature.anniversary.apiError
@@ -51,6 +52,9 @@ class AnniversaryEditViewModelTest {
     private val birthday = custom("a1", "생일", LocalDate.of(2026, 11, 20), yearly = true)
     private val repo = FakeAnniversaryRepository(listOf(birthday))
 
+    /** 기존 테스트는 권한 요청 효과가 끼지 않도록 이미 물은 기록으로 시작한다 */
+    private val gate = FakeNotificationPermissionGate(asked = true)
+
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -61,14 +65,14 @@ class AnniversaryEditViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun create() = AnniversaryEditViewModel(SavedStateHandle(emptyMap<String, Any?>()), repo, me, clock)
+    private fun create() = AnniversaryEditViewModel(SavedStateHandle(emptyMap<String, Any?>()), repo, me, gate, clock)
 
     private fun edit(id: String = "a1", date: String? = "2026-11-20"): AnniversaryEditViewModel {
         val args = buildMap<String, Any?> {
             put(AnniversaryRouteModel.Edit::anniversaryId.name, id)
             if (date != null) put(AnniversaryRouteModel.Edit::date.name, date)
         }
-        return AnniversaryEditViewModel(SavedStateHandle(args), repo, me, clock)
+        return AnniversaryEditViewModel(SavedStateHandle(args), repo, me, gate, clock)
     }
 
     // --- 새 기념일 (D-122) ---
@@ -216,6 +220,7 @@ class AnniversaryEditViewModelTest {
             SavedStateHandle(mapOf(AnniversaryRouteModel.Edit::anniversaryId.name to "p1")),
             repo2,
             me,
+            gate,
             clock,
         )
 
@@ -234,6 +239,7 @@ class AnniversaryEditViewModelTest {
             SavedStateHandle(mapOf(AnniversaryRouteModel.Edit::anniversaryId.name to "p1")),
             repo2,
             me,
+            gate,
             clock,
         )
 
@@ -386,6 +392,29 @@ class AnniversaryEditViewModelTest {
 
         vm.effects.test {
             vm.onAction(AnniversaryEditAction.CloseClicked)
+            assertEquals(AnniversaryEditSideEffect.Close, awaitItem())
+        }
+    }
+
+    @Test
+    fun `FR-NOTI-01 AC1 직접 기념일 저장에 성공하면 권한 요청 효과를 낸 뒤 닫는다`() = runTest {
+        val vm = AnniversaryEditViewModel(SavedStateHandle(emptyMap<String, Any?>()), repo, me, FakeNotificationPermissionGate(), clock)
+        vm.onAction(AnniversaryEditAction.NameChanged("처음 여행 간 날"))
+
+        vm.effects.test {
+            vm.onAction(AnniversaryEditAction.SaveClicked)
+            assertEquals(AnniversaryEditSideEffect.RequestNotificationPermission, awaitItem())
+            assertEquals(AnniversaryEditSideEffect.Close, awaitItem())
+        }
+    }
+
+    @Test
+    fun `FR-NOTI-01 AC3 이미 물었으면 저장해도 다시 묻지 않는다`() = runTest {
+        val vm = create() // gate가 이미 물은 기록이다
+        vm.onAction(AnniversaryEditAction.NameChanged("처음 여행 간 날"))
+
+        vm.effects.test {
+            vm.onAction(AnniversaryEditAction.SaveClicked)
             assertEquals(AnniversaryEditSideEffect.Close, awaitItem())
         }
     }

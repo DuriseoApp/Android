@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.duriseo.android.core.designsystem.R as DesignR
+import com.duriseo.android.core.designsystem.permission.LocalNotificationPermissionRequester
 import com.duriseo.android.core.designsystem.component.CalendarDateRange
 import com.duriseo.android.core.designsystem.component.DuriseoBottomSheetLayer
 import com.duriseo.android.core.designsystem.component.DuriseoDialogLayer
@@ -125,6 +126,7 @@ fun EventEditRoute(
     viewModel: EventEditViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val permissionRequester = LocalNotificationPermissionRequester.current
     // 수정에는 [메모] 탭이 없어 메모 ViewModel을 만들지 않는다. 새로 쓸 때는 이 항목 안에서 만들어 탭을 오가도 입력이 남는다 (D-133)
     val memoSlot = if (!state.isEdit && memoTab != null) memoTab(onClose, onShowSnackBar) else null
     LaunchedEffect(viewModel) {
@@ -133,6 +135,7 @@ fun EventEditRoute(
                 EventEditSideEffect.Close -> onClose()
                 EventEditSideEffect.OpenColors -> onOpenColors()
                 is EventEditSideEffect.ShowMessage -> onShowSnackBar(effect.messageRes)
+                EventEditSideEffect.RequestNotificationPermission -> permissionRequester.request()
             }
         }
     }

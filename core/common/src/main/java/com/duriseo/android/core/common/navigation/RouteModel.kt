@@ -89,6 +89,13 @@ sealed interface AuthRouteModel : RouteModel {
     data class Start(val sessionReplaced: Boolean = false) : AuthRouteModel
 }
 
+/** 알림 목록 (`feature:notification`). 하단 탭이 없다. 진입은 SCR-CAL-01 앱바의 알림 버튼 (단위 7 묶음 C) */
+sealed interface NotificationRouteModel : RouteModel {
+    /** 알림 목록 (SCR-NOTI-01) */
+    @Serializable
+    data object Notifications : NotificationRouteModel
+}
+
 /** 전체 메뉴(설정)에서 들어가는 하위 화면 (`feature:settings`) */
 sealed interface SettingsRouteModel : RouteModel {
     /**
@@ -107,6 +114,10 @@ sealed interface SettingsRouteModel : RouteModel {
     /** 연결 정보 (SCR-SET-01 하위 화면 "연결 정보": 연결됨·혼자 사용 중) */
     @Serializable
     data object ConnectionInfo : SettingsRouteModel
+
+    /** 알림 설정 (SCR-SET-02). 진입은 SCR-SET-01의 알림 설정 행 (단위 7 묶음 E) */
+    @Serializable
+    data object NotificationSettings : SettingsRouteModel
 }
 
 /** 커플 연결 화면 (`feature:couple`). 하단 탭이 없다. */
