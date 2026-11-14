@@ -32,7 +32,8 @@ object PushIntentTrust {
     private fun token(context: Context): String {
         val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         prefs.getString(KEY, null)?.let { return it }
-        return UUID.randomUUID().toString().also { prefs.edit().putString(KEY, it).commit() // 알림 Intent에 넣기 전에 저장을 마쳐, 프로세스가 죽어도 값이 달라지지 않게 }
+        // 알림 Intent에 넣기 전에 저장을 마쳐, 프로세스가 죽어도 값이 달라지지 않게 한다
+        return UUID.randomUUID().toString().also { prefs.edit().putString(KEY, it).commit() }
     }
 }
 
