@@ -13,6 +13,9 @@ import com.duriseo.android.data.local.me.MeEntity
 import com.duriseo.android.data.local.memo.MemoDao
 import com.duriseo.android.data.local.memo.MemoEntity
 import com.duriseo.android.data.local.memo.MemoPageStateEntity
+import com.duriseo.android.data.local.notification.NotificationDao
+import com.duriseo.android.data.local.notification.NotificationEntity
+import com.duriseo.android.data.local.notification.NotificationStateEntity
 
 /**
  * 앱의 Room 데이터베이스 (오프라인 보기 캐시, NFR-OFF-01). 첫 엔티티는 `MeEntity`(단위 2).
@@ -29,6 +32,9 @@ import com.duriseo.android.data.local.memo.MemoPageStateEntity
  *
  * 버전 5 (단위 6): 메모 `memo`(보기별 목록·고정 목록·날짜 메모·상세, 응답 위치 저장)·`memo_page_state`(보기별 다음 커서·전체 개수, 즐겨찾기 개수)를
  * 더했다 (API.md 3.4). 같은 방식으로 지우고 다시 만든다.
+ *
+ * 버전 6 (단위 7): 알림 `notification`(응답 위치 저장)·`notification_state`(다음 커서, 안 읽은 개수)를 더했다 (API.md 3.5). 같은 방식으로 지우고 다시 만든다.
+ * 알림은 사용자 것이라 공간이 바뀌어도 지우지 않고 로그아웃·계정 전환의 `clearAllTables`가 지운다.
  */
 @Database(
     entities = [
@@ -39,8 +45,10 @@ import com.duriseo.android.data.local.memo.MemoPageStateEntity
         AnniversaryPageStateEntity::class,
         MemoEntity::class,
         MemoPageStateEntity::class,
+        NotificationEntity::class,
+        NotificationStateEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 abstract class DuriseoDatabase : RoomDatabase() {
@@ -51,6 +59,8 @@ abstract class DuriseoDatabase : RoomDatabase() {
     abstract fun anniversaryDao(): AnniversaryDao
 
     abstract fun memoDao(): MemoDao
+
+    abstract fun notificationDao(): NotificationDao
 
     companion object {
         const val NAME = "duriseo.db"

@@ -10,6 +10,7 @@ import com.duriseo.android.domain.error.ErrorCode
 import com.duriseo.android.domain.error.hasCode
 import com.duriseo.android.domain.me.ImportCounts
 import com.duriseo.android.domain.me.MeRepository
+import com.duriseo.android.domain.notification.NotificationPermissionGate
 import com.duriseo.android.domain.result.DataResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -43,6 +44,7 @@ import javax.inject.Inject
 class LinkedSheetViewModel @Inject constructor(
     private val coupleRepository: CoupleRepository,
     private val meRepository: MeRepository,
+    private val notificationPermissionGate: NotificationPermissionGate,
     private val clock: Clock,
 ) : ViewModel() {
 
@@ -208,7 +210,7 @@ class LinkedSheetViewModel @Inject constructor(
                 }
             }
             // ③ 이 연결을 확인했다고 기록하고 시트를 닫는다 (호스트가 `observeLinkedSheetNeeded()`로 내린다)
-            meRepository.acknowledgeSpace()
+            acknowledgeAndAskNotificationPermission()
             if (rereadMe) meRepository.refreshMe()
             local.value = Local()
         }
@@ -218,9 +220,21 @@ class LinkedSheetViewModel @Inject constructor(
         val state = uiState.value
         if (!state.canDismiss) return
         viewModelScope.launch {
-            meRepository.acknowledgeSpace()
+            acknowledgeAndAskNotificationPermission()
             local.value = Local()
         }
+    }
+
+    /**
+     * 연결을 확인했다고 기록해 시트를 닫고, 알림 권한을 아직 묻지 않았으면 묻는다 (FR-NOTI-01 AC2, D-144: 시트를 닫은 직후).
+     * 시트가 사라지면 이 화면의 효과 수집도 함께 멈추므로 "권한 요청" 효과는 닫기 직전에 낸다. 실제 요청은 앱 맨 위층의 요청기가 하므로
+     * 시트가 사라져도 요청은 이어진다.
+     */
+    private suspend fun acknowledgeAndAskNotificationPermission() {
+        if (notificationPermissionGate.shouldAskNow()) {
+            effectChannel.trySend(LinkedSheetSideEffect.RequestNotificationPermission)
+        }
+        meRepository.acknowledgeSpace()
     }
 
     private fun onBack() {

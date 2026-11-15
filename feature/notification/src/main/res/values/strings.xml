@@ -1,0 +1,21 @@
+<resources>
+    <!-- SCR-NOTI-01 알림 목록. 문구는 SCREENS.md SCR-NOTI-01과 보드 Notifications.dc.html. 항목의 제목·본문은 서버가 만든 문구 그대로다 (D-46) -->
+    <string name="notification_title">알림</string>
+    <string name="notification_hint">최근 30일 알림이에요. 누르면 관련 화면으로 가요.</string>
+    <string name="notification_empty">최근 30일 동안 받은 알림이 없어요</string>
+
+    <!-- 종류 이름 (보드 TYPE 표) -->
+    <string name="notification_type_event_reminder">일정 알림</string>
+    <string name="notification_type_partner_event">상대 일정 추가</string>
+    <string name="notification_type_partner_memo">상대 메모 추가</string>
+    <string name="notification_type_memo_pinned">메모 고정</string>
+    <string name="notification_type_anniversary">기념일</string>
+    <string name="notification_type_couple_linked">연결</string>
+    <string name="notification_type_couple_unlinked">연결 해제</string>
+
+    <!-- 종류 · 받은 시각. 시각 표기는 core:designsystem의 writtenAtText (D-129) -->
+    <string name="notification_type_and_time">%1$s · %2$s</string>
+
+    <!-- 안 읽음: 보드의 접근성 라벨 "안 읽음, ..."에서 따옴 -->
+    <string name="notification_unread">안 읽음</string>
+</resources>

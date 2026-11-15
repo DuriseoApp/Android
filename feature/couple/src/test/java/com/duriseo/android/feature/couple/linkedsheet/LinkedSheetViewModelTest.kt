@@ -7,6 +7,7 @@ import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.domain.result.DataResult
 import com.duriseo.android.feature.couple.FakeCoupleRepository
 import com.duriseo.android.feature.couple.FakeMeRepository
+import com.duriseo.android.feature.couple.FakeNotificationPermissionGate
 import com.duriseo.android.feature.couple.SchedulerClock
 import com.duriseo.android.feature.couple.collectInto
 import com.duriseo.android.feature.couple.failure
@@ -39,6 +40,7 @@ class LinkedSheetViewModelTest {
 
     private val scheduler = TestCoroutineScheduler()
     private val couple = FakeCoupleRepository()
+    private val gate = FakeNotificationPermissionGate()
     private val counts = ImportCounts(events = 3, anniversaries = 0, memos = 2)
 
     /** 오늘은 2026-10-31 */
@@ -58,7 +60,7 @@ class LinkedSheetViewModelTest {
 
     private fun meWithoutRecords(startDate: LocalDate? = null) = testMe(type = SpaceType.COUPLE, startDate = startDate)
 
-    private fun viewModel(me: FakeMeRepository) = LinkedSheetViewModel(couple, me, clock)
+    private fun viewModel(me: FakeMeRepository) = LinkedSheetViewModel(couple, me, gate, clock)
 
     @Test
     fun `D-93 제목에 상대 이름이 들어가고 혼자 쓴 기록 개수를 0개인 종류까지 보여 준다`() = runTest {
@@ -100,6 +102,30 @@ class LinkedSheetViewModelTest {
 
         assertEquals(1, me.acknowledgeCalls)
         assertTrue(couple.writeOrder.isEmpty())
+    }
+
+    @Test
+    fun `FR-NOTI-01 AC2 연결 완료 시트를 닫으면 권한 요청 효과를 한 번만 낸다`() = runTest {
+        val me = FakeMeRepository(meWithoutRecords())
+        val vm = viewModel(me)
+        val effects = collectInto(vm.effects)
+
+        vm.onAction(LinkedSheetAction.CloseClicked)
+        assertEquals(listOf<LinkedSheetSideEffect>(LinkedSheetSideEffect.RequestNotificationPermission), effects.toList())
+
+        // 한 번 물었으면 다시 묻지 않는다 (FR-NOTI-01 AC3)
+        vm.onAction(LinkedSheetAction.CloseClicked)
+        assertEquals(1, effects.size)
+    }
+
+    @Test
+    fun `FR-NOTI-01 AC2 시작하기로 닫을 때도 권한 요청 효과를 낸다`() = runTest {
+        val vm = viewModel(FakeMeRepository(meWithRecords()))
+        val effects = collectInto(vm.effects)
+
+        vm.onAction(LinkedSheetAction.StartClicked)
+
+        assertEquals(listOf<LinkedSheetSideEffect>(LinkedSheetSideEffect.RequestNotificationPermission), effects.toList())
     }
 
     @Test
@@ -358,7 +384,8 @@ class LinkedSheetViewModelTest {
 
         assertEquals(1, me.acknowledgeCalls)
         assertEquals(1, me.refreshCalls)
-        assertTrue(effects.isEmpty())
+        // 오류 안내는 없다. 시트를 닫을 때의 알림 권한 요청(FR-NOTI-01 AC2)만 있다
+        assertEquals(listOf<LinkedSheetSideEffect>(LinkedSheetSideEffect.RequestNotificationPermission), effects)
     }
 
     @Test

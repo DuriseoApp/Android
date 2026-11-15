@@ -2,6 +2,7 @@ package com.duriseo.android.data.repository.me
 
 import app.cash.turbine.test
 import com.duriseo.android.data.repository.RepoHarness
+import com.duriseo.android.data.repository.coupleMeJson
 import com.duriseo.android.data.repository.fixtureMe
 import com.duriseo.android.data.repository.jsonResponse
 import com.duriseo.android.data.repository.meJson
@@ -78,6 +79,93 @@ class MeRepositoryTest {
         h.meRepository.refreshMe()
 
         assertEquals(fixtureMe(id = "user-1"), h.roomMe())
+    }
+
+    @Test
+    fun `FR-SYNC GET space 결과를 Room의 구성원 닉네임과 색에 합친다`() = runTestWithTimeout {
+        val h = harness()
+        server.enqueue(jsonResponse(200, coupleMeJson()))
+        h.meRepository.refreshMe()
+        server.enqueue(
+            jsonResponse(
+                200,
+                """{"id":"33333333-3333-3333-3333-333333333333","type":"COUPLE","togetherColor":"pick-green",
+                    "startDate":"2026-01-02","linkedAt":"2026-10-12T03:00:00Z","members":[
+                    {"userId":"11111111-1111-1111-1111-111111111111","nickname":"민수","color":"pick-red","hasProfileImage":false},
+                    {"userId":"44444444-4444-4444-4444-444444444444","nickname":"지우 새 이름","color":"pick-blue","hasProfileImage":true}]}""",
+            ),
+        )
+
+        val result = h.meRepository.refreshSpace()
+
+        assertEquals(DataResult.Success(Unit), result)
+        val space = h.roomMe()
+        assertEquals("pick-red", space?.space?.myColor)
+        assertEquals("지우 새 이름", space?.space?.partner?.nickname)
+        assertEquals(true, space?.space?.partner?.hasProfileImage)
+        assertEquals("pick-green", space?.space?.togetherColor)
+        server.takeRequest() // GET /me
+        assertEquals("/api/v1/space", server.takeRequest().path)
+    }
+
+    @Test
+    fun `FR-SYNC GET space의 공간이 Room과 다르면 저장하지 않는다`() = runTestWithTimeout {
+        val h = harness()
+        server.enqueue(jsonResponse(200, coupleMeJson()))
+        h.meRepository.refreshMe()
+        server.enqueue(
+            jsonResponse(
+                200,
+                """{"id":"99999999-9999-9999-9999-999999999999","type":"PERSONAL","togetherColor":null,
+                    "startDate":null,"linkedAt":null,"members":[
+                    {"userId":"11111111-1111-1111-1111-111111111111","nickname":"다른","color":"pick-red","hasProfileImage":false}]}""",
+            ),
+        )
+
+        h.meRepository.refreshSpace()
+
+        assertEquals("pick-orange", h.roomMe()?.space?.myColor)
+    }
+
+    @Test
+    fun `FR-SYNC 요청 사이에 내 정보가 저장되면 늦은 GET space 응답은 버린다`() = runTestWithTimeout {
+        val h = harness()
+        server.enqueue(jsonResponse(200, coupleMeJson()))
+        h.meRepository.refreshMe()
+        server.takeRequest()
+        // GET /space는 느리게 옛 값을 주고, 그 사이 GET /me가 저장된다
+        server.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
+            override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): okhttp3.mockwebserver.MockResponse =
+                if (request.path == "/api/v1/space") {
+                    jsonResponse(
+                        200,
+                        """{"id":"33333333-3333-3333-3333-333333333333","type":"COUPLE","togetherColor":"pick-green",
+                            "startDate":null,"linkedAt":null,"members":[
+                            {"userId":"11111111-1111-1111-1111-111111111111","nickname":"옛 이름","color":"pick-red","hasProfileImage":false},
+                            {"userId":"44444444-4444-4444-4444-444444444444","nickname":"지우","color":"pick-blue","hasProfileImage":false}]}""",
+                    ).setHeadersDelay(500, TimeUnit.MILLISECONDS)
+                } else {
+                    jsonResponse(200, coupleMeJson())
+                }
+        }
+
+        val slow = async(Dispatchers.IO) { h.meRepository.refreshSpace() }
+        assertEquals("/api/v1/space", server.takeRequest().path)
+        h.meRepository.refreshMe()
+        slow.await()
+
+        // GET /me가 저장한 값 그대로다 (옛 GET /space의 pick-red로 덮이지 않음)
+        assertEquals("pick-orange", h.roomMe()?.space?.myColor)
+    }
+
+    @Test
+    fun `FR-SYNC 오프라인이면 refreshSpace는 요청하지 않는다`() = runTestWithTimeout {
+        val h = harness(online = false)
+
+        val result = h.meRepository.refreshSpace()
+
+        assertEquals(DataResult.Failure(DataError.Offline), result)
+        assertEquals(0, server.requestCount)
     }
 
     @Test

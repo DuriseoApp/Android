@@ -234,3 +234,12 @@ fun <T> TestScope.collectInto(flow: Flow<T>): MutableList<T> {
     backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { flow.collect { items += it } }
     return items
 }
+
+/** 알림 권한 "이미 물었는지" 가짜: 처음 한 번만 true (FR-NOTI-01 AC3) */
+class FakeNotificationPermissionGate(private var asked: Boolean = false) : com.duriseo.android.domain.notification.NotificationPermissionGate {
+    override suspend fun shouldAskNow(): Boolean {
+        if (asked) return false
+        asked = true
+        return true
+    }
+}

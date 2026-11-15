@@ -1,6 +1,9 @@
 <resources>
     <!-- SCR-CAL-01 캘린더 홈. 문구는 SCREENS.md SCR-CAL-01과 보드 Calendar.dc.html -->
     <string name="calendar_menu_description">전체 메뉴</string>
+    <!-- 알림 버튼 접근성 라벨: 보드 Calendar.dc.html 393행 (안 읽은 알림이 있으면 그 사실도 함께, SCREENS.md SCR-CAL-01 "알림 버튼") -->
+    <string name="calendar_notifications_description">알림</string>
+    <string name="calendar_notifications_unread_description">알림, 안 읽은 알림 있음</string>
     <string name="calendar_title_couple">우리 둘</string>
     <string name="calendar_title_solo">나의 캘린더</string>
     <!-- 앱바 아바타 글자 (design-system.md "사람 호칭": 나 "나", 상대 "너") -->

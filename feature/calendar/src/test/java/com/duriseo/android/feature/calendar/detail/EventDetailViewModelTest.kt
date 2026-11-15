@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.calendar.detail
 
+import com.duriseo.android.feature.calendar.FakeNotificationPermissionGate
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.duriseo.android.core.common.navigation.CalendarRouteModel
@@ -48,6 +49,8 @@ class EventDetailViewModelTest {
 
     private val me = FakeMeRepository(coupleMe())
     private val events = FakeEventRepository()
+    /** 기본은 이미 물은 상태: 알림 권한과 상관없는 테스트의 효과 목록이 흔들리지 않게. FR-NOTI-01 테스트만 새로 만든다 */
+    private var gate = FakeNotificationPermissionGate(asked = true)
     private val clock = Clock.fixed(Instant.parse("2026-10-12T01:20:00Z"), ZoneId.of("Asia/Seoul"))
 
     @Before
@@ -62,7 +65,7 @@ class EventDetailViewModelTest {
 
     private fun TestScope.viewModel(id: String = "e1"): EventDetailViewModel {
         val handle = SavedStateHandle(mapOf(CalendarRouteModel.EventDetail::eventId.name to id))
-        val vm = EventDetailViewModel(handle, events, me, clock)
+        val vm = EventDetailViewModel(handle, events, me, gate, clock)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect { } }
         return vm
     }
@@ -320,5 +323,31 @@ class EventDetailViewModelTest {
             expectNoEvents()
         }
         assertNotNull(vm.uiState.value.event)
+    }
+
+    @Test
+    fun `FR-NOTI-01 AC1 없음이 아닌 알림을 처음 고르면 권한 요청 효과를 낸다`() = runTest {
+        gate = FakeNotificationPermissionGate()
+        events.events.value = listOf(sampleEvent())
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(EventDetailAction.ReminderSelected(ReminderOption.MIN_10))
+            assertEquals(EventDetailSideEffect.RequestNotificationPermission, awaitItem())
+
+            // 한 번 물었으면 다시 묻지 않는다 (FR-NOTI-01 AC3)
+            vm.onAction(EventDetailAction.ReminderSelected(ReminderOption.HOUR_1))
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `FR-NOTI-01 AC1 없음을 고르거나 저장이 실패하면 권한을 묻지 않는다`() = runTest {
+        gate = FakeNotificationPermissionGate()
+        events.events.value = listOf(sampleEvent(reminder = ReminderOption.HOUR_1))
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(EventDetailAction.ReminderSelected(null))
+            expectNoEvents()
+        }
     }
 }

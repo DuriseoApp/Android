@@ -54,4 +54,7 @@ sealed interface EventDetailSideEffect {
     data object Close : EventDetailSideEffect
     data class OpenEdit(val id: String) : EventDetailSideEffect
     data class ShowMessage(@StringRes val messageRes: Int) : EventDetailSideEffect
+
+    /** 알림 권한을 요청한다 (Android 13 이상, 처음 한 번, FR-NOTI-01). 실제 요청은 앱 맨 위층의 요청기가 한다 */
+    data object RequestNotificationPermission : EventDetailSideEffect
 }

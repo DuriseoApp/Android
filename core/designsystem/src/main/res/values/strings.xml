@@ -10,6 +10,10 @@
     <!-- 공통 오류 안내: SCREENS.md 공통 표 "공통 오류" (API.md 5장 INTERNAL_ERROR, 스낵바) -->
     <string name="error_common">문제가 생겼어요. 잠시 후 다시 시도해 주세요</string>
 
+    <!-- 알림 대상이 삭제됐을 때의 스낵바: SCREENS.md 공통 "푸시 진입"·SCR-NOTI-01 (FR-NOTI-05 AC5, FR-NOTI-03 AC3). 알림 목록과 푸시 진입이 같이 쓴다 -->
+    <string name="notification_event_deleted">삭제된 일정이에요</string>
+    <string name="notification_memo_deleted">삭제된 메모예요</string>
+
     <!-- 공용 버튼·접근성 문구. "뒤로 가기"·"닫기"는 보드 그대로 (SCREENS.md 공통 "접근성 문구") -->
     <string name="action_cancel">취소</string>
     <string name="nav_back">뒤로 가기</string>

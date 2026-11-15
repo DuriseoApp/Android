@@ -101,4 +101,7 @@ sealed interface LinkedSheetAction {
 sealed interface LinkedSheetSideEffect {
     /** 시트의 스낵바에 문구를 보여 준다 (공통 오류, 오프라인 안내) */
     data class ShowMessage(@StringRes val messageRes: Int) : LinkedSheetSideEffect
+
+    /** 알림 권한을 요청한다 (Android 13 이상, 연결 완료 시트를 닫는 순간 처음 한 번, FR-NOTI-01 AC2) */
+    data object RequestNotificationPermission : LinkedSheetSideEffect
 }

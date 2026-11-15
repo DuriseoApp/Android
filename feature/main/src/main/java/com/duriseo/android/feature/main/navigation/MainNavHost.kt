@@ -11,6 +11,7 @@ import com.duriseo.android.feature.auth.start.AfterLogin
 import com.duriseo.android.feature.calendar.navigation.calendarNavGraph
 import com.duriseo.android.feature.couple.navigation.coupleNavGraph
 import com.duriseo.android.feature.memo.navigation.memoNavGraph
+import com.duriseo.android.feature.notification.navigation.notificationNavGraph
 import com.duriseo.android.feature.settings.navigation.settingsNavGraph
 
 /**
@@ -69,6 +70,8 @@ fun MainNavHost(
             onOpenCreate = navigator::navigateToEventCreate,
             onOpenEdit = navigator::navigateToEventEdit,
             onOpenAnniversaries = navigator::navigateToAnniversaries,
+            // 앱바의 알림 버튼 -> SCR-NOTI-01 (단위 7 묶음 C)
+            onOpenNotifications = navigator::navigateToNotifications,
             onOpenColors = navigator::navigateToColors,
             onBack = navigator::navigateUp,
             onShowSnackBar = onShowSnackBar,
@@ -97,6 +100,13 @@ fun MainNavHost(
             onShowSnackBar = onShowSnackBar,
             snackbarVisible = snackbarVisible,
         )
+        // 알림 목록 (SCR-NOTI-01). 하단 탭이 없다. 항목을 누르면 목록 위로 대상 화면을 쌓고, 삭제된 대상이면 목록에 머문다
+        notificationNavGraph(
+            padding = padding,
+            onBack = navigator::navigateUp,
+            onOpenDestination = navigator::openFromNotificationList,
+            onShowSnackBar = onShowSnackBar,
+        )
         // 하단 탭이 아니다. 진입은 캘린더 앱바
         settingsNavGraph(
             padding = padding,
@@ -108,6 +118,8 @@ fun MainNavHost(
             onOpenConnect = navigator::navigateToConnect,
             onOpenConnectionInfo = navigator::navigateToConnectionInfo,
             onBackFromConnectionInfo = navigator::navigateUp,
+            onOpenNotificationSettings = navigator::navigateToNotificationSettings,
+            onBackFromNotificationSettings = navigator::navigateUp,
             onOpenInviteCreate = navigator::navigateToInviteCreate,
             onOpenInviteEnter = navigator::navigateToInviteEnter,
             onLoggedOut = { navigator.navigateToStart() },

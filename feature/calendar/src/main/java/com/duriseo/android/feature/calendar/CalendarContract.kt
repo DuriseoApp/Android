@@ -94,6 +94,8 @@ data class CalendarUiState(
     val startDateSheet: CalendarStartDateSheet? = null,
     /** 당겨서 새로고침 중 (Q-16). 화면에 들어올 때·달을 넘길 때의 다시 불러오기에는 켜지 않는다 (D-112) */
     val refreshing: Boolean = false,
+    /** 안 읽은 알림이 있다. 앱바 알림 버튼에 점이 보인다 (FR-CAL-01 AC4, 안 읽은 개수 > 0) */
+    val hasUnreadNotifications: Boolean = false,
 ) {
     /** 처음 만난 날 저장 요청이 도는 동안 true. 로딩 덮개를 그린다 (D-115). 조회와 당겨서 새로고침은 덮지 않는다 */
     val loading: Boolean get() = startDateSheet?.saving == true
@@ -134,6 +136,9 @@ sealed interface CalendarAction {
     /** 날짜 목록을 당겼다 (Q-16, NFR-SYNC-02) */
     data object Refresh : CalendarAction
 
+    /** 앱바의 알림 버튼: SCR-NOTI-01로 간다 (FR-CAL-01 AC4) */
+    data object NotificationsClicked : CalendarAction
+
     data object StartDatePreviousMonth : CalendarAction
     data object StartDateNextMonth : CalendarAction
     data class StartDateSelected(val date: LocalDate) : CalendarAction
@@ -150,6 +155,9 @@ sealed interface CalendarSideEffect {
 
     /** SCR-ANNIV-01 */
     data object OpenAnniversaries : CalendarSideEffect
+
+    /** SCR-NOTI-01 */
+    data object OpenNotifications : CalendarSideEffect
 
     /** 새 일정 작성. [date]는 선택한 날 (`YYYY-MM-DD`) */
     data class OpenCreate(val date: LocalDate) : CalendarSideEffect

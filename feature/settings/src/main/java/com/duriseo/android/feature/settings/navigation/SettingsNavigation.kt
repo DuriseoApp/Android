@@ -11,6 +11,7 @@ import com.duriseo.android.feature.settings.account.AccountRoute
 import com.duriseo.android.feature.settings.colors.ColorsRoute
 import com.duriseo.android.feature.settings.connection.ConnectionInfoRoute
 import com.duriseo.android.feature.settings.menu.SettingsRoute
+import com.duriseo.android.feature.settings.notification.NotificationSettingsRoute
 
 fun NavController.navigateToSettings(navOptions: NavOptions? = null) {
     navigate(MainRouteModel.Settings, navOptions)
@@ -28,12 +29,19 @@ fun NavController.navigateToConnectionInfo(navOptions: NavOptions? = null) {
     navigate(SettingsRouteModel.ConnectionInfo, navOptions)
 }
 
+/** 알림 설정 (SCR-SET-02). SCR-SET-01의 알림 설정 행이 부른다 (단위 7 묶음 E) */
+fun NavController.navigateToNotificationSettings(navOptions: NavOptions? = null) {
+    navigate(SettingsRouteModel.NotificationSettings, navOptions)
+}
+
 /**
  * 전체 메뉴(SCR-SET-01), 계정 화면, 우리 색상(SCR-SET-03), 연결 정보. 모두 하단 탭이 없다 (D-30).
  *
  * @param onClose 전체 메뉴의 닫기
  * @param onOpenAccount 계정 행 또는 [로그인해서 기록 지키기]
  * @param onBackFromAccount 계정 화면의 뒤로 가기
+ * @param onOpenNotificationSettings 설정 › 알림 설정 행 -> SCR-SET-02
+ * @param onBackFromNotificationSettings 알림 설정의 뒤로 가기
  * @param onOpenColors 꾸미기 › 우리 색상 행
  * @param onBackFromColors 우리 색상의 뒤로 가기. [완료]로 저장했을 때도 같다
  * @param onOpenConnect 프로필 카드의 [상대와 연결하기], 게스트의 연결 정보 행 → SCR-COUPLE-01 (뒤로 가기가 전체 메뉴로 돌아온다)
@@ -56,6 +64,8 @@ fun NavGraphBuilder.settingsNavGraph(
     onOpenConnect: () -> Unit,
     onOpenConnectionInfo: () -> Unit,
     onBackFromConnectionInfo: () -> Unit,
+    onOpenNotificationSettings: () -> Unit,
+    onBackFromNotificationSettings: () -> Unit,
     onOpenInviteCreate: () -> Unit,
     onOpenInviteEnter: () -> Unit,
     onLoggedOut: () -> Unit,
@@ -71,7 +81,15 @@ fun NavGraphBuilder.settingsNavGraph(
             onOpenColors = onOpenColors,
             onOpenConnect = onOpenConnect,
             onOpenConnectionInfo = onOpenConnectionInfo,
+            onOpenNotificationSettings = onOpenNotificationSettings,
             onLoggedOut = onLoggedOut,
+            onShowSnackBar = onShowSnackBar,
+        )
+    }
+    composable<SettingsRouteModel.NotificationSettings> {
+        NotificationSettingsRoute(
+            padding = padding,
+            onBack = onBackFromNotificationSettings,
             onShowSnackBar = onShowSnackBar,
         )
     }

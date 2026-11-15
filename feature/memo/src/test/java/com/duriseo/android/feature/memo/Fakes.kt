@@ -126,6 +126,11 @@ class FakeMemoRepository : MemoRepository {
     val favoriteCalls = mutableListOf<Pair<String, Boolean>>()
 
     var refreshMemoResult: DataResult<Unit> = DataResult.Success(Unit)
+
+    override suspend fun forget(id: String) {
+        memos.value = memos.value - id
+    }
+
     var createResult: DataResult<Unit> = DataResult.Success(Unit)
     var updateResult: DataResult<Unit> = DataResult.Success(Unit)
     var deleteResult: DataResult<Unit> = DataResult.Success(Unit)

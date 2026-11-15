@@ -44,6 +44,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.duriseo.android.core.designsystem.permission.LocalNotificationPermissionRequester
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.component.CalendarDateRange
 import com.duriseo.android.core.designsystem.component.DuriseoBottomSheetLayer
@@ -100,9 +101,11 @@ fun AnniversaryEditRoute(
     viewModel: AnniversaryEditViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val permissionRequester = LocalNotificationPermissionRequester.current
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
+                AnniversaryEditSideEffect.RequestNotificationPermission -> permissionRequester.request()
                 AnniversaryEditSideEffect.Close -> onClose()
                 is AnniversaryEditSideEffect.ShowMessage -> onShowSnackBar(effect.messageRes)
             }

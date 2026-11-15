@@ -112,3 +112,29 @@ private fun MeSpaceDto.toDomain(): MeSpace = MeSpace(
     linkedAt = linkedAt,
     importCounts = importCounts?.let { ImportCounts(it.events, it.anniversaries, it.memos) },
 )
+
+/** API.md 3.1 `NotificationSettings`. 켜짐이 true. 연결·해제 알림은 필드가 없다 */
+@Serializable
+data class NotificationSettingsDto(
+    val eventReminder: Boolean,
+    val partnerCreated: Boolean,
+    val memoPinned: Boolean,
+    val anniversary: Boolean,
+)
+
+/** `PATCH /me/notification-settings` 본문. 바꿀 필드만 채운다 (null이면 JSON에 넣지 않는다, `explicitNulls = false`) */
+@Serializable
+data class UpdateNotificationSettingsRequest(
+    val eventReminder: Boolean? = null,
+    val partnerCreated: Boolean? = null,
+    val memoPinned: Boolean? = null,
+    val anniversary: Boolean? = null,
+)
+
+fun NotificationSettingsDto.toDomain(): com.duriseo.android.domain.notification.NotificationSettings =
+    com.duriseo.android.domain.notification.NotificationSettings(
+        eventReminder = eventReminder,
+        partnerCreated = partnerCreated,
+        memoPinned = memoPinned,
+        anniversary = anniversary,
+    )

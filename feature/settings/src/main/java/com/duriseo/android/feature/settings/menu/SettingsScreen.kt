@@ -84,6 +84,7 @@ fun SettingsRoute(
     onOpenColors: () -> Unit,
     onOpenConnect: () -> Unit,
     onOpenConnectionInfo: () -> Unit,
+    onOpenNotificationSettings: () -> Unit,
     onLoggedOut: () -> Unit,
     onShowSnackBar: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -108,6 +109,7 @@ fun SettingsRoute(
         onOpenColors = onOpenColors,
         onOpenConnect = onOpenConnect,
         onOpenConnectionInfo = onOpenConnectionInfo,
+        onOpenNotificationSettings = onOpenNotificationSettings,
         onAction = viewModel::onAction,
         modifier = modifier,
     )
@@ -124,6 +126,7 @@ fun SettingsScreen(
     onOpenConnectionInfo: () -> Unit,
     onAction: (SettingsAction) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenNotificationSettings: () -> Unit = {},
 ) {
     val sheet = state.startDateSheet
     DuriseoDialogLayer(
@@ -222,6 +225,12 @@ fun SettingsScreen(
 
                     Column {
                         DuriseoSectionTitle(text = stringResource(R.string.settings_section_settings))
+                        // 알림 설정 -> SCR-SET-02 (보드 `Menu.dc.html` 126행: 종 아이콘, 값 없음. 게스트도 바꿀 수 있다, D-62)
+                        DuriseoMenuRow(
+                            label = stringResource(R.string.settings_notification_settings),
+                            onClick = onOpenNotificationSettings,
+                            iconRes = DesignR.drawable.ic_bell,
+                        )
                         // 연결 정보: 값은 "연결됨"/"혼자 사용 중". 게스트는 [상대와 연결하기]와 같이 SCR-COUPLE-01(guest)로 간다
                         // (SCREENS.md "게스트의 연결 정보 행", FR-AUTH-04 AC2)
                         state.space?.let { space ->

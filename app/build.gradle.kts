@@ -21,6 +21,12 @@ fun localProperty(key: String): String = localProperties.getProperty(key, "").tr
 fun String.asBuildConfigString(): String =
     "\"" + replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
+// Firebase(FCM) 설정 파일. 비밀값이라 커밋하지 않는다 (docs/SETUP.md). 파일이 있을 때만 google-services 플러그인을 적용한다.
+// 없으면(CI 등) FCM이 꺼진 채 빌드되고, 앱은 토큰 등록·푸시 수신 없이 동작한다 (core:push `FcmAvailability`).
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.duriseo.android"
 
@@ -52,6 +58,7 @@ dependencies {
     implementation(projects.feature.main)
     implementation(projects.core.designsystem)
     implementation(projects.core.common)
+    implementation(projects.core.push)
     implementation(projects.domain)
     // Hilt 바인딩(리포지토리, 원격, 로컬)을 앱 그래프에 모으기 위해
     implementation(projects.data.repository)

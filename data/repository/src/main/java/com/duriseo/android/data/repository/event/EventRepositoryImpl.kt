@@ -63,6 +63,10 @@ class EventRepositoryImpl @Inject constructor(
         return remote.get(id).thenSave().dropValue().thenForgetIfGone(id)
     }
 
+    override suspend fun forget(id: String) {
+        local.delete(id)
+    }
+
     override suspend fun create(event: NewEvent): DataResult<Event> =
         networkMonitor.runOnlineWrite { remote.create(event) }.thenSave()
 

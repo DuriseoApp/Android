@@ -6,6 +6,7 @@ import com.duriseo.android.data.local.anniversary.AnniversaryDao
 import com.duriseo.android.data.local.event.EventDao
 import com.duriseo.android.data.local.me.MeDao
 import com.duriseo.android.data.local.memo.MemoDao
+import com.duriseo.android.data.local.notification.NotificationDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -36,4 +37,7 @@ object DatabaseModule {
 
     @Provides
     fun provideMemoDao(database: DuriseoDatabase): MemoDao = database.memoDao()
+
+    @Provides
+    fun provideNotificationDao(database: DuriseoDatabase): NotificationDao = database.notificationDao()
 }

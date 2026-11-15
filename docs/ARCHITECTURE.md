@@ -37,7 +37,7 @@ Screen ← ViewModel ← Repository.observeX(): Flow  ← Room
                        Repository.refreshX() ─── API ──> Room에 저장 (트랜잭션)
 ```
 
-- 다시 불러오는 때: 화면에 들어갈 때, 월을 넘길 때(캘린더), 당겨서 새로고침(NFR-SYNC-02, 단위 5), 동기화 신호를 받았을 때(NFR-SYNC-01, 단위 7). 지금은 앞의 둘만 있다.
+- 다시 불러오는 때: 화면에 들어갈 때, 월을 넘길 때(캘린더), 당겨서 새로고침(NFR-SYNC-02, 단위 5), 동기화 신호를 받았을 때(NFR-SYNC-01, 단위 7). 동기화 신호는 단위 7(`SyncDispatcher`)이 붙였다.
 - 범위로 불러오는 목록(일정 `GET /events`)은 응답을 받으면 그 범위에 걸친 행을 지우고 새로 넣는다(한 트랜잭션). 서버에서 지워진 행이 남지 않는다.
 - 공간이 바뀌면(연결, 가져오기 결정, 다른 커플 공간으로 `GET /me`) 일정·기념일 캐시를 비운다. 해제·로그아웃·탈퇴는 `clearAllTables`가 비운다. 다른 공간의 일정이 잠깐이라도 보이면 안 되기 때문이다.
 - 오프라인이면 refresh는 조용히 실패하고 화면은 마지막으로 저장한 데이터를 보여 준다.
@@ -54,7 +54,7 @@ ViewModel → Repository.create/update/delete → (오프라인이면 즉시 Off
 
 **동기화 신호** (NFR-SYNC-01, API.md 동기화 신호 장)
 
-- FCM 데이터 메시지는 `push`가 받아 해당 리포지토리의 refresh를 부른다. 사용자에게 보이지 않는다.
+- FCM 데이터 메시지는 `core:push`의 `DuriseoMessagingService`가 받는다. `SYNC`는 화면(Activity)이 한 번이라도 만들어진 프로세스에서만 `SyncSignalReceiver`(domain)로 넘기고, `SyncDispatcher`(`data:repository`)가 1초 안의 신호를 모아 해당 리포지토리의 refresh를 부른다. 사용자에게 보이지 않는다. `PUSH`는 프로세스가 없었어도 같은 서비스가 알림으로 그린다.
 - 신호의 종류·필드는 API.md 그대로 쓴다.
 
 ## 3. 오류

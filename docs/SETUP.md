@@ -26,7 +26,14 @@
 
 새 키를 만들면 이 표, `app/build.gradle.kts`, CI 워크플로를 같은 PR에서 고쳐요.
 
-`google-services.json`(Firebase)은 단위 7에서 `app/`에 두고, 커밋하지 않아요.
+### google-services.json (Firebase, 단위 7)
+
+FCM 푸시에 쓰는 Firebase 설정 파일이에요. 비밀값이라 커밋하지 않아요(`.gitignore`에 있어요).
+
+- **맥**: Firebase 콘솔에서 받은 `google-services.json`을 `app/`에 두어요. 패키지명은 `com.duriseo.android` 하나예요(debug·release 공통).
+- **파일이 없으면**: `app/build.gradle.kts`가 google-services 플러그인을 적용하지 않아 빌드는 되고, FCM이 꺼진 채 동작해요(토큰 등록·푸시 수신 없음, 경고 로그 한 줄). 로그인·일정·메모 등 나머지 기능은 그대로예요.
+- **CI**: 레포 Settings › Secrets and variables › Actions에 Secret `GOOGLE_SERVICES_JSON`을 만들어요. 값은 파일을 base64로 인코딩한 한 줄이에요(`base64 -i app/google-services.json | pbcopy`, 리눅스는 `base64 -w0`). Secret이 있으면 CI가 `app/google-services.json`을 만들고, 없으면 건너뛰어요(둘 다 초록불). **등록은 사람이 해요.**
+- 값은 claude.ai 프로젝트 "둘이서 - 커플 앱"의 `config/environment.md`를 확인해요.
 
 ## 3. CI
 
