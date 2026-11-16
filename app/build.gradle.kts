@@ -64,7 +64,7 @@ dependencies {
     implementation(projects.data.repository)
 
     // 프로필 사진 이미지 로더를 앱 전체 로더로 등록 (SingletonImageLoader.Factory)
-    implementation(libs.coil.core)
+    implementation(libs.coil.singleton)
 
     implementation(libs.timber)
 
