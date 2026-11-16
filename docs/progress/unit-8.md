@@ -1,6 +1,6 @@
 # 단위 8: 프로필 — SCR-SET-04, 프로필 사진, 전체 메뉴 정보, SCR-SET-05
 
-> 브랜치: `feat/8-profile` · PR: (draft 때 채움) · 상태: 범위 확인 대기
+> 브랜치: `feat/8-profile` · PR: (draft 때 채움) · 상태: 진행 중 (2026-11-16 범위 승인, 확인 필요 1~6 추천안대로)
 > 기준: PRD v0.12 (FR-AUTH-07 AC1~AC9, FR-SET-01, FR-SET-02 AC1~AC4, NFR-FILE-01, NFR-LIMIT-01, NFR-PRIV-01, D-82·D-115·D-126·D-146~D-153), SCREENS.md SCR-SET-01(프로필 카드·정보)·SCR-SET-04·SCR-SET-05, design-system "메일 앱 없음 다이얼로그"·"프로필 카드·연결 상태 카드"·"앱 정보 카드 상태"·"오픈소스 라이선스 목록", API.md 3.1(`PATCH /me`, `/me/profile-image`, `/users/{id}/profile-image`)·5장(413·415)·6장(`SPACE` `UPDATED`)·8장
 > Docs 기준 커밋: DuriseoApp/Docs main `cee0885` (캔버스 버전 43)
 > 앞 단위: 단위 7 머지됨 (main `7d5e2cc`). 서버 단위 7(프로필 사진) 머지·개발 서버 배포됨 (2026-11-14 배포 성공)
