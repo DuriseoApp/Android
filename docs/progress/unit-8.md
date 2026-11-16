@@ -120,6 +120,19 @@
 12. **`DuriseoAvatar`**: designsystem이 Coil(`coil-compose`)에 의존한다 (ARCHITECTURE의 금지 목록에 없음). 글자 원을 먼저 그리고 그 위에 `AsyncImage`(원형·`Crop`)를 얹어서, 받는 중·실패·null은 따로 처리하지 않아도 글자 원이 보인다. 지름이 달라 `DuriseoAvatar`를 못 쓰는 메모 핀 카드 작성자 아바타(24)가 쓰도록 `DuriseoAvatarPhoto`를 공개했다. Preview는 Coil 없이 같은 자리·같은 자르기로 그림 하나를 얹는다(`_Photo`).
 13. **사진을 연결한 곳**: SCR-SET-01 프로필 카드(`SettingsPerson.photo`, 연결 정보 SCR-SET 연결 상태 카드와 공용), SCR-CAL-01 앱바(커플 겹침·개인), 메모 핀 카드의 작성자 아바타(SCR-MEMO-01·02 공용 `MemoItemUi.photo`). **메모 행은 사람 색 점만 있고 아바타가 없어** 바꿀 것이 없다. SCR-SET-03 색 미리보기의 글자 원은 색을 고르는 미리보기라 사진을 넣지 않았다 (필요하면 알려 주세요).
 
+2단계(묶음 B와 D의 SCR-SET-01 연결)에서 문서에 없어 정한 것:
+
+14. **사진 읽기·카메라 앱 판정은 인터페이스**(`PickedPhotoReader`, `CameraAvailability`)로 ViewModel과 나눴다. Uri는 `String`으로 주고받아 ViewModel 테스트가 Android 없이 돈다. 구현(`AndroidPickedPhotoReader`, `AndroidCameraAvailability`)은 Hilt `ProfilePhotoModule`이 묶는다. 읽기는 `@IoDispatcher`에서 하고 10MB + 1바이트까지만 읽어(큰 파일 전체를 메모리에 올리지 않음) 넘으면 바로 크기 오류, 읽다 `OutOfMemoryError`가 나면 읽기 실패(공통 오류)다.
+15. **고른 사진은 `PickedPhoto`(올릴 바이트·형식·작은 미리보기 비트맵)로 ViewModel이 저장 전까지 들고 있다.** 미리보기는 짧은 변 512 안팎으로 `inSampleSize`로 줄여 디코드하고 EXIF 회전을 적용해 `Image`로 그린다(Coil에 비트맵을 넣지 않음). 카메라 임시 파일은 읽은 뒤(성공·실패)와 찍지 않고 돌아왔을 때 지운다. 카메라 Uri 문자열은 `rememberSaveable`에 둔다.
+16. **서버가 사진을 413·415로 거부하면 고른 사진을 버린다**(원래 모습으로, 같은 사진은 다시 보내도 실패). 그 밖의 실패는 고른 사진을 그대로 둬 다시 누를 수 있다. 사진이 올라가거나 지워지면 고른 상태를 비운다(Room이 새 원래 값).
+17. **저장이 중간에 실패했을 때 "원래 값"은 Room의 내 정보다.** 이름이 저장되면 `PATCH /me` 응답이 Room을 바꿔 이름은 더 이상 바뀐 것이 아니다. 이름 입력은 사용자가 건드릴 때까지 Room 값을 그대로 보이고, 공백만 다른 이름은 바뀐 것이 아니다. 저장하지 않고 뒤로 가도 확인 대화상자는 없다(문서에 없음).
+18. **디자인시스템에 보드 값 추가**: `DuriseoAvatarSize.XLarge`(112, 글자 40)·`Compact`(36, 14)·`Mini`(22, 10), 고른 사진 미리보기용 `DuriseoAvatarImage`, 아이콘 `ic_pencil`·`ic_camera`·`ic_image`(보드 SVG 그대로). 보드의 ink-300 `#B3AEBB`(비활성 [저장])·brand-700(활성)은 토큰이다. 토큰에 없는 수치(카메라 버튼 40, [사진 변경] 높이 40, 배지 28 등)는 화면 파일의 이름 붙은 상수다.
+19. **프로필 카드 연결**: 보드가 내 아바타·이름·표지를 한 링크로 묶고 접근성 이름을 "내 프로필 수정: [내 이름]"으로 두어 그대로 했다(내 칸 전체가 버튼, 연필 배지는 그 안의 장식). 버튼 줄은 커플 [내 프로필 수정][처음 만난 날 수정], 혼자·게스트 [내 프로필 수정][상대와 연결하기](보드 71·101행). ViewModel은 `SettingsAction.ProfileEditClicked` -> `NavigateToProfileEdit` 효과로 보내 테스트한다. 요청 중(`requesting`)에는 누를 수 없다.
+20. **로그아웃·탈퇴·세션 끊김·계정 전환 때 Coil 메모리·디스크 캐시를 비운다**(NFR-PRIV-01 취지). domain `ProfileImageCacheCleaner`(구현 `data:remote`의 `CoilProfileImageCacheCleaner`, 로더는 `Provider`로 늦게 받아 의존 순환 방지)를 `SessionManager.clearAll`(로그아웃·탈퇴·세션 끊김)과 `clearUserDataOrFail`(로그인·switch가 새 토큰을 저장하기 전)에서 부른다. 실패해도 나머지 정리와 로그인은 계속한다. 결정 3의 남은 일 해결.
+21. **사진 시트의 면은 공용 `DuriseoSheetPanel`**(좌우 24·위 10)을 그대로 썼다(보드는 좌우 20·위 8). 다른 시트와 같은 모양을 지키려는 선택이고 차이는 4dp 안팎이다.
+22. **로그인 계정 줄은 회원인데 로그인 수단을 모르면 줄을 그리지 않는다**(SCR-SET-01 계정 행이 값이 빈 것과 같음). 도움말 "상대 화면과 캘린더에 이 이름으로 보여요. 최대 10자."는 SCREENS.md에는 없고 보드(`ProfileEdit.dc.html` 99행) 문구다.
+23. **오프라인**: 저장소가 요청 없이 `Offline`을 돌려주는 기존 규칙(`runOnlineWrite`)을 그대로 쓰고, ViewModel은 그 결과를 "인터넷 연결이 필요해요"로 보인다. 사진 오류·공통 오류 스낵바는 앱 공통 `onShowSnackBar`가 위 40에 띄운다(`isSnackbarAtTop`이 탭 없는 화면을 이미 포함, `SnackbarPositionTest`에 SCR-SET-04 추가).
+
 ## 리뷰 기록
 
 | 회차 | Critical | Major | 비고 |
@@ -127,7 +140,7 @@
 
 ## 남은 일
 
-- 로그아웃·계정 전환 때 Coil 디스크 캐시(이전 사용자의 사진)를 비울지 (결정 3). `SessionManager`가 지우는 목록에 이미지 캐시를 더하는 일이고 2단계에서 정하면 된다.
-- 2단계: B(SCR-SET-04), 연필 배지·[내 프로필 수정], 사진 시트(`PhotoSheetTest`), 고른 사진을 `PickedPhotoChecker`·`PhotoDownscaler`로 처리해 `ProfileRepository.uploadPhoto`에 연결, `DuriseoAvatar`의 오류 문구 연결(`IMAGE_*` 코드 → D-147 문구).
+- (2단계 끝) 아직 못 확인: 이 환경에서 Gradle이 안 돌아 2단계 코드는 CI로 컴파일·테스트 확인이 필요하다. 실기기 확인(사람): 앨범·카메라로 고르기, 카메라 앱 없는 기기에서 [사진 찍기] 숨김, 큰 사진 줄이기, 저장 중 덮개, 로그아웃 뒤 이전 사진이 남지 않는지.
+- 묶음 E·F·G (정보 섹션, SCR-SET-05, 큰 글자 스크롤)는 3단계.
 - CI에서 컴파일 확인: Coil 3.3.0 API(`Mapper`·`ImageLoader.Builder.components`·`OkHttpNetworkFetcherFactory`), exifinterface 1.4.1.
 -

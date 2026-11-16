@@ -103,6 +103,9 @@ sealed interface SettingsAction {
     data object LogoutConfirmed : SettingsAction
     data object DialogDismissed : SettingsAction
 
+    /** 프로필 카드의 [내 프로필 수정]과 내 아바타의 연필 배지 -> SCR-SET-04 (D-149). 둘은 같은 곳으로 간다 */
+    data object ProfileEditClicked : SettingsAction
+
     /** 프로필 카드의 [처음 만난 날 수정] */
     data object StartDateEditClicked : SettingsAction
     data object StartDatePreviousMonth : SettingsAction
@@ -120,6 +123,9 @@ sealed interface SettingsAction {
 sealed interface SettingsSideEffect {
     /** 공통 스낵바 */
     data class ShowMessage(@StringRes val messageRes: Int) : SettingsSideEffect
+
+    /** 내 프로필 수정(SCR-SET-04)으로 간다 */
+    data object NavigateToProfileEdit : SettingsSideEffect
 
     /** 로그아웃이 끝났다 → SCR-START-01 (백스택을 비운다) */
     data object NavigateToStart : SettingsSideEffect

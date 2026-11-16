@@ -429,4 +429,27 @@ class SettingsViewModelTest {
             expectNoEvents()
         }
     }
+
+    @Test
+    fun `FR-AUTH-07 AC9 내 프로필 수정과 연필 배지는 프로필 화면으로 간다`() = runTest {
+        me.me.value = coupleMe()
+        val vm = viewModel()
+        vm.effects.test {
+            // [내 프로필 수정]과 연필 배지는 같은 동작이다 (D-149)
+            vm.onAction(SettingsAction.ProfileEditClicked)
+
+            assertEquals(SettingsSideEffect.NavigateToProfileEdit, awaitItem())
+        }
+    }
+
+    @Test
+    fun `FR-AUTH-07 AC9 게스트와 혼자 쓰는 회원도 프로필 화면으로 갈 수 있다`() = runTest {
+        me.me.value = guestMe()
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(SettingsAction.ProfileEditClicked)
+
+            assertEquals(SettingsSideEffect.NavigateToProfileEdit, awaitItem())
+        }
+    }
 }

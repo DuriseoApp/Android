@@ -69,6 +69,8 @@ class SnackbarPositionTest {
         assertTrue(atTop(SettingsRouteModel.Account::class))
         assertTrue(atTop(SettingsRouteModel.Colors::class))
         assertTrue(atTop(SettingsRouteModel.ConnectionInfo::class))
+        // SCR-SET-04 내 프로필 (사진 오류 스낵바 위 40, FR-AUTH-07 AC7)
+        assertTrue(atTop(SettingsRouteModel.ProfileEdit::class))
         // 연결 완료 시트(SCR-COUPLE-04)가 캘린더 위에 떠 있는 동안
         assertTrue(atTop(MainRouteModel.Calendar::class, linkedSheetVisible = true))
         // 시트가 없으면 탭 화면은 그대로 하단 탭 위

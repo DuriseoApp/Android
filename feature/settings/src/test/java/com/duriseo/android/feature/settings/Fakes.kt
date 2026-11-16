@@ -18,6 +18,7 @@ import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.me.MeSpace
 import com.duriseo.android.domain.me.SocialProvider
 import com.duriseo.android.domain.me.SpaceType
+import com.duriseo.android.domain.profile.ProfileRepository
 import com.duriseo.android.domain.result.DataResult
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
@@ -212,5 +213,45 @@ class FakeCoupleRepository : CoupleRepository {
         unlinkCalls++
         unlinkGate?.await()
         return unlinkResult
+    }
+}
+
+/** 프로필 쓰기 가짜. 호출 순서를 [calls]에 남기고, 성공하면 실제 저장소처럼 [meRepository]의 내 정보를 바꾼다 */
+class FakeProfileRepository(private val meRepository: FakeMeRepository) : ProfileRepository {
+    /** "name:<이름>", "upload:<mime>:<바이트 수>", "delete" 순서대로 */
+    val calls = mutableListOf<String>()
+
+    /** 앞에서부터 하나씩 쓴다. 비면 성공 */
+    val nameResults = ArrayDeque<DataResult<Unit>>()
+    val uploadResults = ArrayDeque<DataResult<Unit>>()
+    val deleteResults = ArrayDeque<DataResult<Unit>>()
+
+    /** 설정하면 이름 저장이 이 신호를 받을 때까지 멈춘다 (요청 중 상태를 확인하려고) */
+    var nameGate: CompletableDeferred<Unit>? = null
+
+    /** 던지게 하면 저장소가 예외를 던지는 경우를 흉내 낸다 */
+    var uploadThrows: Boolean = false
+
+    override suspend fun updateNickname(nickname: String): DataResult<Unit> {
+        calls += "name:$nickname"
+        nameGate?.await()
+        val result = nameResults.removeFirstOrNull() ?: DataResult.Success(Unit)
+        if (result is DataResult.Success) meRepository.me.value = meRepository.me.value?.copy(nickname = nickname)
+        return result
+    }
+
+    override suspend fun uploadPhoto(bytes: ByteArray, mimeType: String): DataResult<Unit> {
+        calls += "upload:$mimeType:${bytes.size}"
+        if (uploadThrows) throw IllegalStateException("업로드 예외")
+        val result = uploadResults.removeFirstOrNull() ?: DataResult.Success(Unit)
+        if (result is DataResult.Success) meRepository.me.value = meRepository.me.value?.copy(profileImageVersion = "uploaded-v")
+        return result
+    }
+
+    override suspend fun deletePhoto(): DataResult<Unit> {
+        calls += "delete"
+        val result = deleteResults.removeFirstOrNull() ?: DataResult.Success(Unit)
+        if (result is DataResult.Success) meRepository.me.value = meRepository.me.value?.copy(profileImageVersion = null)
+        return result
     }
 }

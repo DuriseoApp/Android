@@ -39,6 +39,13 @@ object PhotoDownscaler {
         return PreparedPhoto(jpeg, PickedPhotoChecker.MIME_JPEG)
     }
 
+    /**
+     * 미리보기용으로 디코드한 [decoded]에 [original] 바이트의 EXIF 방향을 적용해 돌려준다 (카메라 사진이 옆으로 눕지 않게).
+     * 회전이 필요하면 새 비트맵을 만들고 [decoded]는 풀어 준다.
+     */
+    internal fun applyExifOrientation(decoded: Bitmap, original: ByteArray): Bitmap =
+        replace(decoded, applyOrientation(decoded, readOrientation(original)))
+
     /** 픽셀은 읽지 않고 크기만 읽는다. 읽지 못하면 null */
     private fun readBounds(bytes: ByteArray): PixelSize? {
         val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }

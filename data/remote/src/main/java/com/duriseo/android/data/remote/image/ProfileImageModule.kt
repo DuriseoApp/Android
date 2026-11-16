@@ -4,13 +4,17 @@ import android.content.Context
 import coil3.ImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.duriseo.android.core.common.config.AppConfig
+import com.duriseo.android.core.common.coroutines.IoDispatcher
 import com.duriseo.android.data.remote.network.Authed
+import com.duriseo.android.domain.profile.ProfileImageCacheCleaner
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineDispatcher
 import okhttp3.OkHttpClient
+import javax.inject.Provider
 import javax.inject.Singleton
 
 /**
@@ -36,4 +40,12 @@ object ProfileImageModule {
             add(OkHttpNetworkFetcherFactory(callFactory = { client }))
         }
         .build()
+
+    /** 로그아웃·탈퇴·세션 끊김·계정 전환 때 받아 둔 사진을 지운다. 로더는 `Provider`로 늦게 받아 의존 순환을 피한다 */
+    @Provides
+    @Singleton
+    fun provideProfileImageCacheCleaner(
+        loader: Provider<ImageLoader>,
+        @IoDispatcher io: CoroutineDispatcher,
+    ): ProfileImageCacheCleaner = CoilProfileImageCacheCleaner(loader, io)
 }

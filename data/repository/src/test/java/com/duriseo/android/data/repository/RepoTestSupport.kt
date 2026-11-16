@@ -56,6 +56,7 @@ import com.duriseo.android.domain.auth.SocialSessionCleaner
 import com.duriseo.android.domain.auth.TokenState
 import com.duriseo.android.domain.auth.TokenStorage
 import com.duriseo.android.domain.notification.DrawnNotificationCleaner
+import com.duriseo.android.domain.profile.ProfileImageCacheCleaner
 import com.duriseo.android.domain.me.AccountType
 import com.duriseo.android.domain.me.ImportCounts
 import com.duriseo.android.domain.me.MePartner
@@ -131,6 +132,13 @@ class FakeDrawnNotificationCleaner : DrawnNotificationCleaner {
     val cancelCount = AtomicInteger()
     override fun cancelAll() {
         cancelCount.incrementAndGet()
+    }
+}
+
+class FakeProfileImageCacheCleaner : ProfileImageCacheCleaner {
+    val clearCount = AtomicInteger()
+    override suspend fun clear() {
+        clearCount.incrementAndGet()
     }
 }
 
@@ -239,6 +247,7 @@ class RepoHarness(
     val tokens = FakeTokenStorage(initialTokens)
     val social = FakeSocialCleaner()
     val drawnNotifications = FakeDrawnNotificationCleaner()
+    val profileImages = FakeProfileImageCacheCleaner()
     val settingsKey = stringPreferencesKey("sample_setting")
 
     val database: DuriseoDatabase = Room.inMemoryDatabaseBuilder(
@@ -284,6 +293,7 @@ class RepoHarness(
         scope = ioScope,
         cache = cache,
         drawnNotifications = drawnNotifications,
+        profileImages = profileImages,
     )
     val clock: Clock = Clock.fixed(Instant.parse("2026-10-30T00:00:00Z"), ZoneId.of(zoneId))
     val acknowledgedSpace = AcknowledgedSpaceLocalDataSource(settings)

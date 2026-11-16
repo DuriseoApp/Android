@@ -87,6 +87,9 @@ class SettingsViewModel @Inject constructor(
                 local.update { it.copy(logoutDialogVisible = false) }
             }
             SettingsAction.LogoutConfirmed -> logout()
+            SettingsAction.ProfileEditClicked -> {
+                if (!local.value.requesting) effectChannel.trySend(SettingsSideEffect.NavigateToProfileEdit)
+            }
             SettingsAction.StartDateEditClicked -> openStartDateSheet()
             SettingsAction.StartDatePreviousMonth -> moveStartDateMonth(forward = false)
             SettingsAction.StartDateNextMonth -> moveStartDateMonth(forward = true)

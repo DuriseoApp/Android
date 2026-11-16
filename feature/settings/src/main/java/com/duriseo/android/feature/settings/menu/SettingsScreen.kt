@@ -85,6 +85,7 @@ fun SettingsRoute(
     onOpenConnect: () -> Unit,
     onOpenConnectionInfo: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
+    onOpenProfileEdit: () -> Unit,
     onLoggedOut: () -> Unit,
     onShowSnackBar: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -96,6 +97,7 @@ fun SettingsRoute(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is SettingsSideEffect.ShowMessage -> onShowSnackBar(effect.messageRes)
+                SettingsSideEffect.NavigateToProfileEdit -> onOpenProfileEdit()
                 SettingsSideEffect.NavigateToStart -> onLoggedOut()
             }
         }
@@ -204,6 +206,7 @@ fun SettingsScreen(
                     state.space?.let { space ->
                         SettingsProfileCard(
                             space = space,
+                            onEditProfile = { onAction(SettingsAction.ProfileEditClicked) },
                             onEditStartDate = { onAction(SettingsAction.StartDateEditClicked) },
                             onConnect = onOpenConnect,
                             enabled = !state.requesting,
@@ -471,7 +474,7 @@ private fun previewCouple(startDate: LocalDate?) = SettingsSpace.Couple(
 /** 커플: 나·너 아바타, D+N, 처음 만난 날 (`SCR-SET-01.png`) */
 @Preview(showBackground = true, widthDp = 390, heightDp = 1000)
 @Composable
-private fun SettingsScreenCouplePreview() {
+private fun SettingsPreview_Couple() {
     DuriseoTheme {
         SettingsScreen(
             state = SettingsUiState(
@@ -494,7 +497,7 @@ private fun SettingsScreenCouplePreview() {
 /** 혼자(회원): 나 + "아직 없음" + [상대와 연결하기] (`SCR-SET-01--solo.png`) */
 @Preview(showBackground = true, widthDp = 390, heightDp = 1000)
 @Composable
-private fun SettingsScreenAlonePreview() {
+private fun SettingsPreview_Solo() {
     DuriseoTheme {
         SettingsScreen(
             state = SettingsUiState(
@@ -517,7 +520,7 @@ private fun SettingsScreenAlonePreview() {
 /** 게스트: 맨 위 배너 + 혼자 모양 프로필 카드 (`SCR-SET-01--guest.png`) */
 @Preview(showBackground = true, widthDp = 390, heightDp = 1100)
 @Composable
-private fun SettingsScreenGuestProfilePreview() {
+private fun SettingsPreview_Guest() {
     DuriseoTheme {
         SettingsScreen(
             state = SettingsUiState(

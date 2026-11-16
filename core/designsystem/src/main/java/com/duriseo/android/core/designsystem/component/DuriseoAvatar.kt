@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -38,6 +39,9 @@ import com.duriseo.android.core.designsystem.theme.onPersonColor
 private val AvatarLargeSize = 72.dp
 private val AvatarMediumSize = 56.dp
 private val AvatarSmallSize = 32.dp
+private val AvatarXLargeSize = 112.dp
+private val AvatarCompactSize = 36.dp
+private val AvatarMiniSize = 22.dp
 
 /** 아바타 크기 (보드 값: 전체 메뉴 프로필 카드 72, 연결 정보 56) */
 enum class DuriseoAvatarSize(val diameter: Dp, val fontSize: Float) {
@@ -46,6 +50,15 @@ enum class DuriseoAvatarSize(val diameter: Dp, val fontSize: Float) {
 
     /** 캘린더 앱바: 지름 32, 글자 13/700 (`Calendar.dc.html` 70행 `avatar`) */
     Small(AvatarSmallSize, 13f),
+
+    /** 프로필 수정 아바타: 지름 112, 글자 40/700 (`ProfileEdit.dc.html` `circle(112, 40)`) */
+    XLarge(AvatarXLargeSize, 40f),
+
+    /** 프로필 수정 "상대에게 이렇게 보여요" 미리보기: 지름 36, 글자 14/700 (`circle(36, 14)`) */
+    Compact(AvatarCompactSize, 14f),
+
+    /** 프로필 사진 시트 [기본 이미지로 변경] 줄: 지름 22, 글자 10/700 (`circle(22, 10)`) */
+    Mini(AvatarMiniSize, 10f),
 }
 
 /**
@@ -85,6 +98,29 @@ fun DuriseoAvatarPhoto(photo: Any?, modifier: Modifier = Modifier) {
         contentScale = ContentScale.Crop,
         modifier = modifier.clip(DuriseoShapes.Full),
     )
+}
+
+/**
+ * 기기에서 방금 고른 사진을 저장 전에 미리 보여 주는 아바타 (FR-AUTH-07 AC6: 고른 사진은 저장하기 전에는 기기에서 미리보기만 한다).
+ * [DuriseoAvatar]와 같은 크기·같은 자르기(원형, 가운데 채움)이고 서버에서 받지 않는다.
+ */
+@Composable
+fun DuriseoAvatarImage(
+    label: String,
+    colorKey: String,
+    image: ImageBitmap,
+    modifier: Modifier = Modifier,
+    size: DuriseoAvatarSize = DuriseoAvatarSize.Large,
+    fallback: Color = PersonPartner,
+) {
+    DuriseoAvatarFrame(label, colorKey, modifier, size, fallback) {
+        Image(
+            bitmap = image,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.matchParentSize().clip(DuriseoShapes.Full),
+        )
+    }
 }
 
 /** 글자 원 + 그 위에 얹는 [photoLayer]. 미리보기가 Coil 없이 사진 모양을 그리려고 나눠 둔 부분이다 */
