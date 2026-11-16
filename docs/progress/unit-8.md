@@ -1,6 +1,6 @@
 # 단위 8: 프로필 — SCR-SET-04, 프로필 사진, 전체 메뉴 정보, SCR-SET-05
 
-> 브랜치: `feat/8-profile` · PR: #19 · 상태: 진행 중 (2026-11-16 범위 승인, 확인 필요 1~6 추천안대로)
+> 브랜치: `feat/8-profile` · PR: #19 · 상태: PR 완료 (2026-11-16 범위 승인, 확인 필요 1~6 추천안대로)
 > 기준: PRD v0.12 (FR-AUTH-07 AC1~AC9, FR-SET-01, FR-SET-02 AC1~AC4, NFR-FILE-01, NFR-LIMIT-01, NFR-PRIV-01, D-82·D-115·D-126·D-146~D-153), SCREENS.md SCR-SET-01(프로필 카드·정보)·SCR-SET-04·SCR-SET-05, design-system "메일 앱 없음 다이얼로그"·"프로필 카드·연결 상태 카드"·"앱 정보 카드 상태"·"오픈소스 라이선스 목록", API.md 3.1(`PATCH /me`, `/me/profile-image`, `/users/{id}/profile-image`)·5장(413·415)·6장(`SPACE` `UPDATED`)·8장
 > Docs 기준 커밋: DuriseoApp/Docs main `cee0885` (캔버스 버전 43)
 > 앞 단위: 단위 7 머지됨 (main `7d5e2cc`). 서버 단위 7(프로필 사진) 머지·개발 서버 배포됨 (2026-11-14 배포 성공)
@@ -164,8 +164,8 @@
 
 ## 남은 일
 
-- (2단계 끝) 아직 못 확인: 이 환경에서 Gradle이 안 돌아 2단계 코드는 CI로 컴파일·테스트 확인이 필요하다. 실기기 확인(사람): 앨범·카메라로 고르기, 카메라 앱 없는 기기에서 [사진 찍기] 숨김, 큰 사진 줄이기, 저장 중 덮개, 로그아웃 뒤 이전 사진이 남지 않는지.
-- (3단계 끝) 묶음 E·F·G 구현 완료, 이 환경에서 Gradle이 안 돌아 CI 확인 필요: Play `app-update-ktx` 2.1.0 API(`requestAppUpdateInfo`·`startUpdateFlow`·`InstallStateUpdatedListener`), AboutLibraries 플러그인 id·버전·`res/raw/aboutlibraries.json` 생성(결정 30). 실기기 확인(사람): Play 설치 앱에서 새 버전 감지·[업데이트]·백그라운드 설치, 메일 앱 없는 기기의 다이얼로그, 큰 글자 연결 정보, 라이선스 목록 내용, OFL 저작권 줄(결정 31).
-- Docs 후속: [업데이트] 문구(결정 27), 이용약관·개인정보처리방침 주소(Q-03)·문의 주소(Q-10).
-- CI에서 컴파일 확인: Coil 3.3.0 API(`Mapper`·`ImageLoader.Builder.components`·`OkHttpNetworkFetcherFactory`), exifinterface 1.4.1.
--
+- CI: 모든 단계 초록불 (Coil·Play app-update·AboutLibraries 15.3.0 플러그인·`R.raw.aboutlibraries` 컴파일 참조 확인됨).
+- 사람(맥): Room 스키마 JSON 7 생성·커밋.
+- 사람(실기기): 앨범·카메라로 고르기, 카메라 앱 없는 기기의 [사진 찍기] 숨김, 25MP 넘는 사진 줄이기, 저장 중 덮개, 상대 기기에 사진·이름 반영(SYNC), 로그아웃·연결 해제 뒤 이전 사진이 남지 않는지, Play 설치 앱에서 새 버전 감지·[업데이트]·백그라운드 설치, 메일 앱 없는 기기 다이얼로그, 큰 글자 연결 정보·라이선스 목록, 라이선스 목록 내용.
+- 사람(출시 전): OFL 1.1 저작권 줄을 IBM Plex 저장소 `LICENSE.txt`와 대조 (결정 31).
+- Docs 후속: [업데이트] 문구(결정 27), 인앱 업데이트 받는 중·설치 시점(확인 필요 5), SCR-SET-04 이름 도움말(결정 22), 메일 [복사] 뒤 다이얼로그 닫기(결정 25), 라이선스 행 접근성 "펼쳐짐"·"접힘"(결정 37), 약관 주소(Q-03)·문의 주소(Q-10).
