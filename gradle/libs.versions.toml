@@ -41,7 +41,7 @@ googleServices = "4.4.3"
 coil = "3.3.0"
 exifinterface = "1.4.1"
 playAppUpdate = "2.1.0"
-aboutlibraries = "12.2.4"
+aboutlibraries = "15.3.0"
 
 robolectric = "4.15.1"
 androidxTestCore = "1.6.1"

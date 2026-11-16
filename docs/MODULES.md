@@ -68,5 +68,5 @@ PRD에 화면이 추가되면 이 표에 먼저 넣고 모듈을 정한다.
 | 프로필 이미지 | Coil 3 (`coil-compose`·`coil-core`·`coil-network-okhttp` 3.3.0). `coil-network-okhttp`에 앱의 "인증" OkHttp(`@Authed`)를 넣어 Bearer·401 갱신을 그대로 씀. 버전은 CI로 확인 | 8 (추가됨) |
 | 사진 회전(EXIF) | `androidx.exifinterface:exifinterface` 1.4.1 (`feature:settings`, 25MP를 넘는 사진을 줄일 때 방향 읽기) | 8 (추가됨, 버전은 CI로 확인) |
 | 인앱 업데이트 | `com.google.android.play:app-update-ktx` 2.1.0 (`core:common`, FLEXIBLE 방식. 코드는 `app-update`의 `AppUpdateManager` 등을 쓰고 ktx는 `requestAppUpdateInfo`만 씀). 버전은 CI로 확인 | 8 (추가됨, 버전은 CI로 확인) |
-| 오픈소스 라이선스 | AboutLibraries **Gradle 플러그인만** (`com.mikepenz.aboutlibraries.plugin.android` 12.2.4, `app`에 적용, 기본 설정). 빌드 때 의존성의 이름·라이선스 JSON(`res/raw/aboutlibraries.json`)을 만들고 화면은 우리 토큰으로 직접 그림. `aboutlibraries-core`·UI 모듈은 쓰지 않음(JSON을 `kotlinx-serialization-json`으로 직접 읽음, `feature:settings`). 플러그인 id·버전은 CI로 확인 | 8 (추가됨, 버전은 CI로 확인) |
+| 오픈소스 라이선스 | AboutLibraries **Gradle 플러그인만** (`com.mikepenz.aboutlibraries.plugin.android` 15.3.0, `app`에 적용, 기본 설정). 빌드 때 의존성의 이름·라이선스 JSON(`res/raw/aboutlibraries.json`)을 만들고 화면은 우리 토큰으로 직접 그림. `aboutlibraries-core`·UI 모듈은 쓰지 않음(JSON을 `kotlinx-serialization-json`으로 직접 읽음, `feature:settings`). 플러그인 id·버전은 CI로 확인 | 8 (추가됨, 버전은 CI로 확인) |
 | 테스트 | kotlinx-coroutines-test, Turbine, OkHttp MockWebServer | 1 (추가됨) |
