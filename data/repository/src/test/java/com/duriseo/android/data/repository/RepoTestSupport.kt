@@ -142,8 +142,14 @@ class FakeDrawnNotificationCleaner : DrawnNotificationCleaner {
 
 class FakeProfileImageCacheCleaner : ProfileImageCacheCleaner {
     val clearCount = AtomicInteger()
+
+    /** true면 지우기가 실패한다 (나머지 정리가 계속되는지 확인용) */
+    @Volatile
+    var fail = false
+
     override suspend fun clear() {
         clearCount.incrementAndGet()
+        if (fail) throw IllegalStateException("사진 캐시 정리 실패")
     }
 }
 
