@@ -24,6 +24,7 @@ import com.duriseo.android.domain.memo.Memo
 import com.duriseo.android.domain.memo.MemoRepository
 import com.duriseo.android.domain.memo.MemoTexts
 import com.duriseo.android.domain.notification.NotificationRepository
+import com.duriseo.android.domain.profile.profileImageOf
 import com.duriseo.android.domain.result.DataResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -307,11 +308,14 @@ class CalendarViewModel @Inject constructor(
 
 private fun Me.toHeader(today: LocalDate): CalendarHeader {
     val partner = space.partner
-    if (space.type != SpaceType.COUPLE || partner == null) return CalendarHeader.Solo(space.myColor)
+    val myPhoto = profileImageOf(id, profileImageVersion)
+    if (space.type != SpaceType.COUPLE || partner == null) return CalendarHeader.Solo(space.myColor, myPhoto)
     return CalendarHeader.Couple(
         myColorKey = space.myColor,
         partnerColorKey = partner.color,
         dayNumber = space.startDate?.let { DayCount.of(it, today) },
+        myPhoto = myPhoto,
+        partnerPhoto = profileImageOf(partner.id, partner.profileImageVersion),
     )
 }
 

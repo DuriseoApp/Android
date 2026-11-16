@@ -1,4 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
+        카메라 앱이 있는지 찾으려고 (Android 11 이상 패키지 가시성). 권한이 아니다.
+        CAMERA·저장소 권한은 선언하지 않는다: 사진은 기기 사진 선택기와 카메라 앱이 건네주고, 앱은 FileProvider Uri만 쓴다 (D-149).
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+    </queries>
+
+    <application>
+        <!-- 카메라 앱이 사진을 쓸 임시 파일 Uri (앱 캐시 profile_photo/). ProfilePhotoFiles -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.profilephoto"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/profile_photo_paths" />
+        </provider>
+    </application>
+
 </manifest>

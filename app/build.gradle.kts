@@ -63,6 +63,9 @@ dependencies {
     // Hilt 바인딩(리포지토리, 원격, 로컬)을 앱 그래프에 모으기 위해
     implementation(projects.data.repository)
 
+    // 프로필 사진 이미지 로더를 앱 전체 로더로 등록 (SingletonImageLoader.Factory)
+    implementation(libs.coil.core)
+
     implementation(libs.timber)
 
     implementation(libs.androidx.core.ktx)

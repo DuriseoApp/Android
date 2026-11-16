@@ -12,6 +12,7 @@ import com.duriseo.android.data.repository.notification.NotificationPermissionGa
 import com.duriseo.android.data.repository.notification.NotificationRepositoryImpl
 import com.duriseo.android.data.repository.notification.NotificationSettingsRepositoryImpl
 import com.duriseo.android.data.repository.notification.NotificationTapHandlerImpl
+import com.duriseo.android.data.repository.profile.ProfileRepositoryImpl
 import com.duriseo.android.data.repository.sync.SyncDispatcher
 import com.duriseo.android.domain.anniversary.AnniversaryRepository
 import com.duriseo.android.domain.auth.AuthRepository
@@ -25,6 +26,7 @@ import com.duriseo.android.domain.notification.NotificationPermissionGate
 import com.duriseo.android.domain.notification.NotificationRepository
 import com.duriseo.android.domain.notification.NotificationSettingsRepository
 import com.duriseo.android.domain.notification.NotificationTapHandler
+import com.duriseo.android.domain.profile.ProfileRepository
 import com.duriseo.android.domain.sync.SyncSignalReceiver
 import com.duriseo.android.domain.sync.SyncSpaceSignals
 import dagger.Binds
@@ -43,6 +45,10 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindMeRepository(impl: MeRepositoryImpl): MeRepository
+
+    /** 내 프로필 쓰기: 이름·사진 (SCR-SET-04, 단위 8) */
+    @Binds
+    abstract fun bindProfileRepository(impl: ProfileRepositoryImpl): ProfileRepository
 
     @Binds
     abstract fun bindCoupleRepository(impl: CoupleRepositoryImpl): CoupleRepository

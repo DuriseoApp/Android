@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 카메라 앱이 쓰는 임시 사진: 앱 캐시의 profile_photo/ 만 FileProvider로 연다 (ProfilePhotoFiles, FR-AUTH-07 AC9) -->
+<paths>
+    <cache-path
+        name="profile_photo"
+        path="profile_photo/" />
+</paths>

@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.domain.event.EventTarget
 import com.duriseo.android.domain.event.EventTime
+import com.duriseo.android.domain.profile.ProfileImage
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -125,6 +126,29 @@ class CalendarViewModelTest {
     fun `FR-CAL-01 AC5 개인 공간은 내 아바타와 나의 캘린더가 보인다`() = runTest {
         me.me.value = soloMe()
         assertEquals(CalendarHeader.Solo("pick-orange"), viewModel().uiState.value.header)
+    }
+
+    @Test
+    fun `FR-AUTH-07 AC3 앱바의 커플 아바타는 두 사람의 사진 모델을 가진다`() = runTest {
+        val base = coupleMe()
+        me.me.value = base.copy(
+            profileImageVersion = "my-ver",
+            space = base.space.copy(partner = base.space.partner!!.copy(profileImageVersion = "partner-ver")),
+        )
+
+        val header = viewModel().uiState.value.header as CalendarHeader.Couple
+
+        assertEquals(ProfileImage(MyId, "my-ver"), header.myPhoto)
+        assertEquals(ProfileImage(PartnerId, "partner-ver"), header.partnerPhoto)
+    }
+
+    @Test
+    fun `FR-AUTH-07 AC3 개인 공간 앱바의 내 아바타는 내 사진 모델을 가지고 사진이 없으면 null이다`() = runTest {
+        me.me.value = soloMe().copy(profileImageVersion = "my-ver")
+        assertEquals(CalendarHeader.Solo("pick-orange", ProfileImage(MyId, "my-ver")), viewModel().uiState.value.header)
+
+        me.me.value = soloMe()
+        assertEquals(CalendarHeader.Solo("pick-orange", null), viewModel().uiState.value.header)
     }
 
     @Test

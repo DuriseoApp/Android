@@ -36,6 +36,8 @@ internal fun Me.toEntity(): MeEntity = MeEntity(
     importEvents = space.importCounts?.events,
     importAnniversaries = space.importCounts?.anniversaries,
     importMemos = space.importCounts?.memos,
+    profileImageVersion = profileImageVersion,
+    partnerProfileImageVersion = space.partner?.profileImageVersion,
 )
 
 /**
@@ -62,6 +64,7 @@ internal fun MeEntity.toDomainOrNull(): Me? {
             nickname = partnerNickname ?: return null,
             color = partnerColor ?: return null,
             hasProfileImage = partnerHasProfileImage ?: return null,
+            profileImageVersion = partnerProfileImageVersion,
         )
     }
     val start = try {
@@ -86,6 +89,7 @@ internal fun MeEntity.toDomainOrNull(): Me? {
         providers = providerList,
         hasProfileImage = hasProfileImage,
         createdAt = Instant.ofEpochMilli(createdAt),
+        profileImageVersion = profileImageVersion,
         space = MeSpace(
             id = spaceId,
             type = spaceKind,

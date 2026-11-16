@@ -8,6 +8,9 @@ import com.duriseo.android.domain.notification.NotificationSettingKind
 import com.duriseo.android.domain.notification.NotificationSettings
 import com.duriseo.android.domain.result.DataResult
 import com.duriseo.android.domain.result.map
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -22,6 +25,20 @@ class MeRemoteDataSource @Inject constructor(
     /** `PATCH /me {timeZone}` (NFR-TIME-01). `nickname`은 보내지 않는다 */
     suspend fun patchTimeZone(timeZone: String): DataResult<Me> =
         apiCaller.call { api.patchMe(UpdateMeRequest(timeZone = timeZone)) }.map { it.toDomain() }
+
+    /** `PATCH /me {nickname}` (FR-AUTH-07 AC6). 앞뒤 공백은 부르는 쪽이 지운다. `timeZone`은 보내지 않는다 */
+    suspend fun patchNickname(nickname: String): DataResult<Me> =
+        apiCaller.call { api.patchMe(UpdateMeRequest(nickname = nickname)) }.map { it.toDomain() }
+
+    /** `PUT /me/profile-image`: multipart 필드 `file` 하나, Content-Type은 [mimeType] (`image/jpeg`·`image/png`). 사진 바이트는 로그에 남기지 않는다 */
+    suspend fun putProfileImage(bytes: ByteArray, mimeType: String): DataResult<Unit> {
+        val fileName = if (mimeType == "image/png") "profile.png" else "profile.jpg"
+        val part = MultipartBody.Part.createFormData("file", fileName, bytes.toRequestBody(mimeType.toMediaType()))
+        return apiCaller.callUnit { api.putProfileImage(part) }
+    }
+
+    /** `DELETE /me/profile-image` (204) */
+    suspend fun deleteProfileImage(): DataResult<Unit> = apiCaller.callUnit { api.deleteProfileImage() }
 
     suspend fun deleteMe(): DataResult<Unit> = apiCaller.callUnit { api.deleteMe() }
 

@@ -5,6 +5,8 @@ import com.duriseo.android.domain.anniversary.DayCount
 import com.duriseo.android.domain.me.Me
 import com.duriseo.android.domain.me.SocialProvider
 import com.duriseo.android.domain.me.SpaceType
+import com.duriseo.android.domain.profile.ProfileImage
+import com.duriseo.android.domain.profile.profileImageOf
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
@@ -18,8 +20,11 @@ sealed interface SettingsAccount {
     data class Member(val provider: SocialProvider?) : SettingsAccount
 }
 
-/** 프로필 카드·연결 정보에 보이는 한 사람. [colorKey]는 팔레트 키 (모르는 키는 아바타가 기본 색으로 그린다) */
-data class SettingsPerson(val name: String, val colorKey: String)
+/**
+ * 프로필 카드·연결 정보에 보이는 한 사람. [colorKey]는 팔레트 키 (모르는 키는 아바타가 기본 색으로 그린다).
+ * [photo]는 프로필 사진 모델이고 사진이 없으면 null이다 (FR-AUTH-07 AC3·AC4)
+ */
+data class SettingsPerson(val name: String, val colorKey: String, val photo: ProfileImage? = null)
 
 /**
  * 프로필 카드와 연결 정보 화면이 쓰는 공간 요약 (SCREENS.md SCR-SET-01 "프로필 카드", FR-SET-01).
@@ -46,13 +51,13 @@ sealed interface SettingsSpace {
 
 /** 내 정보에서 공간 요약을 만든다. [today]는 기기 시계의 오늘, [zone]은 기기 시간대 */
 internal fun Me.toSettingsSpace(today: LocalDate, zone: ZoneId): SettingsSpace {
-    val myself = SettingsPerson(nickname, space.myColor)
+    val myself = SettingsPerson(nickname, space.myColor, profileImageOf(id, profileImageVersion))
     val partner = space.partner
     if (space.type != SpaceType.COUPLE || partner == null) return SettingsSpace.Alone(myself)
     val start = space.startDate
     return SettingsSpace.Couple(
         me = myself,
-        partner = SettingsPerson(partner.nickname, partner.color),
+        partner = SettingsPerson(partner.nickname, partner.color, profileImageOf(partner.id, partner.profileImageVersion)),
         togetherColorKey = space.togetherColor.orEmpty(),
         startDate = start,
         dayNumber = start?.let { DayCount.of(it, today) },

@@ -94,11 +94,14 @@ class MeRepositoryImpl @Inject constructor(
             current.copy(
                 nickname = mine?.nickname ?: current.nickname,
                 hasProfileImage = mine?.hasProfileImage ?: current.hasProfileImage,
+                // 사진 버전은 null이 "사진 없음"이라 구성원이 있을 때는 그 값을 그대로 쓴다 (없던 사진이 지워진 것도 반영)
+                profileImageVersion = if (mine != null) mine.profileImageVersion else current.profileImageVersion,
                 myColor = mine?.color ?: current.myColor,
                 partnerId = partner?.userId ?: current.partnerId,
                 partnerNickname = partner?.nickname ?: current.partnerNickname,
                 partnerColor = partner?.color ?: current.partnerColor,
                 partnerHasProfileImage = partner?.hasProfileImage ?: current.partnerHasProfileImage,
+                partnerProfileImageVersion = if (partner != null) partner.profileImageVersion else current.partnerProfileImageVersion,
                 togetherColor = space.togetherColor,
                 startDate = space.startDate?.toString(),
                 linkedAt = space.linkedAt?.toEpochMilli(),
@@ -156,6 +159,13 @@ class MeRepositoryImpl @Inject constructor(
         val generation = cache.current()
         return save(networkMonitor.runOnlineWrite { remote.patchTimeZone(zoneId) }, generation)
     }
+
+    /**
+     * 내 정보를 바꾸는 쓰기(`PATCH /me`, 단위 8 프로필)의 응답 `Me`를 Room에 저장한다. [generation]은 쓰기를 보내기 전에
+     * `LocalCacheGeneration.current()`로 적어 둔 값이다 (그 사이 캐시가 지워졌으면 저장하지 않는다). 실패는 그대로 돌려준다.
+     * `ProfileRepositoryImpl`이 쓰고, [MeWriteLock] 아래에서 저장해 `GET /me` 저장과 섞이지 않는다.
+     */
+    internal suspend fun saveWrittenMe(result: DataResult<Me>, generation: Long): DataResult<Unit> = save(result, generation)
 
     /** [generation]이 있으면 그 세대의 응답만 저장한다 (캐시를 지운 뒤에 도착한 이전 세대 응답은 버리고 성공으로 돌려준다).
      * 확인은 [MeWriteLock] 아래에서 한다. 지우는 쪽 대부분이 이 락 아래라 확인과 저장 사이에 끼어들지 못한다

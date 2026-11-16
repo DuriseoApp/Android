@@ -4,11 +4,13 @@ import app.cash.turbine.test
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.domain.format.WrittenAt
 import com.duriseo.android.domain.memo.MemoView
+import com.duriseo.android.domain.profile.ProfileImage
 import com.duriseo.android.feature.memo.FakeMemoRepository
 import com.duriseo.android.feature.memo.FakeMeRepository
 import com.duriseo.android.feature.memo.FakeMidnightTicker
 import com.duriseo.android.feature.memo.MutableClock
 import com.duriseo.android.feature.memo.Offline
+import com.duriseo.android.feature.memo.MyId
 import com.duriseo.android.feature.memo.PartnerId
 import com.duriseo.android.feature.memo.TestClock
 import com.duriseo.android.feature.memo.coupleMe
@@ -112,6 +114,34 @@ class MemoListViewModelTest {
         assertEquals(2027, items[1].memoDate?.year)
         assertFalse(items[0].canEdit)
         assertTrue(items[1].canEdit)
+    }
+
+    @Test
+    fun `FR-AUTH-07 AC3 핀 카드의 작성자 아바타는 작성자의 사진 모델을 가진다`() = runTest {
+        val base = coupleMe()
+        me.me.value = base.copy(
+            profileImageVersion = "my-ver",
+            space = base.space.copy(partner = base.space.partner!!.copy(profileImageVersion = "partner-ver")),
+        )
+        repo.setList(
+            MemoView.NEWEST,
+            listOf(makeMemo("mine", authorId = MyId), makeMemo("theirs", authorId = PartnerId)),
+        )
+
+        val items = viewModel().uiState.value.items
+
+        assertEquals(ProfileImage(MyId, "my-ver"), items[0].photo)
+        assertEquals(ProfileImage(PartnerId, "partner-ver"), items[1].photo)
+    }
+
+    @Test
+    fun `FR-AUTH-07 AC4 작성자에게 사진이 없으면 사진 모델이 null이다`() = runTest {
+        repo.setList(MemoView.NEWEST, listOf(makeMemo("mine", authorId = MyId), makeMemo("theirs", authorId = PartnerId)))
+
+        val items = viewModel().uiState.value.items
+
+        assertEquals(null, items[0].photo)
+        assertEquals(null, items[1].photo)
     }
 
     @Test

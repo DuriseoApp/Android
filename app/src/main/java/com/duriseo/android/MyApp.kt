@@ -3,16 +3,20 @@ package com.duriseo.android
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
 import com.duriseo.android.core.common.social.SocialSdkInitializer
 import com.duriseo.android.core.push.ProcessUiState
 import com.duriseo.android.core.push.PushInitializer
 import com.duriseo.android.data.repository.auth.SessionStartup
+import dagger.Lazy
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import javax.inject.Inject
 
 @HiltAndroidApp
-class MyApp : Application() {
+class MyApp : Application(), SingletonImageLoader.Factory {
 
     @Inject
     lateinit var socialSdkInitializer: SocialSdkInitializer
@@ -25,6 +29,10 @@ class MyApp : Application() {
 
     @Inject
     lateinit var processUiState: ProcessUiState
+
+    /** 프로필 사진을 받는 로더 (`data:remote`의 `ProfileImageModule`: 인증 OkHttp). 처음 사진을 그릴 때 만든다 */
+    @Inject
+    lateinit var imageLoader: Lazy<ImageLoader>
 
     override fun onCreate() {
         super.onCreate()
@@ -45,6 +53,9 @@ class MyApp : Application() {
             ),
         )
     }
+
+    /** Coil의 `AsyncImage`가 쓰는 앱 전체 로더. 사진 요청에 Bearer 헤더와 401 토큰 갱신이 붙는다 */
+    override fun newImageLoader(context: PlatformContext): ImageLoader = imageLoader.get()
 
     private fun initTimber() {
         if (BuildConfig.DEBUG) {

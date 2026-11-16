@@ -257,7 +257,13 @@ private fun PersonColumn(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(PersonGap),
     ) {
-        DuriseoAvatar(label = letter, colorKey = person.colorKey, size = DuriseoAvatarSize.Large, fallback = fallback)
+        DuriseoAvatar(
+            label = letter,
+            colorKey = person.colorKey,
+            size = DuriseoAvatarSize.Large,
+            fallback = fallback,
+            photo = person.photo,
+        )
         Text(
             text = person.name,
             modifier = Modifier.widthIn(max = NameMaxWidth),

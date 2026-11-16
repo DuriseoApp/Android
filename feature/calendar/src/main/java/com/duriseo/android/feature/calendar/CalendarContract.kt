@@ -2,6 +2,7 @@ package com.duriseo.android.feature.calendar
 
 import androidx.annotation.StringRes
 import com.duriseo.android.domain.event.EventTarget
+import com.duriseo.android.domain.profile.ProfileImage
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
@@ -57,15 +58,19 @@ sealed interface CalendarHeader {
     /** 내 정보를 아직 받지 못했다. 앱바 내용은 비운다 */
     data object Loading : CalendarHeader
 
-    data class Solo(val myColorKey: String) : CalendarHeader
+    /** @property myPhoto 내 프로필 사진 모델. 사진이 없으면 null (FR-AUTH-07 AC3·AC4) */
+    data class Solo(val myColorKey: String, val myPhoto: ProfileImage? = null) : CalendarHeader
 
     /**
      * @property dayNumber 함께한 지 D+N의 N (처음 만난 날이 1일, 최소 1: D-116). 처음 만난 날이 없으면 null이고 입력 안내가 보인다
+     * @property myPhoto 내 프로필 사진 모델, [partnerPhoto]는 상대 사진 모델. 사진이 없으면 null (FR-AUTH-07 AC3·AC4)
      */
     data class Couple(
         val myColorKey: String,
         val partnerColorKey: String,
         val dayNumber: Long?,
+        val myPhoto: ProfileImage? = null,
+        val partnerPhoto: ProfileImage? = null,
     ) : CalendarHeader
 }
 

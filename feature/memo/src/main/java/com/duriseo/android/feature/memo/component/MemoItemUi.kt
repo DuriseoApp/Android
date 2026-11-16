@@ -6,6 +6,8 @@ import com.duriseo.android.domain.format.WrittenAt
 import com.duriseo.android.domain.me.Me
 import com.duriseo.android.domain.memo.Memo
 import com.duriseo.android.domain.memo.MemoTexts
+import com.duriseo.android.domain.profile.ProfileImage
+import com.duriseo.android.domain.profile.profileImageOf
 import java.time.Clock
 import java.time.LocalDate
 
@@ -20,6 +22,7 @@ enum class MemoAuthor { ME, PARTNER }
  * @property writtenAt 작성일 표기 계산 결과 (D-129). 문구는 화면이 붙인다
  * @property memoDate 메모 날짜 칩. 없으면 null
  * @property canEdit 내가 만든 메모만 true: 수정·삭제 (FR-MEMO-03 AC1·AC2)
+ * @property photo 작성자 프로필 사진 모델 (핀 카드의 작성자 아바타). 사진이 없으면 null (FR-AUTH-07 AC3·AC4)
  */
 data class MemoItemUi(
     val id: String,
@@ -32,12 +35,14 @@ data class MemoItemUi(
     val isPinned: Boolean,
     val isFavorite: Boolean,
     val canEdit: Boolean,
+    val photo: ProfileImage? = null,
 )
 
 /** [Memo]를 화면 값으로 바꾼다. 오늘·어제·올해는 [clock]의 기기 시간대로 가른다 (D-129) */
 internal fun Memo.toItemUi(me: Me, clock: Clock): MemoItemUi {
     val mine = authorId == me.id
     val today = LocalDate.now(clock)
+    val partner = me.space.partner
     return MemoItemUi(
         id = id,
         title = MemoTexts.listTitle(this),
@@ -49,6 +54,11 @@ internal fun Memo.toItemUi(me: Me, clock: Clock): MemoItemUi {
         isPinned = isPinned,
         isFavorite = isFavorite,
         canEdit = mine,
+        photo = if (mine) {
+            profileImageOf(me.id, me.profileImageVersion)
+        } else {
+            profileImageOf(partner?.id, partner?.profileImageVersion)
+        },
     )
 }
 

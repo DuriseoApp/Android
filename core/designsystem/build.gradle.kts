@@ -14,6 +14,9 @@ dependencies {
     // Google Downloadable Fonts (IBM Plex Sans KR / IBM Plex Mono)
     implementation(libs.androidx.compose.ui.text.google.fonts)
 
+    // 프로필 사진을 원형으로 그리는 아바타 (docs/MODULES.md 3장, 단위 8)
+    implementation(libs.coil.compose)
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

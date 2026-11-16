@@ -426,6 +426,7 @@ private fun PersonItem(person: SettingsPerson, letter: String, fallback: Color) 
             colorKey = person.colorKey,
             size = DuriseoAvatarSize.Medium,
             fallback = fallback,
+            photo = person.photo,
         )
         Text(
             text = person.name,

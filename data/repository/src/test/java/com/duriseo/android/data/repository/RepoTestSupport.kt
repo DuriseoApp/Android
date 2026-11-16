@@ -47,6 +47,7 @@ import com.duriseo.android.data.repository.notification.NotificationTapHandlerIm
 import com.duriseo.android.domain.device.PushTokenProvider
 import com.duriseo.android.data.repository.me.MeRepositoryImpl
 import com.duriseo.android.data.repository.memo.MemoRepositoryImpl
+import com.duriseo.android.data.repository.profile.ProfileRepositoryImpl
 import com.duriseo.android.data.repository.cache.LocalCacheGeneration
 import com.duriseo.android.data.repository.me.MeWriteLock
 import com.duriseo.android.data.repository.me.toEntity
@@ -291,6 +292,7 @@ class RepoHarness(
     val anniversaryLocal = AnniversaryLocalDataSource(database.anniversaryDao())
     val memoLocal = MemoLocalDataSource(database.memoDao())
     val meRepository = MeRepositoryImpl(meRemote, meLocal, monitor, acknowledgedSpace, session, writeLock, eventLocal, anniversaryLocal, memoLocal, cache)
+    val profileRepository = ProfileRepositoryImpl(meRemote, meRepository, monitor, cache)
     val pushTokens = FakePushTokenProvider()
     val deviceRegistrar = DeviceRegistrarImpl(meRemote, tokens, monitor, pushTokens)
     val authRepository = AuthRepositoryImpl(authRemote, meRemote, tokens, session, meRepository, monitor, clock, deviceRegistrar, ioScope)

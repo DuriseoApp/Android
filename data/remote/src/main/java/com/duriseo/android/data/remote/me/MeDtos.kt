@@ -28,6 +28,8 @@ data class MePartnerDto(
     val nickname: String,
     val color: String,
     val hasProfileImage: Boolean,
+    /** 사진의 버전(객체 키 uuid). 사진이 없으면 null (API.md 3.1) */
+    val profileImageVersion: String? = null,
 )
 
 /** API.md 3.1 `ImportCounts`. 각각 0 이상이고 합은 1 이상이다 */
@@ -63,10 +65,12 @@ data class MeDto(
     val hasProfileImage: Boolean,
     @Contextual val createdAt: Instant,
     val space: MeSpaceDto,
+    /** 내 사진의 버전(객체 키 uuid). 사진이 없으면 null (API.md 3.1) */
+    val profileImageVersion: String? = null,
 )
 
 /**
- * `PATCH /me` 요청. 없는 필드는 바꾸지 않으므로 보내지 않을 필드는 `null`로 둔다.
+ * `PATCH /me` 요청. 단위 2는 `timeZone`, 단위 8은 `nickname`을 보낸다. 없는 필드는 바꾸지 않으므로 보내지 않을 필드는 `null`로 둔다.
  * API 본문용 `Json`이 `explicitNulls = false`라서 `null`은 필드째 생략된다 (`null`을 보내면 400, API 3.1).
  */
 @Serializable
@@ -96,6 +100,7 @@ fun MeDto.toDomain(): Me = Me(
     hasProfileImage = hasProfileImage,
     createdAt = createdAt,
     space = space.toDomain(),
+    profileImageVersion = profileImageVersion,
 )
 
 private fun MeSpaceDto.toDomain(): MeSpace = MeSpace(
@@ -105,7 +110,7 @@ private fun MeSpaceDto.toDomain(): MeSpace = MeSpace(
         SpaceTypeDto.COUPLE -> SpaceType.COUPLE
     },
     myColor = myColor,
-    partner = partner?.let { MePartner(it.id, it.nickname, it.color, it.hasProfileImage) },
+    partner = partner?.let { MePartner(it.id, it.nickname, it.color, it.hasProfileImage, it.profileImageVersion) },
     togetherColor = togetherColor,
     startDate = startDate,
     importPending = importPending,

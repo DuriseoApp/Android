@@ -314,4 +314,78 @@ class MeRepositoryTest {
         assertEquals("fresh-user", h.roomMe()?.id)
         assertEquals("Asia/Seoul", h.roomMe()?.timeZone)
     }
+
+    @Test
+    fun `FR-AUTH-07 AC3 GET me의 사진 버전을 저장한다`() = runTestWithTimeout {
+        val h = harness()
+        server.enqueue(
+            jsonResponse(
+                200,
+                """{"id":"11111111-1111-1111-1111-111111111111","accountType":"MEMBER","nickname":"민수",
+                    "timeZone":"Asia/Seoul","providers":["GOOGLE"],"hasProfileImage":true,"profileImageVersion":"my-ver-1",
+                    "createdAt":"2026-10-12T03:00:00Z",
+                    "space":{"id":"33333333-3333-3333-3333-333333333333","type":"COUPLE","myColor":"pick-orange",
+                    "partner":{"id":"44444444-4444-4444-4444-444444444444","nickname":"지우","color":"pick-blue",
+                               "hasProfileImage":true,"profileImageVersion":"partner-ver-1"},
+                    "togetherColor":"pick-purple","startDate":null,"linkedAt":"2026-10-12T03:00:00Z","importPending":false,"importCounts":null}}""",
+            ),
+        )
+
+        h.meRepository.refreshMe()
+
+        val me = h.roomMe()
+        assertEquals("my-ver-1", me?.profileImageVersion)
+        assertEquals("partner-ver-1", me?.space?.partner?.profileImageVersion)
+    }
+
+    @Test
+    fun `FR-AUTH-07 AC3 사진 버전이 없는 응답은 null로 저장한다`() = runTestWithTimeout {
+        val h = harness()
+        server.enqueue(jsonResponse(200, coupleMeJson()))
+
+        h.meRepository.refreshMe()
+
+        assertNull(h.roomMe()?.profileImageVersion)
+        assertNull(h.roomMe()?.space?.partner?.profileImageVersion)
+    }
+
+    @Test
+    fun `FR-AUTH-07 AC3 GET space의 구성원 사진 버전을 합친다`() = runTestWithTimeout {
+        val h = harness()
+        server.enqueue(jsonResponse(200, coupleMeJson()))
+        h.meRepository.refreshMe()
+        server.enqueue(
+            jsonResponse(
+                200,
+                """{"id":"33333333-3333-3333-3333-333333333333","type":"COUPLE","togetherColor":"pick-purple",
+                    "startDate":null,"linkedAt":"2026-10-12T03:00:00Z","members":[
+                    {"userId":"11111111-1111-1111-1111-111111111111","nickname":"민수","color":"pick-orange",
+                     "hasProfileImage":true,"profileImageVersion":"my-ver-2"},
+                    {"userId":"44444444-4444-4444-4444-444444444444","nickname":"지우","color":"pick-blue",
+                     "hasProfileImage":true,"profileImageVersion":"partner-ver-2"}]}""",
+            ),
+        )
+
+        h.meRepository.refreshSpace()
+
+        val me = h.roomMe()
+        assertEquals("my-ver-2", me?.profileImageVersion)
+        assertEquals("partner-ver-2", me?.space?.partner?.profileImageVersion)
+
+        // 상대가 사진을 지우면 버전이 null이 된다 (이전 값을 남기지 않는다)
+        server.enqueue(
+            jsonResponse(
+                200,
+                """{"id":"33333333-3333-3333-3333-333333333333","type":"COUPLE","togetherColor":"pick-purple",
+                    "startDate":null,"linkedAt":"2026-10-12T03:00:00Z","members":[
+                    {"userId":"11111111-1111-1111-1111-111111111111","nickname":"민수","color":"pick-orange",
+                     "hasProfileImage":true,"profileImageVersion":"my-ver-2"},
+                    {"userId":"44444444-4444-4444-4444-444444444444","nickname":"지우","color":"pick-blue",
+                     "hasProfileImage":false,"profileImageVersion":null}]}""",
+            ),
+        )
+        h.meRepository.refreshSpace()
+        assertNull(h.roomMe()?.space?.partner?.profileImageVersion)
+        assertEquals("my-ver-2", h.roomMe()?.profileImageVersion)
+    }
 }

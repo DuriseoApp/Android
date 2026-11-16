@@ -19,6 +19,10 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
 
+    // 프로필 사진: 인증 OkHttp로 받는 Coil ImageLoader (docs/MODULES.md 3장, 단위 8)
+    implementation(libs.coil.core)
+    implementation(libs.coil.network.okhttp)
+
     implementation(libs.androidx.core.ktx)
 
     testImplementation(libs.junit)

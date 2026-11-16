@@ -104,7 +104,21 @@
 
 ## 결정
 
-(구현하면서 채움)
+1단계(묶음 A·C·D)에서 문서에 없어 정한 것:
+
+1. **사진 모델은 도메인 `ProfileImage(userId, version)`.** feature는 URL·서버 주소를 모른다. `DuriseoAvatar(photo: Any?)`에 이 값을 넘기면 `data:remote`의 Coil `Mapper<ProfileImage, String>`(`ProfileImageMapper`)이 주소로 바꾼다. 버전이 null이면 `profileImageOf`가 null을 돌려줘 요청하지 않는다.
+2. **주소는 `<서버 주소>/api/v1/users/{id}/profile-image?v=<version>`.** API.md 경로는 모두 `/api/v1` 아래라 `AppConfig.apiV1BaseUrl()`에 붙인다 (요청 문장의 `<서버주소>/users/…`는 `/api/v1`이 빠진 줄임으로 봄). 서버 주소가 비면(CI) 주소가 null이라 요청하지 않는다.
+3. **`ImageLoader`는 `data:remote`의 `ProfileImageModule`이 인증 OkHttp(`@Authed`)로 만들고, 앱 `MyApp`이 `SingletonImageLoader.Factory`로 등록한다** (`dagger.Lazy`). 디스크·메모리 캐시는 Coil 기본이고 키는 주소(사용자 ID + 버전)다. 로그아웃 때 디스크 캐시를 비우는 일은 하지 않았다 (남은 일).
+4. **라이브러리**: Coil 3.3.0 (`coil-core`·`coil-compose`·`coil-network-okhttp`, `coil-core`는 `ImageLoader`·`Mapper`를 data:remote·app이 직접 써서 더함), `androidx.exifinterface` 1.4.1. 버전은 이 환경에서 못 받아 봐서 CI로 확인한다. MODULES.md 3장에 적었다.
+5. **Room 6 → 7**: `Migration(6, 7)`이 두 열(`profile_image_version`·`partner_profile_image_version`, null 허용)을 더한다. 그 밖의 옛 버전은 기존대로 destructive. 스키마 JSON을 커밋하지 않아(단위 2 결정) `MigrationTestHelper`를 못 써서, 테스트는 버전 7 DB를 연 뒤 `me`를 6 모양으로 다시 만들고 마이그레이션을 직접 돌려 Room 엔티티로 읽는다.
+6. **새 필드는 모두 끝에 기본값 null로 더했다** (`Me`·`MePartner`·`SpaceMember`·`SettingsPerson`·`CalendarHeader`·`MemoItemUi`). 기존 호출·Fake가 그대로 컴파일되고, 사진을 보는 곳만 새 값을 넣는다. `GET /space` 합치기는 구성원이 있으면 **null도 그대로** 반영한다 (사진 삭제가 이전 버전을 남기지 않게).
+7. **`ProfileRepository`**(domain) / `ProfileRepositoryImpl`(data:repository). 이름: `runOnlineWrite` → `PATCH /me {nickname.trim()}` → 응답 `Me`를 `MeRepositoryImpl.saveWrittenMe`(내부 함수, 기존 `save`: `MeWriteLock`·캐시 세대)로 저장. 사진: 204 뒤 `refreshMe()`로 새 버전을 읽고, 그 읽기가 실패해도 올리기·지우기는 성공이다(`CoupleRepositoryImpl.thenRefreshMe`와 같은 규칙). `MeRepository` 인터페이스는 바꾸지 않았다(Fake 영향 없음).
+8. **사진 오류 타입 `PhotoError`(TOO_LARGE·TYPE_NOT_ALLOWED) + `DataError.photoErrorOrNull()`** (domain `profile`). `DataError`에 하위 타입을 더하면 모든 `when`이 깨지고 `ErrorCode`에 이미 두 코드가 있어서, `code`로 판단하는 도우미로 했다. 그 밖의 오류는 공통 오류 변환 그대로. 고를 때 검사(`PickedPhotoChecker`)도 같은 타입을 쓴다.
+9. **`PickedPhotoChecker`는 domain**(순수 Kotlin이라 Android 없이 테스트). 한계는 서버 `ProfileImageProcessor`와 같다: `MAX_BYTES = 10 * 1024 * 1024`(정확히 10MB는 통과), `MAX_PIXELS = 25_000_000`. 크기를 형식보다 먼저 본다(서버 순서).
+10. **`PhotoDownscaler`는 `feature:settings`의 `profile/photo/`.** 25MP 이하(또는 크기를 못 읽음)면 원본 바이트·형식 그대로(EXIF 회전은 서버가 적용). 넘으면 `inSampleSize`는 디코드 결과가 25MP 이하가 되는 가장 작은 2의 거듭제곱(메모리 절약), 그래도 넘으면 `fitWithinPixels` 크기로 스케일 → EXIF 회전 → 투명이면 흰 배경 합성 → JPEG(품질 90, 10MB를 넘으면 80·70·60). 순수 계산(`fitWithinPixels`·`sampleSizeFor`)만 단위 테스트하고 실제 비트맵 경로는 실기기 확인이다.
+11. **FileProvider는 `feature:settings` 매니페스트**(authority `${applicationId}.profilephoto`, 앱 캐시 `profile_photo/`만, `exported=false`). 카메라 앱을 찾는 `<queries>` `IMAGE_CAPTURE`(권한 아님)도 같이 두었다 (확인 필요 4의 "카메라 앱 없으면 행 숨김"에 필요, 2단계가 씀). `ManifestPermissionTest`는 레포의 모든 모듈 소스 매니페스트를 훑어 카메라·저장소 권한이 없는지, provider 설정이 맞는지 확인한다.
+12. **`DuriseoAvatar`**: designsystem이 Coil(`coil-compose`)에 의존한다 (ARCHITECTURE의 금지 목록에 없음). 글자 원을 먼저 그리고 그 위에 `AsyncImage`(원형·`Crop`)를 얹어서, 받는 중·실패·null은 따로 처리하지 않아도 글자 원이 보인다. 지름이 달라 `DuriseoAvatar`를 못 쓰는 메모 핀 카드 작성자 아바타(24)가 쓰도록 `DuriseoAvatarPhoto`를 공개했다. Preview는 Coil 없이 같은 자리·같은 자르기로 그림 하나를 얹는다(`_Photo`).
+13. **사진을 연결한 곳**: SCR-SET-01 프로필 카드(`SettingsPerson.photo`, 연결 정보 SCR-SET 연결 상태 카드와 공용), SCR-CAL-01 앱바(커플 겹침·개인), 메모 핀 카드의 작성자 아바타(SCR-MEMO-01·02 공용 `MemoItemUi.photo`). **메모 행은 사람 색 점만 있고 아바타가 없어** 바꿀 것이 없다. SCR-SET-03 색 미리보기의 글자 원은 색을 고르는 미리보기라 사진을 넣지 않았다 (필요하면 알려 주세요).
 
 ## 리뷰 기록
 
@@ -113,4 +127,7 @@
 
 ## 남은 일
 
+- 로그아웃·계정 전환 때 Coil 디스크 캐시(이전 사용자의 사진)를 비울지 (결정 3). `SessionManager`가 지우는 목록에 이미지 캐시를 더하는 일이고 2단계에서 정하면 된다.
+- 2단계: B(SCR-SET-04), 연필 배지·[내 프로필 수정], 사진 시트(`PhotoSheetTest`), 고른 사진을 `PickedPhotoChecker`·`PhotoDownscaler`로 처리해 `ProfileRepository.uploadPhoto`에 연결, `DuriseoAvatar`의 오류 문구 연결(`IMAGE_*` 코드 → D-147 문구).
+- CI에서 컴파일 확인: Coil 3.3.0 API(`Mapper`·`ImageLoader.Builder.components`·`OkHttpNetworkFetcherFactory`), exifinterface 1.4.1.
 -
