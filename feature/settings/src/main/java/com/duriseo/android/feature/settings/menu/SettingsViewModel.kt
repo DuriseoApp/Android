@@ -30,7 +30,7 @@ import java.time.YearMonth
 import javax.inject.Inject
 
 /**
- * SCR-SET-01 전체 메뉴 (게스트 배너, 프로필 카드, 우리 색상 행, 연결 정보 행, 계정 행, 로그아웃).
+ * SCR-SET-01 전체 메뉴 (게스트 배너, 프로필 카드, 우리 색상 행, 연결 정보 행, 계정 행, 정보 섹션, 로그아웃).
  * 화면은 Room의 내 정보만 구독한다. 쓰기(처음 만난 날 저장)는 온라인에서만 한다 (NFR-OFF-02).
  */
 @HiltViewModel
@@ -43,6 +43,7 @@ class SettingsViewModel @Inject constructor(
 
     private data class Local(
         val logoutDialogVisible: Boolean = false,
+        val mailDialogVisible: Boolean = false,
         val requesting: Boolean = false,
         val startDateSheet: StartDateSheetState? = null,
     )
@@ -58,6 +59,7 @@ class SettingsViewModel @Inject constructor(
             today = today,
             colorKeys = me?.space?.let { listOfNotNull(it.myColor, it.partner?.color, it.togetherColor) }.orEmpty(),
             logoutDialogVisible = localState.logoutDialogVisible,
+            mailDialogVisible = localState.mailDialogVisible,
             requesting = localState.requesting,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), SettingsUiState())
@@ -90,6 +92,11 @@ class SettingsViewModel @Inject constructor(
             SettingsAction.ProfileEditClicked -> {
                 if (!local.value.requesting) effectChannel.trySend(SettingsSideEffect.NavigateToProfileEdit)
             }
+            SettingsAction.LicensesClicked -> {
+                if (!local.value.requesting) effectChannel.trySend(SettingsSideEffect.NavigateToLicenses)
+            }
+            SettingsAction.MailAppMissing -> local.update { it.copy(mailDialogVisible = true) }
+            SettingsAction.MailDialogDismissed -> local.update { it.copy(mailDialogVisible = false) }
             SettingsAction.StartDateEditClicked -> openStartDateSheet()
             SettingsAction.StartDatePreviousMonth -> moveStartDateMonth(forward = false)
             SettingsAction.StartDateNextMonth -> moveStartDateMonth(forward = true)

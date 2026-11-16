@@ -40,6 +40,8 @@ googleServices = "4.4.3"
 
 coil = "3.3.0"
 exifinterface = "1.4.1"
+playAppUpdate = "2.1.0"
+aboutlibraries = "12.2.4"
 
 robolectric = "4.15.1"
 androidxTestCore = "1.6.1"
@@ -95,6 +97,7 @@ coil-singleton = { group = "io.coil-kt.coil3", name = "coil", version.ref = "coi
 coil-core = { group = "io.coil-kt.coil3", name = "coil-core", version.ref = "coil" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+play-app-update-ktx = { group = "com.google.android.play", name = "app-update-ktx", version.ref = "playAppUpdate" }
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
@@ -118,3 +121,5 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 # google-services.json이 있을 때만 app이 적용한다 (app/build.gradle.kts, docs/SETUP.md)
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+# 빌드 때 의존성의 이름·라이선스 JSON(res/raw/aboutlibraries.json)을 만든다. 화면(SCR-SET-05)은 JSON을 직접 읽는다 (D-152, docs/MODULES.md 3장)
+aboutlibraries = { id = "com.mikepenz.aboutlibraries.plugin.android", version.ref = "aboutlibraries" }

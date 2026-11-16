@@ -452,4 +452,28 @@ class SettingsViewModelTest {
             assertEquals(SettingsSideEffect.NavigateToProfileEdit, awaitItem())
         }
     }
+
+    @Test
+    fun `FR-SET-02 AC1 메일 앱이 없으면 주소 다이얼로그를 보인다`() = runTest {
+        me.me.value = memberMe()
+        val vm = viewModel()
+        assertFalse(vm.uiState.value.mailDialogVisible)
+
+        vm.onAction(SettingsAction.MailAppMissing)
+        assertTrue(vm.uiState.value.mailDialogVisible)
+
+        vm.onAction(SettingsAction.MailDialogDismissed)
+        assertFalse(vm.uiState.value.mailDialogVisible)
+    }
+
+    @Test
+    fun `FR-SET-02 AC3 오픈소스 라이선스는 라이선스 화면으로 간다`() = runTest {
+        me.me.value = memberMe()
+        val vm = viewModel()
+
+        vm.effects.test {
+            vm.onAction(SettingsAction.LicensesClicked)
+            assertEquals(SettingsSideEffect.NavigateToLicenses, awaitItem())
+        }
+    }
 }

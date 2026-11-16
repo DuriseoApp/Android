@@ -99,6 +99,8 @@ fun DuriseoDialogLayer(
  *
  * @param confirmStyle 파괴적 확인은 [DuriseoButtonStyle.Destructive], 그 밖은 [DuriseoButtonStyle.Brand]
  * @param buttonsEnabled false면 두 버튼과 뒤 막이 모두 눌리지 않는다. 확인 뒤 요청이 도는 동안 쓴다 (D-88)
+ * @param extra 본문 아래에 더 놓을 것 (메일 앱 없음 다이얼로그의 주소 상자, 보드 `Menu.dc.html` 200행). 본문과 사이는
+ *   Column 간격 8에 위 4를 더한다. 없으면 그리지 않는다
  */
 @Composable
 fun DuriseoDialog(
@@ -112,6 +114,7 @@ fun DuriseoDialog(
     confirmStyle: DuriseoButtonStyle = DuriseoButtonStyle.Brand,
     buttonsEnabled: Boolean = true,
     onDismissRequest: () -> Unit = onCancel,
+    extra: (@Composable () -> Unit)? = null,
 ) {
     BackHandler(enabled = buttonsEnabled, onBack = onDismissRequest)
     val shape = MaterialTheme.shapes.extraLarge
@@ -174,6 +177,9 @@ fun DuriseoDialog(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (extra != null) {
+                Box(modifier = Modifier.padding(top = DuriseoSpacing.Space1)) { extra() }
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

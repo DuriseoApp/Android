@@ -74,12 +74,13 @@ data class StartDateSheetState(
 )
 
 /**
- * 전체 메뉴(SCR-SET-01)의 상태. 알림 설정·정보 섹션·앱 정보 카드는 다른 단위(7·8)다.
+ * 전체 메뉴(SCR-SET-01)의 상태. 앱 정보 카드의 상태는 [com.duriseo.android.feature.settings.appupdate.AppUpdateUiState]가 따로 가진다.
  *
  * @property account 내 정보를 아직 못 받았으면 null (화면은 앱바만 그린다)
  * @property space 프로필 카드와 연결 정보 행의 값 (커플/혼자). 내 정보를 못 받았으면 null
  * @property startDateSheet [처음 만난 날 수정]으로 연 선택 시트. 닫혀 있으면 null
  * @property today 선택 시트의 마지막 날짜 (기기 시계의 오늘)
+ * @property mailDialogVisible 문의하기를 눌렀는데 메일 앱이 없어서 주소 다이얼로그를 보이는 중 (D-150)
  * @property colorKeys 꾸미기 › 우리 색상 행에 보일 현재 색 점의 팔레트 키. 나, 상대, 함께 순서이고 개인 공간은 나 하나다
  */
 data class SettingsUiState(
@@ -89,6 +90,7 @@ data class SettingsUiState(
     val today: LocalDate = LocalDate.of(1970, 1, 1),
     val colorKeys: List<String> = emptyList(),
     val logoutDialogVisible: Boolean = false,
+    val mailDialogVisible: Boolean = false,
     val requesting: Boolean = false,
 ) {
     /** 서버 요청(로그아웃, 처음 만난 날 저장)이 도는 동안 true. 로딩 덮개를 그린다 (D-115) */
@@ -105,6 +107,13 @@ sealed interface SettingsAction {
 
     /** 프로필 카드의 [내 프로필 수정]과 내 아바타의 연필 배지 -> SCR-SET-04 (D-149). 둘은 같은 곳으로 간다 */
     data object ProfileEditClicked : SettingsAction
+
+    /** 정보 › 오픈소스 라이선스 -> SCR-SET-05 (FR-SET-02 AC3) */
+    data object LicensesClicked : SettingsAction
+
+    /** 문의하기로 메일 앱을 열려 했는데 열 수 있는 앱이 없었다 -> 주소 다이얼로그 (D-150) */
+    data object MailAppMissing : SettingsAction
+    data object MailDialogDismissed : SettingsAction
 
     /** 프로필 카드의 [처음 만난 날 수정] */
     data object StartDateEditClicked : SettingsAction
@@ -126,6 +135,9 @@ sealed interface SettingsSideEffect {
 
     /** 내 프로필 수정(SCR-SET-04)으로 간다 */
     data object NavigateToProfileEdit : SettingsSideEffect
+
+    /** 오픈소스 라이선스(SCR-SET-05)로 간다 */
+    data object NavigateToLicenses : SettingsSideEffect
 
     /** 로그아웃이 끝났다 → SCR-START-01 (백스택을 비운다) */
     data object NavigateToStart : SettingsSideEffect

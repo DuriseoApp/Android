@@ -33,6 +33,7 @@ import com.duriseo.android.feature.memo.navigation.navigateToPinnedMemos
 import com.duriseo.android.feature.settings.navigation.navigateToAccount
 import com.duriseo.android.feature.settings.navigation.navigateToColors
 import com.duriseo.android.feature.settings.navigation.navigateToConnectionInfo
+import com.duriseo.android.feature.settings.navigation.navigateToLicenses
 import com.duriseo.android.feature.settings.navigation.navigateToNotificationSettings
 import com.duriseo.android.feature.settings.navigation.navigateToProfileEdit
 import com.duriseo.android.feature.settings.navigation.navigateToSettings
@@ -162,6 +163,9 @@ class MainNavigator(
 
     /** 내 프로필 수정 (SCR-SET-04). 전체 메뉴 프로필 카드의 [내 프로필 수정]·연필 배지 */
     fun navigateToProfileEdit() = navController.navigateToProfileEdit()
+
+    /** 오픈소스 라이선스 (SCR-SET-05). 전체 메뉴의 정보 › 오픈소스 라이선스 행 */
+    fun navigateToLicenses() = navController.navigateToLicenses()
 
     /** 알림 목록 (SCR-NOTI-01). 캘린더 앱바의 알림 버튼 */
     fun navigateToNotifications() = navController.navigateToNotifications()

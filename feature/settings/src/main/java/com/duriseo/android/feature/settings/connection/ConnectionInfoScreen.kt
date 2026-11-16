@@ -16,11 +16,14 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -28,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -37,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.duriseo.android.core.designsystem.component.DuriseoAvatar
@@ -227,6 +232,7 @@ private fun CoupleContent(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .padding(
                 start = DuriseoSpacing.Space5,
                 end = DuriseoSpacing.Space5,
@@ -340,6 +346,7 @@ private fun AloneContent(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .padding(
                 start = DuriseoSpacing.Space5,
                 end = DuriseoSpacing.Space5,
@@ -561,16 +568,19 @@ private fun previewCouple(startDate: LocalDate?) = SettingsSpace.Couple(
 )
 
 @Composable
-private fun PreviewConnectionInfo(state: ConnectionInfoUiState) {
+private fun PreviewConnectionInfo(state: ConnectionInfoUiState, fontScale: Float = 1f) {
     DuriseoTheme {
-        ConnectionInfoScreen(
-            state = state,
-            padding = PaddingValues(),
-            onBack = {},
-            onInviteCreate = {},
-            onInviteEnter = {},
-            onAction = {},
-        )
+        val density = LocalDensity.current
+        CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
+            ConnectionInfoScreen(
+                state = state,
+                padding = PaddingValues(),
+                onBack = {},
+                onInviteCreate = {},
+                onInviteEnter = {},
+                onAction = {},
+            )
+        }
     }
 }
 
@@ -609,3 +619,18 @@ private fun ConnectionInfoScreenUnlinkRequestingPreview() = PreviewConnectionInf
 @Composable
 private fun ConnectionInfoPreview_NoStartDate() =
     PreviewConnectionInfo(ConnectionInfoUiState(space = previewCouple(startDate = null)))
+
+/**
+ * 큰 글자(fontScale 2)에서도 안내·[연결 해제]까지 세로 스크롤로 닿는다 (넘어온 일 G). 긴 이름은 한 줄 말줄임이다.
+ * 보통 글자 크기에서는 모양이 그대로이고, 스크롤 칸이 화면 높이 이상이라 [연결 해제]가 아래에 붙는다.
+ */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun ConnectionInfoPreview_LargeFont() = PreviewConnectionInfo(
+    ConnectionInfoUiState(
+        space = previewCouple(LocalDate.of(2026, 10, 12)).copy(
+            me = SettingsPerson("이름이아주아주긴사람", "pick-orange"),
+        ),
+    ),
+    fontScale = 2f,
+)

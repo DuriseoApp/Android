@@ -2,6 +2,7 @@ package com.duriseo.android.di
 
 import com.duriseo.android.BuildConfig
 import com.duriseo.android.core.common.config.AppConfig
+import com.duriseo.android.core.common.update.AppVersion
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,5 +23,13 @@ object AppModule {
         apiBaseUrl = BuildConfig.API_BASE_URL,
         googleWebClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID,
         kakaoNativeAppKey = BuildConfig.KAKAO_NATIVE_APP_KEY,
+    )
+
+    /** 앱 정보 카드와 문의 메일의 앱 버전 (FR-SET-02 AC1·AC4). `feature`는 app의 `BuildConfig`를 볼 수 없다 */
+    @Provides
+    @Singleton
+    fun provideAppVersion(): AppVersion = AppVersion(
+        name = BuildConfig.VERSION_NAME,
+        code = BuildConfig.VERSION_CODE.toLong(),
     )
 }

@@ -133,6 +133,19 @@
 22. **로그인 계정 줄은 회원인데 로그인 수단을 모르면 줄을 그리지 않는다**(SCR-SET-01 계정 행이 값이 빈 것과 같음). 도움말 "상대 화면과 캘린더에 이 이름으로 보여요. 최대 10자."는 SCREENS.md에는 없고 보드(`ProfileEdit.dc.html` 99행) 문구다.
 23. **오프라인**: 저장소가 요청 없이 `Offline`을 돌려주는 기존 규칙(`runOnlineWrite`)을 그대로 쓰고, ViewModel은 그 결과를 "인터넷 연결이 필요해요"로 보인다. 사진 오류·공통 오류 스낵바는 앱 공통 `onShowSnackBar`가 위 40에 띄운다(`isSnackbarAtTop`이 탭 없는 화면을 이미 포함, `SnackbarPositionTest`에 SCR-SET-04 추가).
 
+3단계(묶음 E·F·G)에서 문서에 없어 정한 것:
+
+24. **문의 메일 기기 모델 표기는 "제조사 모델"** (`Build.MANUFACTURER` 첫 글자 대문자 + `Build.MODEL`, 모델이 이미 제조사 이름으로 시작하면 모델만. 예: "Google Pixel 8"). 앱 버전은 `versionName`만, Android 버전은 `Build.VERSION.RELEASE`. 제목·본문 글은 메일에 들어가는 내용이라 `strings.xml`이 아니라 순수 함수 `supportMail`(`menu/SupportMail.kt`)에 두었다(Android 없이 `SupportMailTest`). 본문은 정확히 세 줄이다.
+25. **문의하기는 `startActivity`가 `ActivityNotFoundException`을 던지면 메일 앱 없음으로 본다** (`resolveActivity`는 Android 11+ 패키지 가시성 때문에 쓰지 않음). 받는 사람은 비운 `mailto:`. 메일 앱 없음 다이얼로그의 [복사]는 주소를 복사하고 **다이얼로그도 닫는다**(보드 [복사]에 동작이 없고 SCREENS는 복사 뒤 스낵바 없음만 정함. 닫지 않으면 시스템 복사 안내 뒤에도 남아 있어 닫는 쪽으로 정함, 바꾸려면 알려 주세요). 주소는 `settings_mail_address` 한 곳.
+26. **이용약관·개인정보처리방침은 한 행·한 주소**(`LegalLinks.TERMS_AND_PRIVACY_URL`, 비면 동작 없음). 보드가 한 행이라 문서 두 개를 한 주소로 둔다. 출시 때 문서가 둘로 나뉘면(Q-03) 디자인 결정이 필요하다.
+27. **앱 정보 카드는 스크롤 밖 맨 아래에 붙는다**(보드 `footer`가 `flex-shrink: 0`). 로그아웃 위치는 보드 순서대로 설정 → 정보 → 로그아웃 → 카드. 버전 표기 "버전 {versionName} ({versionCode})" (보드 "버전 1.0.0 (100)"). **[업데이트] 글자는 "업데이트"**: 보드는 "새 버전 1.1.0 업데이트"이지만 Play 인앱 업데이트 API는 새 버전 이름을 주지 않고(`availableVersionCode`뿐) SCREENS는 "[업데이트] 버튼"이라 SCREENS를 따랐다. Docs 후속: 보드 문구와 SCREENS 정리.
+28. **인앱 업데이트 로직은 `core:common`의 `update/`**: 인터페이스 `AppUpdateSource`(`check`·`startUpdate(Activity)`·`phase`·`start`·`completeIfDownloaded`), 구현 `PlayAppUpdateSource`(Hilt 싱글톤, `AppUpdateManager`). 소셜 로그인 래퍼처럼 플랫폼 SDK 래퍼를 `core:common`에 둔 앞 단위 방식과 같고, feature는 인터페이스만 본다. 방식은 FLEXIBLE: `startUpdateFlow(info, activity, AppUpdateOptions.newBuilder(FLEXIBLE))`. 받기 진행은 `InstallStateUpdatedListener` → `phase`(IDLE·DOWNLOADING·DOWNLOADED). 설치는 `MyApp`의 `ForegroundCallbacks`가 보이는 Activity가 0이 되고 700ms 뒤에도 0이면(`ProcessLifecycleOwner` ON_STOP과 같은 지연, `lifecycle-process`는 계획에 없어 쓰지 않음, 화면 회전 오판 방지) `completeIfDownloaded()`를 부른다. 앱 시작(`MyApp.onCreate`)에 `AppUpdateSource.start()`가 확인해서 이미 DOWNLOADED면 다음 백그라운드 때 설치한다. 앱 버전은 `AppVersion`을 app의 `AppModule`이 `BuildConfig`로 제공한다.
+29. **앱 정보 카드 상태는 `AppUpdateViewModel`(`appupdate/`)**: 오프라인(`NetworkMonitor.isOnlineNow()` false)이면 Play에 묻지 않고 확인할 수 없음. 확인 중·받는 중·받음은 같은 모양(줄은 투명 `alpha(0)`로 자리 유지, 읽기에서도 뺌). [업데이트]를 눌러 Play 확인 창이 떠 있는 동안과 `phase != IDLE`인 동안이 받는 중이다. 사용자가 취소하거나 실패하면 [업데이트]가 다시 보인다. 받기를 수락한 직후 Play의 첫 진행 알림이 오기 전 짧은 순간 [업데이트]가 깜빡일 수 있다(알려진 한계). 업데이트 확인 실패 로그는 예외 종류만 남긴다.
+30. **오픈소스 라이선스 목록은 AboutLibraries 플러그인이 만든 JSON을 직접 읽는다.** `aboutlibraries-core`의 `Libs` API는 버전마다 달라(이 환경에서 확인 불가) 쓰지 않고, `res/raw/aboutlibraries.json`을 `getIdentifier("aboutlibraries", "raw", packageName)`으로 찾아 `kotlinx-serialization-json`으로 읽는다(`AboutLibrariesParser`, 모르는 필드 무시·읽을 수 없는 항목 건너뜀). JSON이 없으면(플러그인이 못 만든 빌드) 글꼴 두 행만 나온다. 정렬: 라이브러리는 이름 대소문자 무시 오름차순(같으면 id), 같은 id는 하나로, 글꼴 두 행(IBM Plex Sans KR → IBM Plex Mono)은 끝. 라이선스 이름은 JSON의 `name`(여러 개면 ", "), 본문은 `content`, 없으면 `url`, 그것도 없으면 이름. 펼침은 한 번에 한 행(보드 `openRow`), 상태는 ViewModel이 가져 화면 회전에도 유지. 플러그인 id는 `com.mikepenz.aboutlibraries.plugin.android`, 버전 12.2.4(둘 다 이 환경에서 확인 불가, CI로 확인). 앱 `app`에 기본 설정으로 적용.
+31. **글꼴 OFL 1.1 전문은 `feature:settings/res/raw/ofl_1_1.txt`**: 맨 위에 "Copyright © 2017 IBM Corp. with Reserved Font Name "Plex"" 줄과 "이 글꼴은 SIL OFL 1.1이고 전문은 아래에 있다" 문장, 그 아래에 SIL 공식 OFL 1.1 전문(이 환경에 있던 SIL 배포본 텍스트, 문단별 줄바꿈 없는 판). **저작권 줄은 IBM Plex 저장소 기준이지만 이 환경에서 원본을 대조하지 못했다. 출시 전 사람이 IBM Plex 저장소 `LICENSE.txt`와 맞는지 확인해 주세요**(Sans KR 줄이 다르면 글꼴별로 나눠야 한다).
+32. **디자인시스템 추가**: `DuriseoInfoRow`(정보 섹션 행 52), `DuriseoDialog`의 `extra` 슬롯(본문 아래 주소 상자, 위 4 더함), 아이콘 `ic_chevron_down`·`ic_chevron_up`(보드 SVG 그대로)·`ic_download`, 로고 `logo_mark_card`(36×25, `duriseo-mark.svg` 좌표 이동). 토큰에 없는 값(카드 모서리 20은 `Xl`, 안쪽 20/16, 알약 36 등)은 화면 파일의 이름 붙은 상수다. 하단 탭이 없는 SCR-SET-05의 스낵바는 `isSnackbarAtTop`이 이미 포함하고 `SnackbarPositionTest`에 더했다(이 화면은 스낵바를 띄울 일이 없다).
+33. **G(넘어온 일)**: `ConnectionInfoScreen`의 두 본문(`CoupleContent`·`AloneContent`)에 `verticalScroll`. 스크롤 칸의 최소 높이가 화면 높이라 [연결 해제] 위 `Spacer(weight)`가 그대로 작동해 보통 글자 크기 모양은 같다. 프로필 카드·연결 상태 카드의 이름은 이미 한 줄 말줄임(`maxLines = 1`, `Ellipsis`)이라 코드는 바꾸지 않았다. `ConnectionInfoPreview_LargeFont`(fontScale 2, 긴 이름).
+
 ## 리뷰 기록
 
 | 회차 | Critical | Major | 비고 |
@@ -141,6 +154,7 @@
 ## 남은 일
 
 - (2단계 끝) 아직 못 확인: 이 환경에서 Gradle이 안 돌아 2단계 코드는 CI로 컴파일·테스트 확인이 필요하다. 실기기 확인(사람): 앨범·카메라로 고르기, 카메라 앱 없는 기기에서 [사진 찍기] 숨김, 큰 사진 줄이기, 저장 중 덮개, 로그아웃 뒤 이전 사진이 남지 않는지.
-- 묶음 E·F·G (정보 섹션, SCR-SET-05, 큰 글자 스크롤)는 3단계.
+- (3단계 끝) 묶음 E·F·G 구현 완료, 이 환경에서 Gradle이 안 돌아 CI 확인 필요: Play `app-update-ktx` 2.1.0 API(`requestAppUpdateInfo`·`startUpdateFlow`·`InstallStateUpdatedListener`), AboutLibraries 플러그인 id·버전·`res/raw/aboutlibraries.json` 생성(결정 30). 실기기 확인(사람): Play 설치 앱에서 새 버전 감지·[업데이트]·백그라운드 설치, 메일 앱 없는 기기의 다이얼로그, 큰 글자 연결 정보, 라이선스 목록 내용, OFL 저작권 줄(결정 31).
+- Docs 후속: [업데이트] 문구(결정 27), 이용약관·개인정보처리방침 주소(Q-03)·문의 주소(Q-10).
 - CI에서 컴파일 확인: Coil 3.3.0 API(`Mapper`·`ImageLoader.Builder.components`·`OkHttpNetworkFetcherFactory`), exifinterface 1.4.1.
 -

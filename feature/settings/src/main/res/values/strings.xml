@@ -170,4 +170,28 @@
     <!-- 사진 오류 (D-147, FR-AUTH-07 AC7). 고를 때 검사와 서버의 413·415가 같은 문구 -->
     <string name="profile_photo_error_too_large">10MB 이하의 사진을 골라 주세요</string>
     <string name="profile_photo_error_type">JPEG나 PNG 사진만 쓸 수 있어요</string>
+
+    <!-- SCR-SET-01 정보 섹션 (보드 Menu.dc.html 130~134행, SCREENS.md "정보") -->
+    <string name="settings_section_info">정보</string>
+    <string name="settings_contact">문의하기</string>
+    <string name="settings_terms">이용약관 · 개인정보처리방침</string>
+    <string name="settings_licenses">오픈소스 라이선스</string>
+
+    <!-- 메일 앱 없음 다이얼로그 (D-150, 보드 Menu.dc.html 198~204행). 주소는 PRD Q-10이 정해질 때까지 자리표시다.
+         주소를 바꿀 때는 이 한 곳만 고친다 (복사도 이 값을 쓴다) -->
+    <string name="settings_mail_dialog_title">메일 앱을 열 수 없어요</string>
+    <string name="settings_mail_dialog_body">아래 주소로 메일을 보내 주세요.</string>
+    <string name="settings_mail_address">[문의 메일 주소]</string>
+    <string name="settings_mail_dialog_copy">복사</string>
+    <string name="settings_mail_copy_label">문의 메일 주소</string>
+
+    <!-- 앱 정보 카드 (D-151, 보드 Menu.dc.html 143~165행) -->
+    <string name="settings_app_info_name">둘이서</string>
+    <string name="settings_app_info_version">버전 %1$s (%2$d)</string>
+    <string name="settings_app_info_latest">최신 버전을 사용하고 있어요</string>
+    <string name="settings_app_info_update">업데이트</string>
+
+    <!-- SCR-SET-05 오픈소스 라이선스 (보드 OpenSourceLicenses.dc.html) -->
+    <string name="licenses_title">오픈소스 라이선스</string>
+    <string name="licenses_row_description">%1$s, %2$s</string>
 </resources>
