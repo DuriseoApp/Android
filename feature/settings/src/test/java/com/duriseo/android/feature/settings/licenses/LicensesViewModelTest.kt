@@ -57,6 +57,18 @@ class LicensesViewModelTest {
     }
 
     @Test
+    fun `FR-SET-02 AC3 라이브러리 목록 읽기가 예외로 실패해도 글꼴 두 행은 보인다`() = runTest {
+        val failing = object : LicenseSource {
+            override suspend fun libraries(): List<LicenseEntry> = throw IllegalStateException("읽기 실패")
+            override suspend fun fontLicenseText(): String = "OFL text"
+        }
+
+        val vm = LicensesViewModel(failing)
+
+        assertEquals(listOf("IBM Plex Sans KR", "IBM Plex Mono"), vm.uiState.value.rows.map { it.name })
+    }
+
+    @Test
     fun `FR-SET-02 AC3 행을 누르면 펼치고 다시 누르면 접는다`() = runTest {
         val vm = LicensesViewModel(FakeLicenseSource(libraries))
         assertNull(vm.uiState.value.expandedId)

@@ -40,8 +40,12 @@ class FakePickedPhotoReader : PickedPhotoReader {
     var result: PickedPhotoResult = PickedPhotoResult.Ready(fakePhoto())
     val reads = mutableListOf<Pair<String, Boolean>>()
 
+    /** 있으면 이 값이 완료될 때까지 읽기가 끝나지 않는다 (사진 읽는 중 상태를 만든다) */
+    var gate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+
     override suspend fun read(uri: String, fromCamera: Boolean): PickedPhotoResult {
         reads += uri to fromCamera
+        gate?.await()
         return result
     }
 }
@@ -317,14 +321,15 @@ class ProfileEditViewModelTest {
     }
 
     @Test
-    fun `FR-AUTH-07 AC7 서버가 413 415로 거부해도 같은 문구를 보이고 고른 사진을 버린다`() = runTest {
+    fun `FR-AUTH-07 AC7 서버 415는 형식 문구 413은 공통 오류로 보이고 고른 사진을 버린다`() = runTest {
         profile.uploadResults += apiError("IMAGE_TOO_LARGE")
         profile.uploadResults += apiError("IMAGE_TYPE_NOT_ALLOWED")
         val vm = viewModel()
         vm.effects.test {
             vm.pickPhoto()
             vm.onAction(ProfileEditAction.SaveClicked)
-            assertEquals(ProfileEditSideEffect.ShowMessage(R.string.profile_photo_error_too_large), awaitItem())
+            // 10MB는 고를 때 이미 막았으니 서버 413은 25MP 초과 등이다: "10MB" 문구 대신 공통 오류 (API.md 5장, D-153)
+            assertEquals(ProfileEditSideEffect.ShowMessage(DesignR.string.error_common), awaitItem())
             assertEquals(PhotoSelection.Keep, vm.uiState.value.selection)
 
             vm.pickPhoto()
@@ -343,6 +348,22 @@ class ProfileEditViewModelTest {
             assertEquals(ProfileEditSideEffect.ShowMessage(DesignR.string.error_common), awaitItem())
             assertEquals(PhotoSelection.Keep, vm.uiState.value.selection)
         }
+    }
+
+    @Test
+    fun `FR-AUTH-07 AC6 사진을 읽는 중에는 저장하지 않고 읽기가 끝나면 고른 사진이 남는다`() = runTest {
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        reader.gate = gate
+        val vm = viewModel()
+        vm.onAction(ProfileEditAction.NameChanged("새 이름"))
+
+        vm.pickPhoto()
+        vm.onAction(ProfileEditAction.SaveClicked)
+        assertFalse(vm.uiState.value.saving)
+        assertTrue(profile.calls.isEmpty())
+
+        gate.complete(Unit)
+        assertTrue(vm.uiState.value.selection is PhotoSelection.Picked)
     }
 
     // ---- 사진 시트 ----

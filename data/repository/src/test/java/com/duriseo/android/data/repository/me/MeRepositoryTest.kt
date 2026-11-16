@@ -298,6 +298,17 @@ class MeRepositoryTest {
     }
 
     @Test
+    fun `NFR-PRIV-01 연결 해제 뒤 초기화는 프로필 사진 캐시도 지운다 상대 사진은 권한이 없어진다`() = runTestWithTimeout {
+        val h = harness()
+        h.preload(fixtureMe())
+        server.enqueue(jsonResponse(200, meJson(id = "fresh-user")))
+
+        h.meRepository.resetAfterUnlink()
+
+        assertEquals(1, h.profileImages.clearCount.get())
+    }
+
+    @Test
     fun `초기화 전에 시작한 PATCH me 응답은 저장하지 않는다`() = runTestWithTimeout {
         val h = harness()
         h.preload(fixtureMe(id = "cached-user", timeZone = "Asia/Seoul"))

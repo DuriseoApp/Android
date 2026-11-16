@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.message.toMessageResOrNull
 import com.duriseo.android.domain.error.DataError
+import com.duriseo.android.domain.error.ErrorCode
+import com.duriseo.android.domain.error.hasCode
 import com.duriseo.android.domain.me.Me
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.profile.ProfileNameRules
@@ -130,6 +132,8 @@ class ProfileEditViewModel @Inject constructor(
      */
     private fun save() {
         if (local.value.saving) return
+        // 고른 사진을 읽는 중이면 저장하지 않는다 (읽기가 저장 중에 끝나 고른 사진이 조용히 버려지는 것을 막는다)
+        if (pickJob?.isActive == true) return
         local.update { it.copy(saving = true) }
         viewModelScope.launch {
             try {
@@ -169,7 +173,7 @@ class ProfileEditViewModel @Inject constructor(
             }
             is DataResult.Failure -> {
                 // 서버가 사진을 거부했으면(413·415) 같은 사진으로 다시 보내도 실패하므로 고른 것을 버리고 원래 모습으로 돌린다
-                if (result.error.photoErrorOrNull() != null) local.update { it.copy(selection = PhotoSelection.Keep) }
+                if (result.error.photoErrorOrNull() != null || result.error.hasCode(ErrorCode.IMAGE_TOO_LARGE)) local.update { it.copy(selection = PhotoSelection.Keep) }
                 result.error
             }
         }

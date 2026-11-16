@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 오픈소스 라이선스 JSON(AboutLibraries가 만든 aboutlibraries.json)을 R8 리소스 축소가 지우지 않게 한다 (SCR-SET-05) -->
+<resources
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/aboutlibraries" />

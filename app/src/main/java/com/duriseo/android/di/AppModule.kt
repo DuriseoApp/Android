@@ -1,7 +1,10 @@
 package com.duriseo.android.di
 
+import androidx.annotation.RawRes
 import com.duriseo.android.BuildConfig
+import com.duriseo.android.R
 import com.duriseo.android.core.common.config.AppConfig
+import com.duriseo.android.core.common.config.LicensesJsonRes
 import com.duriseo.android.core.common.update.AppVersion
 import dagger.Module
 import dagger.Provides
@@ -32,4 +35,13 @@ object AppModule {
         name = BuildConfig.VERSION_NAME,
         code = BuildConfig.VERSION_CODE.toLong(),
     )
+
+    /**
+     * 오픈소스 라이선스 JSON(AboutLibraries 플러그인이 `res/raw/aboutlibraries.json`으로 만든다)의 리소스 ID (SCR-SET-05).
+     * 컴파일 타임에 직접 참조해서 플러그인이 JSON을 못 만들면 빌드가 깨진다. `res/raw/keep.xml`이 리소스 축소에서도 지킨다.
+     */
+    @Provides
+    @LicensesJsonRes
+    @RawRes
+    fun provideLicensesJsonRes(): Int = R.raw.aboutlibraries
 }

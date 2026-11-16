@@ -182,9 +182,10 @@ fun SettingsRoute(
  */
 private fun Context.openSupportMail(appVersion: String): Boolean {
     val mail = supportMail(
-        appVersion = appVersion,
-        androidVersion = Build.VERSION.RELEASE,
-        deviceModel = deviceModelLabel(Build.MANUFACTURER, Build.MODEL),
+        subject = getString(R.string.settings_mail_subject),
+        appVersionLine = getString(R.string.settings_mail_body_app_version, appVersion),
+        androidVersionLine = getString(R.string.settings_mail_body_android_version, Build.VERSION.RELEASE),
+        deviceModelLine = getString(R.string.settings_mail_body_device_model, deviceModelLabel(Build.MANUFACTURER, Build.MODEL)),
     )
     val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")).apply {
         putExtra(Intent.EXTRA_SUBJECT, mail.subject)

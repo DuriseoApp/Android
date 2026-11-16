@@ -10,6 +10,8 @@ import com.duriseo.android.domain.error.DataError
 import com.duriseo.android.domain.profile.PhotoError
 import com.duriseo.android.domain.profile.photoErrorOrNull
 import com.duriseo.android.domain.result.DataResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -23,6 +25,7 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.concurrent.TimeUnit
 
 /** 내 프로필 쓰기: 이름·사진 (FR-AUTH-07 AC6·AC7, NFR-FILE-01). 메모리 Room은 Robolectric이 필요하다 */
 @RunWith(RobolectricTestRunner::class)
@@ -133,20 +136,55 @@ class ProfileRepositoryTest {
     }
 
     @Test
-    fun `FR-AUTH-07 AC6 올리기는 성공했는데 GET me가 실패해도 성공이다`() = runTestWithTimeout {
+    fun `FR-AUTH-07 AC6 올리기는 성공했는데 GET me가 두 번 실패해도 성공이다`() = runTestWithTimeout {
         val h = harness()
         h.preload(fixtureMe())
         server.enqueue(MockResponse().setResponseCode(204))
+        server.enqueue(jsonResponse(500, errorJson("INTERNAL_ERROR")))
         server.enqueue(jsonResponse(500, errorJson("INTERNAL_ERROR")))
 
         val result = h.profileRepository.uploadPhoto(byteArrayOf(1, 2), "image/jpeg")
 
         assertEquals(DataResult.Success(Unit), result)
         assertNull(h.roomMe()?.profileImageVersion)
+        // PUT 한 번 + GET 두 번 (한 번 더 해 보고 그만둔다)
+        assertEquals(3, server.requestCount)
     }
 
     @Test
-    fun `FR-AUTH-07 AC7 413은 사진 크기 오류 415는 사진 형식 오류다`() = runTestWithTimeout {
+    fun `FR-AUTH-07 AC6 GET me가 한 번 실패하면 한 번 더 읽어 새 버전을 저장한다`() = runTestWithTimeout {
+        val h = harness()
+        h.preload(fixtureMe())
+        server.enqueue(MockResponse().setResponseCode(204))
+        server.enqueue(jsonResponse(500, errorJson("INTERNAL_ERROR")))
+        server.enqueue(jsonResponse(200, meWithPhoto("retry-ver")))
+
+        val result = h.profileRepository.uploadPhoto(byteArrayOf(1, 2), "image/jpeg")
+
+        assertEquals(DataResult.Success(Unit), result)
+        assertEquals("retry-ver", h.roomMe()?.profileImageVersion)
+    }
+
+    @Test
+    fun `FR-AUTH-07 AC6 이름 응답이 늦게 와서 캐시가 초기화된 뒤면 저장하지 않는다`() = runTestWithTimeout {
+        val h = harness()
+        h.preload(fixtureMe(id = "cached-user"))
+        // PATCH 응답이 늦게 온다
+        server.enqueue(jsonResponse(200, meJson(id = "stale-user", accountType = "MEMBER")).setHeadersDelay(1500, TimeUnit.MILLISECONDS))
+        server.enqueue(jsonResponse(200, meJson(id = "fresh-user")))
+
+        val stale = async(Dispatchers.Default) { h.profileRepository.updateNickname("새 이름") }
+        assertEquals("PATCH", server.takeRequest(5, TimeUnit.SECONDS)?.method)
+        h.meRepository.resetAfterUnlink()
+        val result = stale.await()
+
+        assertEquals(DataResult.Success(Unit), result)
+        // 초기화 뒤 새로 받은 내 정보가 남고 늦은 이름 응답은 버려진다
+        assertEquals("fresh-user", h.roomMe()?.id)
+    }
+
+    @Test
+    fun `FR-AUTH-07 AC7 413은 공통 오류 415는 사진 형식 오류다`() = runTestWithTimeout {
         val h = harness()
         h.preload(fixtureMe())
         server.enqueue(jsonResponse(413, errorJson("IMAGE_TOO_LARGE")))
@@ -157,7 +195,9 @@ class ProfileRepositoryTest {
         val badType = h.profileRepository.uploadPhoto(byteArrayOf(1), "image/jpeg") as DataResult.Failure
         val other = h.profileRepository.uploadPhoto(byteArrayOf(1), "image/jpeg") as DataResult.Failure
 
-        assertEquals(PhotoError.TOO_LARGE, tooLarge.error.photoErrorOrNull())
+        // 413은 앱이 고를 때 10MB를 막은 뒤라 25MP 초과 등이다: 사진 오류가 아니라 공통 오류(API.md 5장, D-153)
+        assertEquals("IMAGE_TOO_LARGE", (tooLarge.error as DataError.ApiError).code)
+        assertNull(tooLarge.error.photoErrorOrNull())
         assertEquals(PhotoError.TYPE_NOT_ALLOWED, badType.error.photoErrorOrNull())
         // 그 밖의 오류는 사진 오류가 아니라 공통 오류로 보인다
         assertNull(other.error.photoErrorOrNull())

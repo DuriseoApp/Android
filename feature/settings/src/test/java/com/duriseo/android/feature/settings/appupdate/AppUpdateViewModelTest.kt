@@ -100,6 +100,23 @@ class AppUpdateViewModelTest {
     }
 
     @Test
+    fun `FR-SET-02 AC4 업데이트 확인이 10초 안에 끝나지 않으면 확인할 수 없음이다`() = runTest {
+        source.checkResult = CompletableDeferred() // Play가 답하지 않음
+        val vm = viewModel()
+        assertEquals(AppUpdateStatus.CHECKING, vm.uiState.value.status)
+
+        // 가상 시간: 10초 직전까지는 계속 확인 중
+        testScheduler.advanceTimeBy(9_999)
+        testScheduler.runCurrent()
+        assertEquals(AppUpdateStatus.CHECKING, vm.uiState.value.status)
+
+        testScheduler.advanceTimeBy(2)
+        testScheduler.runCurrent()
+        assertEquals(AppUpdateStatus.UNKNOWN, vm.uiState.value.status)
+        assertFalse(vm.uiState.value.latestLineReserved)
+    }
+
+    @Test
     fun `FR-SET-02 AC4 최신이면 최신 버전 안내를 보인다`() = runTest {
         source.checkResult = CompletableDeferred(AppUpdateAvailability.UP_TO_DATE)
 

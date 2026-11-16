@@ -7,7 +7,12 @@ class SupportMailTest {
 
     @Test
     fun `FR-SET-02 AC1 제목과 본문 세 줄을 채운다`() {
-        val mail = supportMail(appVersion = "1.0.0", androidVersion = "15", deviceModel = "Google Pixel 8")
+        val mail = supportMail(
+            subject = "[둘이서 문의]",
+            appVersionLine = "앱 버전: 1.0.0",
+            androidVersionLine = "Android 버전: 15",
+            deviceModelLine = "기기 모델: Google Pixel 8",
+        )
 
         assertEquals("[둘이서 문의]", mail.subject)
         assertEquals("앱 버전: 1.0.0\nAndroid 버전: 15\n기기 모델: Google Pixel 8", mail.body)

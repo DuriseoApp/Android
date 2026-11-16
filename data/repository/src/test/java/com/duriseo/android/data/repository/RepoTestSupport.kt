@@ -123,8 +123,13 @@ class FakePushTokenProvider(var token: String? = null) : PushTokenProvider {
 
 class FakeSocialCleaner : SocialSessionCleaner {
     val clearCount = AtomicInteger()
+
+    /** true면 지우기가 예외를 던진다 (실패해도 나머지 정리가 계속되는지 확인) */
+    @Volatile var fail = false
+
     override suspend fun clear() {
         clearCount.incrementAndGet()
+        if (fail) throw IllegalStateException("캐시 지우기 실패")
     }
 }
 

@@ -4,6 +4,7 @@ import com.duriseo.android.data.remote.me.MeRemoteDataSource
 import com.duriseo.android.data.repository.cache.LocalCacheGeneration
 import com.duriseo.android.data.repository.me.MeRepositoryImpl
 import com.duriseo.android.data.repository.online.runOnlineWrite
+import com.duriseo.android.domain.error.DataError
 import com.duriseo.android.domain.network.NetworkMonitor
 import com.duriseo.android.domain.profile.ProfileRepository
 import com.duriseo.android.domain.result.DataResult
@@ -39,9 +40,15 @@ class ProfileRepositoryImpl @Inject constructor(
     override suspend fun deletePhoto(): DataResult<Unit> =
         networkMonitor.runOnlineWrite { remote.deleteProfileImage() }.thenRefreshMe()
 
-    /** 쓰기가 성공했으면 `GET /me`로 Room을 채운다. 이 갱신이 실패해도 쓰기 결과는 바꾸지 않는다 */
+    /**
+     * 쓰기가 성공했으면 `GET /me`로 Room을 채운다. 갱신이 실패하면(오프라인이 아닐 때) 한 번 더 해 본다 (옛 사진이 남지 않게).
+     * 두 번 다 실패해도 쓰기 결과는 바꾸지 않는다. 화면에 들어올 때 갱신은 없어서 다음 앱 시작의 `GET /me`가 마지막 보충이다.
+     */
     private suspend fun <T> DataResult<T>.thenRefreshMe(): DataResult<T> {
-        if (this is DataResult.Success) meRepository.refreshMe()
+        if (this is DataResult.Success) {
+            val refreshed = meRepository.refreshMe()
+            if (refreshed is DataResult.Failure && refreshed.error != DataError.Offline) meRepository.refreshMe()
+        }
         return this
     }
 }

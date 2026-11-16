@@ -181,6 +181,10 @@
          주소를 바꿀 때는 이 한 곳만 고친다 (복사도 이 값을 쓴다) -->
     <string name="settings_mail_dialog_title">메일 앱을 열 수 없어요</string>
     <string name="settings_mail_dialog_body">아래 주소로 메일을 보내 주세요.</string>
+    <string name="settings_mail_subject">[둘이서 문의]</string>
+    <string name="settings_mail_body_app_version">앱 버전: %1$s</string>
+    <string name="settings_mail_body_android_version">Android 버전: %1$s</string>
+    <string name="settings_mail_body_device_model">기기 모델: %1$s</string>
     <string name="settings_mail_address">[문의 메일 주소]</string>
     <string name="settings_mail_dialog_copy">복사</string>
     <string name="settings_mail_copy_label">문의 메일 주소</string>
@@ -194,4 +198,6 @@
     <!-- SCR-SET-05 오픈소스 라이선스 (보드 OpenSourceLicenses.dc.html) -->
     <string name="licenses_title">오픈소스 라이선스</string>
     <string name="licenses_row_description">%1$s, %2$s</string>
+    <string name="licenses_row_expanded">펼쳐짐</string>
+    <string name="licenses_row_collapsed">접힘</string>
 </resources>

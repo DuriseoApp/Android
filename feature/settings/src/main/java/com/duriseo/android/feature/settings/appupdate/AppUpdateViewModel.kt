@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import java.lang.ref.WeakReference
 import javax.inject.Inject
 
 /**
@@ -52,7 +54,12 @@ class AppUpdateViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            availability.value = if (networkMonitor.isOnlineNow()) source.check() else AppUpdateAvailability.UNKNOWN
+            availability.value = if (networkMonitor.isOnlineNow()) {
+                // Play가 답하지 않으면 확인 중에 머물지 않고 확인할 수 없음으로 둔다 (D-151)
+                withTimeoutOrNull(CHECK_TIMEOUT_MILLIS) { source.check() } ?: AppUpdateAvailability.UNKNOWN
+            } else {
+                AppUpdateAvailability.UNKNOWN
+            }
         }
     }
 
@@ -60,9 +67,11 @@ class AppUpdateViewModel @Inject constructor(
     fun onUpdateClicked(activity: Activity) {
         if (availability.value != AppUpdateAvailability.AVAILABLE || starting.value) return
         starting.value = true
+        // 오래 떠 있는 코루틴이 Activity를 붙들지 않게 약한 참조로 넘긴다 (화면 회전·종료 뒤에도 viewModelScope는 남는다)
+        val activityRef = WeakReference(activity)
         viewModelScope.launch {
             try {
-                source.startUpdate(activity)
+                activityRef.get()?.let { source.startUpdate(it) }
             } finally {
                 starting.value = false
             }
@@ -71,5 +80,8 @@ class AppUpdateViewModel @Inject constructor(
 
     private companion object {
         const val STOP_TIMEOUT_MILLIS = 5_000L
+
+        /** Play의 업데이트 확인을 기다리는 가장 긴 시간 */
+        const val CHECK_TIMEOUT_MILLIS = 10_000L
     }
 }

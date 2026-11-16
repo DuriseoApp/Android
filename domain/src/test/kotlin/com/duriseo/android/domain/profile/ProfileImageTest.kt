@@ -15,9 +15,9 @@ class ProfileImageTest {
     }
 
     @Test
-    fun `NFR-FILE-01 오류 코드로 사진 크기 오류와 형식 오류를 가린다`() {
+    fun `NFR-FILE-01 서버 415만 사진 형식 오류로 가리고 413은 공통 오류다`() {
         fun api(code: String) = DataError.ApiError(code = code, details = null, traceId = null)
-        assertEquals(PhotoError.TOO_LARGE, api("IMAGE_TOO_LARGE").photoErrorOrNull())
+        assertNull(api("IMAGE_TOO_LARGE").photoErrorOrNull())
         assertEquals(PhotoError.TYPE_NOT_ALLOWED, api("IMAGE_TYPE_NOT_ALLOWED").photoErrorOrNull())
         assertNull(api("INTERNAL_ERROR").photoErrorOrNull())
         assertNull(api("모르는 코드").photoErrorOrNull())
