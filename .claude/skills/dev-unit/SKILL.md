@@ -19,23 +19,38 @@ description: 둘이서 Android의 작업 단위 하나(docs/PLAN.md)를 구현�
 1. `docs/progress/_TEMPLATE.md`를 복사해 `docs/progress/unit-<N>.md`를 만든다.
 2. Docs에서 이 단위의 FR·AC, 화면(SCREENS.md의 SCR 항목과 상태별 이미지 `design/screens/<SCR>--<상태>.png`), API 경로·필드·오류 코드를 모두 찾아 범위 표에 적는다. AC마다 테스트 이름을, 화면 상태마다 Preview 이름을 미리 정한다.
 3. 서버 연동 표를 채운다. 그 API가 개발 서버에 배포됐는지 Server 레포 `docs/PLAN.md` 상태로 확인한다. 배포 전이면 API.md대로 만들고 MockWebServer로 테스트한다.
-4. 다음은 여기서 멈추고 사용자에게 묻는다 (Docs 수정은 Docs 레포의 `/prd-sync`로).
+4. **"읽을 곳" 표**를 채운다. 범위 표를 만들며 찾은 위치를 그대로 적는다: 묶음마다 문서와 행 범위(또는 절 제목), 보드 파일(`design/source/*.dc.html`), 화면 이미지, 고칠 기존 코드 파일. 구현 담당과 리뷰어는 이 표만 읽고 시작한다 (같은 탐색을 되풀이하지 않게).
+5. 다음은 여기서 멈추고 사용자에게 묻는다 (Docs 수정은 Docs 레포의 `/prd-sync`로).
    - 문서끼리 다르거나 비어 있는 곳
    - SCREENS.md에서 `디자인: 변경 요청됨`이고 이미지가 없는 새 화면 (디자인이 나오기 전에는 만들지 않는다)
    - 문구나 토큰 값이 문서에 없는 곳
-5. 사용자에게 범위 표를 보여 주고 "맞으면 **start**"라고 묻는다. 승인 전에는 코드를 쓰지 않는다.
+6. 사용자에게 범위 표를 보여 주고 "맞으면 **start**"라고 묻는다. 승인 전에는 코드를 쓰지 않는다.
 
 ## 3. 구현
 
-1. `android-implementer` 서브에이전트에게 진행 기록 경로를 주고 구현을 맡긴다. 범위가 크면 레이어 순서(domain → data → feature)나 화면별로 나눠 순서대로 맡긴다 (같은 파일을 동시에 고치지 않게).
-2. 새 모듈은 `/new-feature-module`, 새 화면은 `/new-screen`, 새 API는 `/add-api`, 토큰 변경은 `/sync-tokens` 절차를 따르게 한다.
-3. 끝나면 `./gradlew assembleDebug testDebugUnitTest`를 직접 돌려 확인한다. SDK가 없는 환경이면 5장의 CI로 확인한다. CI는 `pull_request`에서만 도니(브랜치 push만으로는 안 돈다) 구현을 시작해 첫 커밋을 push할 때 **draft PR을 먼저 연다.** 이후 push마다 CI가 돈다.
+1. `android-implementer` 서브에이전트에게 진행 기록 경로를 주고 구현을 맡긴다. 범위가 크면 레이어 순서(domain → data → feature)나 화면별로 나눠 순서대로 맡긴다 (같은 파일을 동시에 고치지 않게). 작은 단위는 나누지 않는다.
+2. **구현 담당은 단위마다 한 명을 이어 쓴다** (토큰 절약).
+   - 첫 단계만 새로 부르고, 다음 단계와 리뷰 수정은 `SendMessage`로 같은 에이전트에게 보낸다. 이미 읽은 문서·코드를 다시 읽지 않는다.
+   - 이어 쓰기는 **세 번까지**. 그 뒤, 또는 `SendMessage`가 없는 환경(옛 Claude Code)이면 새로 부르고 진행 기록의 "다음 단계용 메모"부터 읽게 한다.
+   - 단계가 끝날 때마다 구현 담당이 "다음 단계용 메모"(만든 파일, 핵심 클래스, 주의점, 몇 줄)를 남긴다.
+   - 이어 쓴 단계의 서브에이전트 토큰이 새로 부른 단계보다 많아지면(캐시가 안 맞는 경우) 그 단위는 새로 부르는 쪽으로 바꾼다.
+3. 지시문에는 진행 기록 경로, 이번 묶음, "읽을 곳 표의 이 묶음 행만 읽고 그 밖은 필요할 때 grep"을 적는다. CLAUDE.md는 에이전트가 자동으로 받으니 읽으라고 하지 않는다.
+4. 새 모듈은 `/new-feature-module`, 새 화면은 `/new-screen`, 새 API는 `/add-api`, 토큰 변경은 `/sync-tokens` 절차를 따르게 한다.
+5. 끝나면 `./gradlew assembleDebug testDebugUnitTest`를 직접 돌려 확인한다. SDK가 없는 환경이면 5장의 CI로 확인한다. CI는 `pull_request`에서만 도니(브랜치 push만으로는 안 돈다) 구현을 시작해 첫 커밋을 push할 때 **draft PR을 먼저 연다.** 이후 push마다 CI가 돈다.
 
 ## 4. 리뷰 반복
 
-1. `android-reviewer`(기본 모델 sonnet)에게 단위 번호를 주고 검사를 맡긴다. 리뷰는 sonnet 1회 + Major 수정분만 리드가 확인한다. 큰 단위는 리드가 opus로 지정해 부를 수 있다.
-2. Critical·Major는 `android-implementer`에게 고치게 한다. Major 수정분은 리드가 diff로 확인하고 다시 리뷰하지 않는다. Critical은 고친 뒤 다시 리뷰한다. 결과를 진행 기록의 "리뷰 기록"에 남긴다.
-3. 3번 반복해도 Critical이 남으면 멈추고, 남은 문제를 PR 본문 맨 위 "⚠️ 사람 확인 필요"에 적는다.
+1. 리뷰 범위는 단위의 위험도로 정한다.
+
+   | 경우 | 리뷰 |
+   | --- | --- |
+   | 보안·개인정보·동시성이 걸린 단위 (로그인, 토큰, 알림, 사진, 탈퇴, 로컬 데이터 정리 등) | `android-reviewer` 1회. 리드가 opus로 지정할 수 있다. Critical이면 재리뷰 |
+   | 보통 기능 단위 | `android-reviewer`(sonnet) 1회 |
+   | 리뷰 수정분, 작은 fix·chore (파일 몇 개) | 리뷰어 없이 리드가 diff로 확인 |
+
+2. 리뷰어는 매번 새로 부른다 (구현 과정을 모르는 눈으로 보게). 지시문에는 단위 번호, `git diff origin/main...HEAD`, 읽을 곳 표, "특히 볼 곳"을 준다. CI가 확인한 것(컴파일, 테스트 통과)은 다시 보지 않게 하고, Docs는 읽을 곳 표의 행만 대조하게 한다.
+3. Critical·Major는 구현 담당(이어 쓰는 그 에이전트)에게 고치게 한다. Major 수정분은 리드가 diff로 확인하고 다시 리뷰하지 않는다. Critical은 고친 뒤 다시 리뷰한다. 결과를 진행 기록의 "리뷰 기록"에 남긴다.
+4. 3번 반복해도 Critical이 남으면 멈추고, 남은 문제를 PR 본문 맨 위 "⚠️ 사람 확인 필요"에 적는다.
 
 ## 5. PR
 
