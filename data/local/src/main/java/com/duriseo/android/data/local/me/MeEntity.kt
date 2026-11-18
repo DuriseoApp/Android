@@ -36,4 +36,8 @@ data class MeEntity(
     @ColumnInfo(name = "import_events") val importEvents: Int? = null,
     @ColumnInfo(name = "import_anniversaries") val importAnniversaries: Int? = null,
     @ColumnInfo(name = "import_memos") val importMemos: Int? = null,
+    /** 내 사진의 버전(객체 키 uuid, 이미지 요청의 `?v=` 캐시 키). 사진이 없으면 null. 스키마 버전 7에서 더함 */
+    @ColumnInfo(name = "profile_image_version") val profileImageVersion: String? = null,
+    /** 상대 사진의 버전. 상대가 없거나 사진이 없으면 null. 스키마 버전 7에서 더함 */
+    @ColumnInfo(name = "partner_profile_image_version") val partnerProfileImageVersion: String? = null,
 )

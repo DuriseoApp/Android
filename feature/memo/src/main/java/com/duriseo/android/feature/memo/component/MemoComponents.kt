@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duriseo.android.core.designsystem.R as DesignR
+import com.duriseo.android.core.designsystem.component.DuriseoAvatarPhoto
 import com.duriseo.android.core.designsystem.format.memoDateChipText
 import com.duriseo.android.core.designsystem.format.writtenAtText
 import com.duriseo.android.core.designsystem.theme.Brand50
@@ -49,6 +50,7 @@ import com.duriseo.android.core.designsystem.theme.Line100
 import com.duriseo.android.core.designsystem.theme.Surface0
 import com.duriseo.android.core.designsystem.theme.Surface100
 import com.duriseo.android.core.designsystem.theme.onPersonColor
+import com.duriseo.android.domain.profile.ProfileImage
 import com.duriseo.android.feature.memo.R
 
 // 핀 카드·메모 행·메모 날짜 칩·핀/별 버튼: SCR-MEMO-01·02·03이 같이 쓰는 부품. 수치는 보드 `Memo.dc.html`, `PinnedAll.dc.html`, `MemoDetail.dc.html`.
@@ -97,9 +99,9 @@ private val ToggleIconSize = 20.dp
 internal fun MemoAuthor.color(): Color =
     if (this == MemoAuthor.ME) DuriseoTheme.personColors.me else DuriseoTheme.personColors.partner
 
-/** 핀 카드 맨 앞 작성자 아바타: 사람 색 원 24에 "나"·"너". 글자색은 배경 상대휘도로 정한다 (SCREENS 공통 "아바타 글자색") */
+/** 핀 카드 맨 앞 작성자 아바타: 사람 색 원 24에 "나"·"너"(사진이 있으면 그 위에 사진). 글자색은 배경 상대휘도로 정한다 (SCREENS 공통 "아바타 글자색") */
 @Composable
-internal fun MemoAuthorAvatar(author: MemoAuthor, modifier: Modifier = Modifier) {
+internal fun MemoAuthorAvatar(author: MemoAuthor, modifier: Modifier = Modifier, photo: ProfileImage? = null) {
     val color = author.color()
     Box(
         modifier = modifier
@@ -114,6 +116,8 @@ internal fun MemoAuthorAvatar(author: MemoAuthor, modifier: Modifier = Modifier)
             style = MaterialTheme.typography.labelSmall.copy(fontSize = AvatarFontSize, fontWeight = FontWeight.Bold),
             color = onPersonColor(color),
         )
+        // 사진이 있으면 글자 원 위에 원형으로 채운다. 받는 중·실패·없음은 글자 원이 그대로 보인다 (FR-AUTH-07 AC4)
+        DuriseoAvatarPhoto(photo, Modifier.matchParentSize())
     }
 }
 
@@ -248,7 +252,7 @@ internal fun PinCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(AvatarGap),
             ) {
-                MemoAuthorAvatar(item.author)
+                MemoAuthorAvatar(item.author, photo = item.photo)
                 Text(
                     text = item.nickname + " · " + writtenAtText(item.writtenAt),
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Normal),

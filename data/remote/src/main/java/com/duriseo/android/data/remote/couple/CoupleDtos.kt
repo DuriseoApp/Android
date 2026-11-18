@@ -36,6 +36,8 @@ data class SpaceMemberDto(
     val nickname: String,
     val color: String,
     val hasProfileImage: Boolean,
+    /** 사진의 버전(객체 키 uuid). 사진이 없으면 null (API.md 3.2) */
+    val profileImageVersion: String? = null,
 )
 
 @Serializable
@@ -91,7 +93,7 @@ fun SpaceDto.toDomain(): Space = Space(
     togetherColor = togetherColor,
     startDate = startDate,
     linkedAt = linkedAt,
-    members = members.map { SpaceMember(it.userId, it.nickname, it.color, it.hasProfileImage) },
+    members = members.map { SpaceMember(it.userId, it.nickname, it.color, it.hasProfileImage, it.profileImageVersion) },
 )
 
 /** 바뀐 필드만 담는다. `members`가 비었으면 필드를 보내지 않는다 */

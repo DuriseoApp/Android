@@ -10,8 +10,10 @@ import com.duriseo.android.core.common.navigation.SettingsRouteModel
 import com.duriseo.android.feature.settings.account.AccountRoute
 import com.duriseo.android.feature.settings.colors.ColorsRoute
 import com.duriseo.android.feature.settings.connection.ConnectionInfoRoute
+import com.duriseo.android.feature.settings.licenses.LicensesRoute
 import com.duriseo.android.feature.settings.menu.SettingsRoute
 import com.duriseo.android.feature.settings.notification.NotificationSettingsRoute
+import com.duriseo.android.feature.settings.profile.ProfileEditRoute
 
 fun NavController.navigateToSettings(navOptions: NavOptions? = null) {
     navigate(MainRouteModel.Settings, navOptions)
@@ -34,6 +36,16 @@ fun NavController.navigateToNotificationSettings(navOptions: NavOptions? = null)
     navigate(SettingsRouteModel.NotificationSettings, navOptions)
 }
 
+/** 내 프로필 수정 (SCR-SET-04). SCR-SET-01 프로필 카드의 [내 프로필 수정]·연필 배지가 부른다 (단위 8) */
+fun NavController.navigateToProfileEdit(navOptions: NavOptions? = null) {
+    navigate(SettingsRouteModel.ProfileEdit, navOptions)
+}
+
+/** 오픈소스 라이선스 (SCR-SET-05). SCR-SET-01의 정보 › 오픈소스 라이선스 행이 부른다 (단위 8) */
+fun NavController.navigateToLicenses(navOptions: NavOptions? = null) {
+    navigate(SettingsRouteModel.Licenses, navOptions)
+}
+
 /**
  * 전체 메뉴(SCR-SET-01), 계정 화면, 우리 색상(SCR-SET-03), 연결 정보. 모두 하단 탭이 없다 (D-30).
  *
@@ -42,6 +54,10 @@ fun NavController.navigateToNotificationSettings(navOptions: NavOptions? = null)
  * @param onBackFromAccount 계정 화면의 뒤로 가기
  * @param onOpenNotificationSettings 설정 › 알림 설정 행 -> SCR-SET-02
  * @param onBackFromNotificationSettings 알림 설정의 뒤로 가기
+ * @param onOpenProfileEdit 프로필 카드의 [내 프로필 수정]·연필 배지 -> SCR-SET-04
+ * @param onBackFromProfileEdit 프로필 수정의 뒤로 가기. [저장]이 끝났을 때도 같다 (전체 메뉴로 돌아온다)
+ * @param onOpenLicenses 정보 › 오픈소스 라이선스 행 -> SCR-SET-05
+ * @param onBackFromLicenses 오픈소스 라이선스의 뒤로 가기
  * @param onOpenColors 꾸미기 › 우리 색상 행
  * @param onBackFromColors 우리 색상의 뒤로 가기. [완료]로 저장했을 때도 같다
  * @param onOpenConnect 프로필 카드의 [상대와 연결하기], 게스트의 연결 정보 행 → SCR-COUPLE-01 (뒤로 가기가 전체 메뉴로 돌아온다)
@@ -66,6 +82,10 @@ fun NavGraphBuilder.settingsNavGraph(
     onBackFromConnectionInfo: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
     onBackFromNotificationSettings: () -> Unit,
+    onOpenProfileEdit: () -> Unit,
+    onBackFromProfileEdit: () -> Unit,
+    onOpenLicenses: () -> Unit,
+    onBackFromLicenses: () -> Unit,
     onOpenInviteCreate: () -> Unit,
     onOpenInviteEnter: () -> Unit,
     onLoggedOut: () -> Unit,
@@ -82,8 +102,23 @@ fun NavGraphBuilder.settingsNavGraph(
             onOpenConnect = onOpenConnect,
             onOpenConnectionInfo = onOpenConnectionInfo,
             onOpenNotificationSettings = onOpenNotificationSettings,
+            onOpenProfileEdit = onOpenProfileEdit,
+            onOpenLicenses = onOpenLicenses,
             onLoggedOut = onLoggedOut,
             onShowSnackBar = onShowSnackBar,
+        )
+    }
+    composable<SettingsRouteModel.ProfileEdit> {
+        ProfileEditRoute(
+            padding = padding,
+            onBack = onBackFromProfileEdit,
+            onShowSnackBar = onShowSnackBar,
+        )
+    }
+    composable<SettingsRouteModel.Licenses> {
+        LicensesRoute(
+            padding = padding,
+            onBack = onBackFromLicenses,
         )
     }
     composable<SettingsRouteModel.NotificationSettings> {

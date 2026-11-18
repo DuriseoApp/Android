@@ -59,4 +59,6 @@ data class SpaceMember(
     val nickname: String,
     val color: String,
     val hasProfileImage: Boolean,
+    /** 사진의 버전(객체 키 uuid). 사진이 없으면 null (API.md 3.2 `SpaceMember.profileImageVersion`) */
+    val profileImageVersion: String? = null,
 )

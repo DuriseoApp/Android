@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -36,6 +39,7 @@ import com.duriseo.android.core.designsystem.component.DuriseoTogetherMark
 import com.duriseo.android.core.designsystem.theme.Brand500
 import com.duriseo.android.core.designsystem.theme.Brand700
 import com.duriseo.android.core.designsystem.theme.DuriseoPickPalette
+import com.duriseo.android.core.designsystem.theme.DuriseoShadows
 import com.duriseo.android.core.designsystem.theme.DuriseoShapes
 import com.duriseo.android.core.designsystem.theme.DuriseoSize
 import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
@@ -45,6 +49,7 @@ import com.duriseo.android.core.designsystem.theme.Line200
 import com.duriseo.android.core.designsystem.theme.OnBrand
 import com.duriseo.android.core.designsystem.theme.PersonMe
 import com.duriseo.android.core.designsystem.theme.PersonPartner
+import com.duriseo.android.core.designsystem.theme.duriseoShadow
 import com.duriseo.android.core.designsystem.theme.Surface0
 import com.duriseo.android.core.designsystem.theme.Surface100
 import com.duriseo.android.feature.settings.R
@@ -54,8 +59,8 @@ import com.duriseo.android.core.designsystem.R as DesignR
 // SCR-SET-01 우리 프로필 카드 (SCREENS.md "프로필 카드", 보드 `Menu.dc.html` 41~97행).
 // 수치는 보드 값을 이름 붙인 상수로 둔다. 토큰이 있는 값(모서리 24, 버튼 높이 44, 모서리 12)은 토큰을 쓴다.
 //
-// 그리지 않은 것: 아바타의 연필 배지와 [내 프로필 수정] 버튼. 이 둘이 가는 SCR-SET-04(프로필 수정)는 단위 8이라
-// 아직 화면이 없다. SCREENS.md는 두 가지를 그대로 두고 있어 단위 8에서 더한다 (unit-3.md "문서와 다른 점").
+// 내 아바타의 연필 배지와 [내 프로필 수정]은 SCR-SET-04(프로필 수정)로 간다 (D-149, 보드 41~45행·72행, 단위 8).
+// 보드는 내 아바타 + 이름 + 표지 한 덩어리를 링크로 묶고 접근성 이름을 "내 프로필 수정: [내 이름]"으로 둔다.
 
 /** 카드 안쪽 여백: 위 22, 좌우 16, 아래 16. 덩어리 사이 18 */
 private val CardPaddingTop = 22.dp
@@ -84,6 +89,18 @@ private val MarkHeight = 22.dp
 /** 버튼 테두리 두께 1 */
 private val OutlineWidth = 1.dp
 
+/** 버튼 두 칸 사이 8 (보드 71행 `gap: 8px`) */
+private val ButtonGap = DuriseoSpacing.Space2
+
+/**
+ * 연필 배지: 28 흰 원, 아바타 오른쪽 아래로 4씩 나감, 카드 면(`surface-100`) 2 링, 연필 15 (보드 44·45행).
+ * 링은 바깥에 그려야 해서 링까지 한 칸(32)으로 두고, 흰 원의 4 나감에 링 2를 더해 6만큼 민다.
+ */
+private val BadgeSize = 28.dp
+private val BadgeRing = 2.dp
+private val BadgeOverhang = 4.dp
+private val BadgeIconSize = 15.dp
+
 /**
  * 커플이면 두 사람과 D+N, 혼자면 나와 "아직 없음". [startDate]가 없으면 D+N과 "부터 함께하고 있어요" 줄은 숨긴다 (D-99).
  * 처음 만난 날 없는 커플은 `SCR-SET-01--no-start-date.png`대로 두 줄을 빼고 마크를 아바타 높이 가운데에 둔다.
@@ -91,6 +108,7 @@ private val OutlineWidth = 1.dp
 @Composable
 internal fun SettingsProfileCard(
     space: SettingsSpace,
+    onEditProfile: () -> Unit,
     onEditStartDate: () -> Unit,
     onConnect: () -> Unit,
     enabled: Boolean,
@@ -114,14 +132,14 @@ internal fun SettingsProfileCard(
         verticalArrangement = Arrangement.spacedBy(CardGap),
     ) {
         when (space) {
-            is SettingsSpace.Couple -> CoupleBody(space, onEditStartDate, enabled)
-            is SettingsSpace.Alone -> AloneBody(space, onConnect, enabled)
+            is SettingsSpace.Couple -> CoupleBody(space, onEditProfile, onEditStartDate, enabled)
+            is SettingsSpace.Alone -> AloneBody(space, onEditProfile, onConnect, enabled)
         }
     }
 }
 
 @Composable
-private fun CoupleBody(space: SettingsSpace.Couple, onEditStartDate: () -> Unit, enabled: Boolean) {
+private fun CoupleBody(space: SettingsSpace.Couple, onEditProfile: () -> Unit, onEditStartDate: () -> Unit, enabled: Boolean) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
         PersonColumn(
             person = space.me,
@@ -129,6 +147,8 @@ private fun CoupleBody(space: SettingsSpace.Couple, onEditStartDate: () -> Unit,
             tag = stringResource(R.string.profile_tag_me),
             fallback = PersonMe,
             modifier = Modifier.weight(1f),
+            onEdit = onEditProfile,
+            editEnabled = enabled,
         )
         TogetherColumn(space)
         PersonColumn(
@@ -149,12 +169,20 @@ private fun CoupleBody(space: SettingsSpace.Couple, onEditStartDate: () -> Unit,
             textAlign = TextAlign.Center,
         )
     }
-    ProfileButton(
-        text = stringResource(R.string.profile_edit_start_date),
-        onClick = onEditStartDate,
-        modifier = Modifier.fillMaxWidth(),
-        enabled = enabled,
-    )
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ButtonGap)) {
+        ProfileButton(
+            text = stringResource(R.string.profile_edit_button),
+            onClick = onEditProfile,
+            modifier = Modifier.weight(1f),
+            enabled = enabled,
+        )
+        ProfileButton(
+            text = stringResource(R.string.profile_edit_start_date),
+            onClick = onEditStartDate,
+            modifier = Modifier.weight(1f),
+            enabled = enabled,
+        )
+    }
 }
 
 /**
@@ -202,7 +230,7 @@ private fun TogetherColumn(space: SettingsSpace.Couple) {
 }
 
 @Composable
-private fun AloneBody(space: SettingsSpace.Alone, onConnect: () -> Unit, enabled: Boolean) {
+private fun AloneBody(space: SettingsSpace.Alone, onEditProfile: () -> Unit, onConnect: () -> Unit, enabled: Boolean) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
         PersonColumn(
             person = space.me,
@@ -210,6 +238,8 @@ private fun AloneBody(space: SettingsSpace.Alone, onConnect: () -> Unit, enabled
             tag = stringResource(R.string.profile_tag_me),
             fallback = PersonMe,
             modifier = Modifier.weight(1f),
+            onEdit = onEditProfile,
+            editEnabled = enabled,
         )
         Box(
             modifier = Modifier
@@ -232,18 +262,29 @@ private fun AloneBody(space: SettingsSpace.Alone, onConnect: () -> Unit, enabled
             )
         }
     }
-    ProfileButton(
-        text = stringResource(R.string.profile_connect_partner),
-        onClick = onConnect,
-        modifier = Modifier.fillMaxWidth(),
-        enabled = enabled,
-        container = Brand500,
-        contentColor = OnBrand,
-        emphasized = true,
-    )
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ButtonGap)) {
+        ProfileButton(
+            text = stringResource(R.string.profile_edit_button),
+            onClick = onEditProfile,
+            modifier = Modifier.weight(1f),
+            enabled = enabled,
+        )
+        ProfileButton(
+            text = stringResource(R.string.profile_connect_partner),
+            onClick = onConnect,
+            modifier = Modifier.weight(1f),
+            enabled = enabled,
+            container = Brand500,
+            contentColor = OnBrand,
+            emphasized = true,
+        )
+    }
 }
 
-/** 아바타 + 이름 + "나"/"상대" 표지 */
+/**
+ * 아바타 + 이름 + "나"/"상대" 표지. [onEdit]이 있으면 내 칸이라 아바타에 연필 배지를 달고, 덩어리 전체가
+ * "내 프로필 수정: 이름"이라는 이름의 버튼이다 (보드 41행 링크, D-149).
+ */
 @Composable
 private fun PersonColumn(
     person: SettingsPerson,
@@ -251,13 +292,34 @@ private fun PersonColumn(
     tag: String,
     fallback: Color,
     modifier: Modifier = Modifier,
+    onEdit: (() -> Unit)? = null,
+    editEnabled: Boolean = true,
 ) {
+    val editDescription = onEdit?.let { stringResource(R.string.profile_edit_badge_description, person.name) }
     Column(
-        modifier = modifier,
+        modifier = modifier.then(
+            if (onEdit != null && editDescription != null) {
+                Modifier
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable(enabled = editEnabled, role = Role.Button, onClick = onEdit)
+                    .semantics(mergeDescendants = true) { contentDescription = editDescription }
+            } else {
+                Modifier
+            },
+        ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(PersonGap),
     ) {
-        DuriseoAvatar(label = letter, colorKey = person.colorKey, size = DuriseoAvatarSize.Large, fallback = fallback)
+        Box(modifier = Modifier.size(DuriseoAvatarSize.Large.diameter)) {
+            DuriseoAvatar(
+                label = letter,
+                colorKey = person.colorKey,
+                size = DuriseoAvatarSize.Large,
+                fallback = fallback,
+                photo = person.photo,
+            )
+            if (onEdit != null) PencilBadge(modifier = Modifier.align(Alignment.BottomEnd))
+        }
         Text(
             text = person.name,
             modifier = Modifier.widthIn(max = NameMaxWidth),
@@ -279,6 +341,35 @@ private fun PersonColumn(
                 text = tag,
                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = Ink600,
+            )
+        }
+    }
+}
+
+/** 아바타 오른쪽 아래의 연필 배지. 눌림은 덩어리 전체가 받아서 접근성 이름도 거기에 있다 */
+@Composable
+private fun PencilBadge(modifier: Modifier = Modifier) {
+    val offset = BadgeOverhang + BadgeRing
+    Box(
+        modifier = modifier
+            .offset(x = offset, y = offset)
+            .size(BadgeSize + BadgeRing * 2)
+            .background(Surface100, DuriseoShapes.Full)
+            .clearAndSetSemantics { },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(BadgeSize)
+                .duriseoShadow(DuriseoShapes.Full, DuriseoShadows.Sm)
+                .background(Surface0, DuriseoShapes.Full),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(DesignR.drawable.ic_pencil),
+                contentDescription = null,
+                modifier = Modifier.size(BadgeIconSize),
+                tint = Ink900,
             )
         }
     }

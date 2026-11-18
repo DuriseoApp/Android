@@ -35,6 +35,9 @@ import com.duriseo.android.data.local.notification.NotificationStateEntity
  *
  * 버전 6 (단위 7): 알림 `notification`(응답 위치 저장)·`notification_state`(다음 커서, 안 읽은 개수)를 더했다 (API.md 3.5). 같은 방식으로 지우고 다시 만든다.
  * 알림은 사용자 것이라 공간이 바뀌어도 지우지 않고 로그아웃·계정 전환의 `clearAllTables`가 지운다.
+ *
+ * 버전 7 (단위 8): `me`에 `profile_image_version`·`partner_profile_image_version`을 더했다 (API.md 3.1 `Me`·`MePartner`의 `profileImageVersion`).
+ * [MIGRATION_6_7]이 열을 더한다(값은 null = 사진 없음으로 보고 다음 `GET /me`가 채운다). 6에서 올라오지 않는 옛 버전은 지우고 다시 만든다.
  */
 @Database(
     entities = [
@@ -48,7 +51,7 @@ import com.duriseo.android.data.local.notification.NotificationStateEntity
         NotificationEntity::class,
         NotificationStateEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 abstract class DuriseoDatabase : RoomDatabase() {

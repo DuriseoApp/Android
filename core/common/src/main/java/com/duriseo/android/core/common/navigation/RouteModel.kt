@@ -118,6 +118,14 @@ sealed interface SettingsRouteModel : RouteModel {
     /** 알림 설정 (SCR-SET-02). 진입은 SCR-SET-01의 알림 설정 행 (단위 7 묶음 E) */
     @Serializable
     data object NotificationSettings : SettingsRouteModel
+
+    /** 내 프로필 수정 (SCR-SET-04). 진입은 SCR-SET-01 프로필 카드의 [내 프로필 수정]·아바타 연필 배지 (D-149, 단위 8) */
+    @Serializable
+    data object ProfileEdit : SettingsRouteModel
+
+    /** 오픈소스 라이선스 (SCR-SET-05). 진입은 SCR-SET-01의 정보 › 오픈소스 라이선스 (D-152, 단위 8) */
+    @Serializable
+    data object Licenses : SettingsRouteModel
 }
 
 /** 커플 연결 화면 (`feature:couple`). 하단 탭이 없다. */

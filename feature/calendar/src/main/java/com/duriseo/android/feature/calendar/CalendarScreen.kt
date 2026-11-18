@@ -94,6 +94,7 @@ import com.duriseo.android.core.designsystem.theme.Surface50
 import com.duriseo.android.core.designsystem.theme.duriseoShadow
 import com.duriseo.android.core.designsystem.theme.onPersonColor
 import com.duriseo.android.domain.event.EventTarget
+import com.duriseo.android.domain.profile.ProfileImage
 import com.duriseo.android.feature.calendar.component.color
 import com.duriseo.android.feature.calendar.component.formatEventDate
 import com.duriseo.android.feature.calendar.component.formatTime24
@@ -346,7 +347,11 @@ private fun CalendarAppBar(
             when (header) {
                 CalendarHeader.Loading -> Unit
                 is CalendarHeader.Solo -> {
-                    RingedAvatar(label = stringResource(R.string.calendar_avatar_me), colorKey = header.myColorKey)
+                    RingedAvatar(
+                        label = stringResource(R.string.calendar_avatar_me),
+                        colorKey = header.myColorKey,
+                        photo = header.myPhoto,
+                    )
                     // 개인 공간: "나의 캘린더" + "기념일 ›" → SCR-ANNIV-01 (FR-CAL-01 AC5, D-54)
                     val description = stringResource(R.string.calendar_solo_title_description)
                     AppBarLink(
@@ -359,8 +364,16 @@ private fun CalendarAppBar(
 
                 is CalendarHeader.Couple -> {
                     Row {
-                        RingedAvatar(label = stringResource(R.string.calendar_avatar_me), colorKey = header.myColorKey)
-                        RingedAvatar(label = stringResource(R.string.calendar_avatar_partner), colorKey = header.partnerColorKey)
+                        RingedAvatar(
+                            label = stringResource(R.string.calendar_avatar_me),
+                            colorKey = header.myColorKey,
+                            photo = header.myPhoto,
+                        )
+                        RingedAvatar(
+                            label = stringResource(R.string.calendar_avatar_partner),
+                            colorKey = header.partnerColorKey,
+                            photo = header.partnerPhoto,
+                        )
                     }
                     CoupleTitle(
                         dayNumber = header.dayNumber,
@@ -412,9 +425,9 @@ private fun NotificationButton(hasUnread: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun RingedAvatar(label: String, colorKey: String) {
+private fun RingedAvatar(label: String, colorKey: String, photo: ProfileImage?) {
     Box(modifier = Modifier.border(AvatarRing, Surface0, CircleShape)) {
-        DuriseoAvatar(label = label, colorKey = colorKey, size = DuriseoAvatarSize.Small)
+        DuriseoAvatar(label = label, colorKey = colorKey, size = DuriseoAvatarSize.Small, photo = photo)
     }
 }
 

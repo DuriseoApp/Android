@@ -46,6 +46,9 @@ private val MenuIconGap = 14.dp
 /** 오른쪽 화살표 18 */
 private val ChevronSize = 18.dp
 
+/** 정보 섹션 행 높이 52 (문의하기, 이용약관 · 개인정보처리방침, 오픈소스 라이선스. 보드 132~134행) */
+private val InfoRowHeight = 52.dp
+
 /** 섹션 제목 아래로 더 띄우는 2 */
 private val SectionTitleBottom = 2.dp
 
@@ -123,6 +126,38 @@ fun DuriseoMenuRow(
 }
 
 /**
+ * 정보 섹션 행: 높이 52, 앞 아이콘 없음, 글자 `body-lg` 16/500 `ink-900`, 오른쪽 화살표 18(`ink-400`). 행 전체가 눌려요.
+ */
+@Composable
+fun DuriseoInfoRow(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(InfoRowHeight)
+            .clickable(role = Role.Button, onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Icon(
+            painter = painterResource(R.drawable.ic_chevron_right),
+            contentDescription = null,
+            modifier = Modifier.size(ChevronSize),
+            tint = Ink400,
+        )
+    }
+}
+
+/**
  * 섹션 제목: 13 / 600(`label`), 아래로 2 더 띄운다. 글자색은 화면마다 보드가 달라 [color]로 받는다
  * (전체 메뉴 `ink-500`, 계정 화면 `ink-600`).
  */
@@ -153,6 +188,7 @@ private fun DuriseoMenuRowPreview() {
             DuriseoMenuRow(label = "Row 56", onClick = {}, iconRes = R.drawable.ic_user, value = "Value 13/400")
             DuriseoMenuRow(label = "Row 56", onClick = {}, iconRes = R.drawable.ic_user, value = "Highlight 13/600", highlightValue = true)
             DuriseoMenuRow(label = "Row 56 no value", onClick = {}, iconRes = R.drawable.ic_user)
+            DuriseoInfoRow(label = "Info row 52", onClick = {})
         }
     }
 }

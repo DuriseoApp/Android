@@ -24,5 +24,8 @@ dependencies {
     implementation(libs.google.id)
     implementation(libs.kakao.v2.user)
 
+    // 인앱 업데이트 (D-151, docs/MODULES.md 3장). `app-update-ktx`가 `app-update`를 함께 가져온다
+    implementation(libs.play.app.update.ktx)
+
     testImplementation(libs.junit)
 }

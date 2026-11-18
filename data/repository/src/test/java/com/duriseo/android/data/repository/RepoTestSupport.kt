@@ -47,6 +47,7 @@ import com.duriseo.android.data.repository.notification.NotificationTapHandlerIm
 import com.duriseo.android.domain.device.PushTokenProvider
 import com.duriseo.android.data.repository.me.MeRepositoryImpl
 import com.duriseo.android.data.repository.memo.MemoRepositoryImpl
+import com.duriseo.android.data.repository.profile.ProfileRepositoryImpl
 import com.duriseo.android.data.repository.cache.LocalCacheGeneration
 import com.duriseo.android.data.repository.me.MeWriteLock
 import com.duriseo.android.data.repository.me.toEntity
@@ -55,6 +56,7 @@ import com.duriseo.android.domain.auth.SocialSessionCleaner
 import com.duriseo.android.domain.auth.TokenState
 import com.duriseo.android.domain.auth.TokenStorage
 import com.duriseo.android.domain.notification.DrawnNotificationCleaner
+import com.duriseo.android.domain.profile.ProfileImageCacheCleaner
 import com.duriseo.android.domain.me.AccountType
 import com.duriseo.android.domain.me.ImportCounts
 import com.duriseo.android.domain.me.MePartner
@@ -121,8 +123,13 @@ class FakePushTokenProvider(var token: String? = null) : PushTokenProvider {
 
 class FakeSocialCleaner : SocialSessionCleaner {
     val clearCount = AtomicInteger()
+
+    /** true면 지우기가 예외를 던진다 (실패해도 나머지 정리가 계속되는지 확인) */
+    @Volatile var fail = false
+
     override suspend fun clear() {
         clearCount.incrementAndGet()
+        if (fail) throw IllegalStateException("캐시 지우기 실패")
     }
 }
 
@@ -130,6 +137,19 @@ class FakeDrawnNotificationCleaner : DrawnNotificationCleaner {
     val cancelCount = AtomicInteger()
     override fun cancelAll() {
         cancelCount.incrementAndGet()
+    }
+}
+
+class FakeProfileImageCacheCleaner : ProfileImageCacheCleaner {
+    val clearCount = AtomicInteger()
+
+    /** true면 지우기가 실패한다 (나머지 정리가 계속되는지 확인용) */
+    @Volatile
+    var fail = false
+
+    override suspend fun clear() {
+        clearCount.incrementAndGet()
+        if (fail) throw IllegalStateException("사진 캐시 정리 실패")
     }
 }
 
@@ -238,6 +258,7 @@ class RepoHarness(
     val tokens = FakeTokenStorage(initialTokens)
     val social = FakeSocialCleaner()
     val drawnNotifications = FakeDrawnNotificationCleaner()
+    val profileImages = FakeProfileImageCacheCleaner()
     val settingsKey = stringPreferencesKey("sample_setting")
 
     val database: DuriseoDatabase = Room.inMemoryDatabaseBuilder(
@@ -283,6 +304,7 @@ class RepoHarness(
         scope = ioScope,
         cache = cache,
         drawnNotifications = drawnNotifications,
+        profileImages = profileImages,
     )
     val clock: Clock = Clock.fixed(Instant.parse("2026-10-30T00:00:00Z"), ZoneId.of(zoneId))
     val acknowledgedSpace = AcknowledgedSpaceLocalDataSource(settings)
@@ -291,6 +313,7 @@ class RepoHarness(
     val anniversaryLocal = AnniversaryLocalDataSource(database.anniversaryDao())
     val memoLocal = MemoLocalDataSource(database.memoDao())
     val meRepository = MeRepositoryImpl(meRemote, meLocal, monitor, acknowledgedSpace, session, writeLock, eventLocal, anniversaryLocal, memoLocal, cache)
+    val profileRepository = ProfileRepositoryImpl(meRemote, meRepository, monitor, cache)
     val pushTokens = FakePushTokenProvider()
     val deviceRegistrar = DeviceRegistrarImpl(meRemote, tokens, monitor, pushTokens)
     val authRepository = AuthRepositoryImpl(authRemote, meRemote, tokens, session, meRepository, monitor, clock, deviceRegistrar, ioScope)

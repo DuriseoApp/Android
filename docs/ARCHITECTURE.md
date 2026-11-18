@@ -41,6 +41,7 @@ Screen ← ViewModel ← Repository.observeX(): Flow  ← Room
 - 범위로 불러오는 목록(일정 `GET /events`)은 응답을 받으면 그 범위에 걸친 행을 지우고 새로 넣는다(한 트랜잭션). 서버에서 지워진 행이 남지 않는다.
 - 공간이 바뀌면(연결, 가져오기 결정, 다른 커플 공간으로 `GET /me`) 일정·기념일 캐시를 비운다. 해제·로그아웃·탈퇴는 `clearAllTables`가 비운다. 다른 공간의 일정이 잠깐이라도 보이면 안 되기 때문이다.
 - 오프라인이면 refresh는 조용히 실패하고 화면은 마지막으로 저장한 데이터를 보여 준다.
+- 프로필 사진은 Room에 `profileImageVersion`(내·상대)만 저장하고, 그림은 Coil이 `GET /users/{id}/profile-image?v=<version>`로 받아 자체 캐시에 둔다. feature는 서버 주소를 모르고 도메인 `ProfileImage(userId, version)`만 `DuriseoAvatar`에 넘기며, `data:remote`의 Coil 매퍼가 주소로 바꾸고 인증 OkHttp(Bearer·401 갱신)가 보낸다. 버전이 없으면 모델이 null이라 요청하지 않고, 받는 중·실패는 사람 색 + 글자 아바타 그대로다.
 
 **쓰기: 온라인에서만** (NFR-OFF-02, D-28)
 

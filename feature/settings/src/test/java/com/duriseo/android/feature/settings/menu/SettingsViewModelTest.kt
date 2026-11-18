@@ -4,11 +4,13 @@ import app.cash.turbine.test
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.domain.error.DataError
 import com.duriseo.android.domain.me.SocialProvider
+import com.duriseo.android.domain.profile.ProfileImage
 import com.duriseo.android.domain.result.DataResult
 import com.duriseo.android.feature.settings.FakeAuthRepository
 import com.duriseo.android.feature.settings.FakeCoupleRepository
 import com.duriseo.android.feature.settings.coupleMe
 import com.duriseo.android.feature.settings.FakeMeRepository
+import com.duriseo.android.feature.settings.GuestId
 import com.duriseo.android.feature.settings.apiError
 import com.duriseo.android.feature.settings.guestMe
 import com.duriseo.android.feature.settings.memberMe
@@ -65,6 +67,30 @@ class SettingsViewModelTest {
         viewModel()
 
         assertEquals(1, me.refreshCalls)
+    }
+
+    @Test
+    fun `FR-AUTH-07 AC3 프로필 카드의 두 사람은 사진 버전으로 사진 모델을 가진다`() = runTest {
+        val base = coupleMe()
+        me.me.value = base.copy(
+            profileImageVersion = "my-ver",
+            space = base.space.copy(partner = base.space.partner!!.copy(profileImageVersion = "partner-ver")),
+        )
+        val vm = viewModel()
+
+        val space = vm.uiState.value.space as SettingsSpace.Couple
+        assertEquals(ProfileImage(GuestId, "my-ver"), space.me.photo)
+        assertEquals(ProfileImage("33333333-3333-3333-3333-333333333333", "partner-ver"), space.partner.photo)
+    }
+
+    @Test
+    fun `FR-AUTH-07 AC4 사진 버전이 없으면 사진 모델이 없어 글자 아바타로 그린다`() = runTest {
+        me.me.value = coupleMe()
+        val vm = viewModel()
+
+        val space = vm.uiState.value.space as SettingsSpace.Couple
+        assertEquals(null, space.me.photo)
+        assertEquals(null, space.partner.photo)
     }
 
     @Test
@@ -401,6 +427,53 @@ class SettingsViewModelTest {
             vm.onAction(SettingsAction.StartDateSaved)
 
             expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `FR-AUTH-07 AC9 내 프로필 수정과 연필 배지는 프로필 화면으로 간다`() = runTest {
+        me.me.value = coupleMe()
+        val vm = viewModel()
+        vm.effects.test {
+            // [내 프로필 수정]과 연필 배지는 같은 동작이다 (D-149)
+            vm.onAction(SettingsAction.ProfileEditClicked)
+
+            assertEquals(SettingsSideEffect.NavigateToProfileEdit, awaitItem())
+        }
+    }
+
+    @Test
+    fun `FR-AUTH-07 AC9 게스트와 혼자 쓰는 회원도 프로필 화면으로 갈 수 있다`() = runTest {
+        me.me.value = guestMe()
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(SettingsAction.ProfileEditClicked)
+
+            assertEquals(SettingsSideEffect.NavigateToProfileEdit, awaitItem())
+        }
+    }
+
+    @Test
+    fun `FR-SET-02 AC1 메일 앱이 없으면 주소 다이얼로그를 보인다`() = runTest {
+        me.me.value = memberMe()
+        val vm = viewModel()
+        assertFalse(vm.uiState.value.mailDialogVisible)
+
+        vm.onAction(SettingsAction.MailAppMissing)
+        assertTrue(vm.uiState.value.mailDialogVisible)
+
+        vm.onAction(SettingsAction.MailDialogDismissed)
+        assertFalse(vm.uiState.value.mailDialogVisible)
+    }
+
+    @Test
+    fun `FR-SET-02 AC3 오픈소스 라이선스는 라이선스 화면으로 간다`() = runTest {
+        me.me.value = memberMe()
+        val vm = viewModel()
+
+        vm.effects.test {
+            vm.onAction(SettingsAction.LicensesClicked)
+            assertEquals(SettingsSideEffect.NavigateToLicenses, awaitItem())
         }
     }
 }

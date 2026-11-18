@@ -4,6 +4,8 @@ plugins {
     id("duriseo.android.application")
     id("duriseo.android.compose")
     id("duriseo.android.hilt")
+    // 오픈소스 라이선스 목록 JSON을 빌드 때 만든다 (SCR-SET-05, D-152). 설정은 기본값 그대로
+    alias(libs.plugins.aboutlibraries)
 }
 
 // local.properties (커밋 안 됨)의 설정값. 키 이름은 docs/SETUP.md 2장.
@@ -62,6 +64,9 @@ dependencies {
     implementation(projects.domain)
     // Hilt 바인딩(리포지토리, 원격, 로컬)을 앱 그래프에 모으기 위해
     implementation(projects.data.repository)
+
+    // 프로필 사진 이미지 로더를 앱 전체 로더로 등록 (SingletonImageLoader.Factory)
+    implementation(libs.coil.singleton)
 
     implementation(libs.timber)
 

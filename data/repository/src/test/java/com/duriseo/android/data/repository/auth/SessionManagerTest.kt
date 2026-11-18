@@ -14,6 +14,7 @@ import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -82,6 +83,47 @@ class SessionManagerTest {
 
         withTimeoutOrNull(5_000) { event.await() }
         assertEquals(1, h.drawnNotifications.cancelCount.get())
+    }
+
+    @Test
+    fun `NFR-PRIV-01 로그아웃하면 받아 둔 프로필 사진 캐시를 지운다`() = runTestWithTimeout {
+        val h = harness()
+
+        h.session.clearAll()
+
+        assertEquals(1, h.profileImages.clearCount.get())
+    }
+
+    @Test
+    fun `NFR-PRIV-01 세션이 끝나면 받아 둔 프로필 사진 캐시를 지운다`() = runTestWithTimeout {
+        val h = harness()
+        val event = async(start = CoroutineStart.UNDISPATCHED) { h.session.events.take(1).toList() }
+
+        h.session.end(SessionEndReason.REPLACED)
+
+        withTimeoutOrNull(5_000) { event.await() }
+        assertEquals(1, h.profileImages.clearCount.get())
+    }
+
+    @Test
+    fun `NFR-PRIV-01 clearUserData도 프로필 사진 캐시를 지우고 실패해도 Room 정리는 끝낸다`() = runTestWithTimeout {
+        val h = harness()
+        h.preload(fixtureMe())
+        h.profileImages.fail = true
+
+        h.session.clearUserData()
+
+        assertEquals(1, h.profileImages.clearCount.get())
+        assertNull(h.roomMe())
+    }
+
+    @Test
+    fun `NFR-PRIV-01 새 로그인 전에 이전 사용자 정리를 하면 프로필 사진 캐시도 지운다`() = runTestWithTimeout {
+        val h = harness()
+
+        assertTrue(h.session.clearUserDataOrFail())
+
+        assertEquals(1, h.profileImages.clearCount.get())
     }
 
     @Test

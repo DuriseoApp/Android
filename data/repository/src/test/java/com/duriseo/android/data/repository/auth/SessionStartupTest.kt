@@ -57,6 +57,15 @@ class SessionStartupTest {
     }
 
     @Test
+    fun `NFR-PRIV-01 토큰이 없는 앱 시작은 남은 프로필 사진 캐시도 지운다`() = runTestWithTimeout {
+        val h = RepoHarness(server, tempFolder.root, initialTokens = null).also { created = it }
+
+        startup(h).run()
+
+        assertEquals(1, h.profileImages.clearCount.get())
+    }
+
+    @Test
     fun `FR-AUTH-01 AC2 저장된 토큰이 있으면 뒤에서 내 정보를 새로 받는다`() = runTestWithTimeout {
         val h = RepoHarness(server, tempFolder.root, initialTokens = testTokens()).also { created = it }
         server.enqueue(jsonResponse(200, meJson(accountType = "MEMBER")))

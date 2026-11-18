@@ -12,12 +12,17 @@ enum class SocialProvider { GOOGLE, KAKAO }
 /** 공간 종류 (API.md 3.1 `MeSpace.type`) */
 enum class SpaceType { PERSONAL, COUPLE }
 
-/** 커플 공간의 상대 (API.md 3.1 `MePartner`). [color]는 사람 색 팔레트 키 */
+/**
+ * 커플 공간의 상대 (API.md 3.1 `MePartner`). [color]는 사람 색 팔레트 키
+ *
+ * @property profileImageVersion 사진의 버전(객체 키 uuid). 사진이 없으면 null. 이미지 요청의 `?v=` 캐시 키다 (단위 8)
+ */
 data class MePartner(
     val id: String,
     val nickname: String,
     val color: String,
     val hasProfileImage: Boolean,
+    val profileImageVersion: String? = null,
 )
 
 /**
@@ -48,7 +53,7 @@ data class MeSpace(
     val importCounts: ImportCounts? = null,
 )
 
-/** 내 정보 + 현재 공간 요약 (API.md 3.1 `Me`). [createdAt]은 가입일 */
+/** 내 정보 + 현재 공간 요약 (API.md 3.1 `Me`). [createdAt]은 가입일, [profileImageVersion]은 내 사진의 버전(없으면 null) */
 data class Me(
     val id: String,
     val accountType: AccountType,
@@ -58,4 +63,5 @@ data class Me(
     val hasProfileImage: Boolean,
     val createdAt: Instant,
     val space: MeSpace,
+    val profileImageVersion: String? = null,
 )

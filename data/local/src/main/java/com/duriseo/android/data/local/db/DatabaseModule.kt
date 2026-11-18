@@ -22,7 +22,8 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): DuriseoDatabase =
         Room.databaseBuilder(context, DuriseoDatabase::class.java, DuriseoDatabase.NAME)
-            // 출시 전: 스키마가 바뀌면 지우고 다시 만든다 (캐시라서 서버에서 다시 받는다)
+            // 6 -> 7은 열만 더한다. 그 밖에 이어지는 길이 없는 버전은 지우고 다시 만든다 (출시 전, 캐시라서 서버에서 다시 받는다)
+            .addMigrations(MIGRATION_6_7)
             .fallbackToDestructiveMigration(true)
             .build()
 

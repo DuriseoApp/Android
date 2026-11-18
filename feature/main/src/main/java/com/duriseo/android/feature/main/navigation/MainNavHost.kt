@@ -120,6 +120,12 @@ fun MainNavHost(
             onBackFromConnectionInfo = navigator::navigateUp,
             onOpenNotificationSettings = navigator::navigateToNotificationSettings,
             onBackFromNotificationSettings = navigator::navigateUp,
+            // 프로필 카드의 [내 프로필 수정]·연필 배지 -> SCR-SET-04. [저장]이 끝나면 전체 메뉴로 돌아온다 (보드)
+            onOpenProfileEdit = navigator::navigateToProfileEdit,
+            onBackFromProfileEdit = navigator::navigateUp,
+            // 정보 › 오픈소스 라이선스 -> SCR-SET-05 (하단 탭 없음, 스낵바 위 40)
+            onOpenLicenses = navigator::navigateToLicenses,
+            onBackFromLicenses = navigator::navigateUp,
             onOpenInviteCreate = navigator::navigateToInviteCreate,
             onOpenInviteEnter = navigator::navigateToInviteEnter,
             onLoggedOut = { navigator.navigateToStart() },

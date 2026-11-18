@@ -9,6 +9,7 @@ import com.duriseo.android.domain.auth.SessionEndReason
 import com.duriseo.android.domain.auth.SocialSessionCleaner
 import com.duriseo.android.domain.auth.TokenStorage
 import com.duriseo.android.domain.notification.DrawnNotificationCleaner
+import com.duriseo.android.domain.profile.ProfileImageCacheCleaner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -25,8 +26,10 @@ import kotlin.coroutines.cancellation.CancellationException
  * - [end]: 서버가 세션을 끊었다(401 `SESSION_REPLACED`·`SESSION_INVALID`). 토큰·Room·설정·소셜 SDK 상태를 지우고
  *   [events]로 이유를 알린다. 이미 끝났거나 끝나는 중이면 무시한다 (한 번만).
  * - [clearAll]: 로그아웃·탈퇴 204 뒤에 같은 정리를 한다 (이벤트 없음).
- * - [clearUserData]: 앱 시작 때 토큰이 없으면 남은 사용자 데이터를 지운다 (실패는 무시).
+ * - [clearUserData]: 앱 시작 때 토큰이 없으면, 연결 해제·공간 초기화 때 남은 사용자 데이터와 프로필 사진 캐시를 지운다 (실패는 무시).
  * - [clearUserDataOrFail]: 로그인·switch가 새 토큰을 저장하기 전에 이전 사용자 데이터를 지운다 (실패를 알린다).
+ *
+ * 이전 사용자의 프로필 사진(이미지 캐시)도 같은 자리에서 지운다 (NFR-PRIV-01 취지, unit-8.md 결정 20).
  */
 @Singleton
 class SessionManager @Inject constructor(
@@ -36,6 +39,7 @@ class SessionManager @Inject constructor(
     @ApplicationScope private val scope: CoroutineScope,
     private val cache: LocalCacheGeneration,
     private val drawnNotifications: DrawnNotificationCleaner,
+    private val profileImages: ProfileImageCacheCleaner,
 ) : SessionEndNotifier {
 
     private val eventChannel = Channel<SessionEndReason>(Channel.BUFFERED)
@@ -78,6 +82,8 @@ class SessionManager @Inject constructor(
         // 이전 사용자의 알림이 새 계정에 남지 않게 한다 (실패해도 로그인은 이어간다)
         clearDrawnNotifications()
         cache.clearing { localData.clearUserData() }
+        // 사진 캐시를 못 지워도 로그인은 막지 않는다 (사진은 사용자 ID가 키라 새 계정에 섞이지 않는다)
+        attempt("프로필 사진 캐시") { profileImages.clear() }
         true
     } catch (e: CancellationException) {
         throw e
@@ -86,9 +92,13 @@ class SessionManager @Inject constructor(
         false
     }
 
-    /** Room과 설정만 지운다. 토큰과 소셜 SDK 상태는 그대로 둔다. */
+    /**
+     * Room과 설정, 프로필 사진 캐시를 지운다. 토큰과 소셜 SDK 상태는 그대로 둔다.
+     * 앱 시작 때 토큰 없음 복구, 연결 해제·공간 초기화(상대 사진은 R-11 권한이 없어진다)가 이 길로 지운다. 한쪽이 실패해도 다른 쪽은 계속한다.
+     */
     suspend fun clearUserData() {
         attempt("로컬 데이터") { cache.clearing { localData.clearUserData() } }
+        attempt("프로필 사진 캐시") { profileImages.clear() }
     }
 
     /** 알림창에 그려진 푸시 알림을 모두 지운다 (NFR-SEC-02). 앱 시작 때 토큰이 없을 때도 부른다 */
