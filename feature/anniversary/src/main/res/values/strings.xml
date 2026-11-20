@@ -42,6 +42,6 @@
     <string name="anniversary_edit_guide_solo">캘린더와 기념일 목록에 표시되고, 당일 오전 9시에 알려 드려요. 2월 29일은 윤년이 아닌 해에 2월 28일로 표시돼요.</string>
     <string name="anniversary_edit_delete">기념일 삭제</string>
     <string name="anniversary_delete_dialog_title">기념일을 삭제할까요?</string>
-    <string name="anniversary_delete_dialog_body">%1$s이 캘린더와 기념일 목록에서 사라져요.</string>
+    <string name="anniversary_delete_dialog_body">%1$s이(가) 캘린더와 기념일 목록에서 사라져요.</string>
     <string name="anniversary_delete_dialog_confirm">삭제</string>
 </resources>

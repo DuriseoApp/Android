@@ -43,6 +43,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
+import com.duriseo.android.core.common.legal.LegalLinks
+import com.duriseo.android.core.common.legal.openExternalUrl
 import android.os.Build
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.duriseo.android.core.designsystem.R as DesignR
@@ -170,14 +172,15 @@ fun SettingsRoute(
         onContact = {
             if (!context.openSupportMail(appUpdate.versionName)) viewModel.onAction(SettingsAction.MailAppMissing)
         },
-        onOpenTerms = { context.openTermsAndPrivacy() },
+        // "이용약관·개인정보처리방침" 한 행은 개인정보처리방침 주소를 연다 (D-154)
+        onOpenTerms = { context.openExternalUrl(LegalLinks.SETTINGS_ROW_URL) },
         onCopyMailAddress = { address -> context.copyToClipboard(address) },
         onUpdate = { context.findActivity()?.let(appUpdateViewModel::onUpdateClicked) },
     )
 }
 
 /**
- * 문의하기: 메일 앱을 연다. `ACTION_SENDTO` `mailto:`에 받는 사람은 비우고(주소 Q-10 미정, 확인 필요 2) 제목·본문만 채운다.
+ * 문의하기: 메일 앱을 연다. `ACTION_SENDTO` `mailto:`에 받는 사람(D-155)과 제목·본문을 채운다.
  * 열 수 있는 앱이 없으면 false.
  */
 private fun Context.openSupportMail(appVersion: String): Boolean {
@@ -187,7 +190,7 @@ private fun Context.openSupportMail(appVersion: String): Boolean {
         androidVersionLine = getString(R.string.settings_mail_body_android_version, Build.VERSION.RELEASE),
         deviceModelLine = getString(R.string.settings_mail_body_device_model, deviceModelLabel(Build.MANUFACTURER, Build.MODEL)),
     )
-    val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")).apply {
+    val intent = Intent(Intent.ACTION_SENDTO, Uri.parse(supportMailUri(getString(R.string.settings_mail_address)))).apply {
         putExtra(Intent.EXTRA_SUBJECT, mail.subject)
         putExtra(Intent.EXTRA_TEXT, mail.body)
     }
@@ -196,17 +199,6 @@ private fun Context.openSupportMail(appVersion: String): Boolean {
         true
     } catch (e: ActivityNotFoundException) {
         false
-    }
-}
-
-/** 이용약관·개인정보처리방침: 주소가 비어 있으면(출시 전, Q-03) 아무 일도 하지 않는다 ([LegalLinks]) */
-private fun Context.openTermsAndPrivacy() {
-    val url = LegalLinks.TERMS_AND_PRIVACY_URL
-    if (url.isBlank()) return
-    try {
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-    } catch (e: ActivityNotFoundException) {
-        // 웹 브라우저가 없는 기기: 아무 일도 하지 않는다
     }
 }
 

@@ -49,6 +49,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.duriseo.android.core.common.legal.LegalLinks
+import com.duriseo.android.core.common.legal.openExternalUrl
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.component.DuriseoButton
 import com.duriseo.android.core.designsystem.component.DuriseoButtonSize
@@ -345,10 +347,11 @@ private fun OrDivider() {
 
 /**
  * 동의 문구 (FR-AUTH-08 AC1). "이용약관"·"개인정보처리방침"은 링크 모양이다: 글자 `ink-600`, 누르는 중 `ink-900`,
- * 밑줄 없음 (design-system.md "시작 화면"). 주소는 PRD Q-03이 정해지지 않아 누르면 아무 일도 하지 않는다 (unit-2 확인 필요 9).
+ * 밑줄 없음 (design-system.md "시작 화면"). 누르면 각 주소를 외부 브라우저로 연다 (D-154).
  */
 @Composable
 private fun ConsentText(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
     val linkStyles = TextLinkStyles(
         style = SpanStyle(color = Ink600),
         pressedStyle = SpanStyle(color = Ink900),
@@ -367,7 +370,9 @@ private fun ConsentText(modifier: Modifier = Modifier) {
             }
             append(rest.substring(0, first))
             val isTerms = rest[first] == '\u0000'
-            withLink(LinkAnnotation.Clickable(tag = if (isTerms) "terms" else "privacy", styles = linkStyles) { }) {
+            withLink(LinkAnnotation.Clickable(tag = if (isTerms) "terms" else "privacy", styles = linkStyles) {
+                context.openExternalUrl(if (isTerms) LegalLinks.TERMS_URL else LegalLinks.PRIVACY_URL)
+            }) {
                 append(if (isTerms) terms else privacy)
             }
             rest = rest.substring(first + 1)
