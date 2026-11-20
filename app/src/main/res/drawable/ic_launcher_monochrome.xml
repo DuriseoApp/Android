@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 테마 아이콘(Android 13+) 단색 레이어: 두 원을 합친 실루엣 한 색 (D-162). 색은 시스템이 입힌다 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M24,54a20,20 0 1,0 40,0a20,20 0 1,0 -40,0z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M44,54a20,20 0 1,0 40,0a20,20 0 1,0 -40,0z" />
+</vector>

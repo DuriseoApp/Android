@@ -25,4 +25,9 @@ class SupportMailTest {
         assertEquals("Samsung Galaxy S23", deviceModelLabel("samsung", "Samsung Galaxy S23"))
         assertEquals("Pixel 8", deviceModelLabel("", "Pixel 8"))
     }
+
+    @Test
+    fun `D-155 FR-SET-02 AC1 mailto 주소에 받는 사람이 들어간다`() {
+        assertEquals("mailto:jucoding99@gmail.com", supportMailUri("jucoding99@gmail.com"))
+    }
 }

@@ -177,7 +177,7 @@
     <string name="settings_terms">이용약관 · 개인정보처리방침</string>
     <string name="settings_licenses">오픈소스 라이선스</string>
 
-    <!-- 메일 앱 없음 다이얼로그 (D-150, 보드 Menu.dc.html 198~204행). 주소는 PRD Q-10이 정해질 때까지 자리표시다.
+    <!-- 메일 앱 없음 다이얼로그 (D-150, 보드 Menu.dc.html 198~204행). 문의 메일 주소는 D-155(jucoding99@gmail.com)다.
          주소를 바꿀 때는 이 한 곳만 고친다 (복사도 이 값을 쓴다) -->
     <string name="settings_mail_dialog_title">메일 앱을 열 수 없어요</string>
     <string name="settings_mail_dialog_body">아래 주소로 메일을 보내 주세요.</string>
@@ -185,7 +185,7 @@
     <string name="settings_mail_body_app_version">앱 버전: %1$s</string>
     <string name="settings_mail_body_android_version">Android 버전: %1$s</string>
     <string name="settings_mail_body_device_model">기기 모델: %1$s</string>
-    <string name="settings_mail_address">[문의 메일 주소]</string>
+    <string name="settings_mail_address">jucoding99@gmail.com</string>
     <string name="settings_mail_dialog_copy">복사</string>
     <string name="settings_mail_copy_label">문의 메일 주소</string>
 

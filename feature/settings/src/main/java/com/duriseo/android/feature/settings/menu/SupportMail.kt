@@ -28,3 +28,6 @@ fun deviceModelLabel(manufacturer: String, model: String): String {
         else -> "$maker $name"
     }
 }
+
+/** 문의 메일 앱을 여는 `mailto:` 주소. 받는 사람은 문의 메일 주소(D-155)다 */
+fun supportMailUri(address: String): String = "mailto:${address.trim()}"
