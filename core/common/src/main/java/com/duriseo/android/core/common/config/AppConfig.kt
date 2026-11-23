@@ -7,11 +7,14 @@ package com.duriseo.android.core.common.config
  * 값이 없으면 빈 문자열이다 (CI 빌드). 이때 그 기능은 동작하지 않는다.
  *
  * @property apiBaseUrl 서버 주소. **호스트까지만** 적는다 (`https://…`). `/api/v1/`은 앱이 붙인다 (API.md 1장)
+ * @property logTokens debug 빌드에서 OkHttp 로그에 토큰을 가리지 않고 남길지. 로컬 디버깅 스위치 `duriseo.debug.logTokens`
+ *   (docs/SETUP.md 2장). release는 항상 false. NFR-SEC-01의 임시 예외라 쓰고 나면 끈다
  */
 data class AppConfig(
     val apiBaseUrl: String,
     val googleWebClientId: String,
     val kakaoNativeAppKey: String,
+    val logTokens: Boolean = false,
 ) {
     /** 서버 주소가 설정돼 있는지 */
     val isApiConfigured: Boolean get() = apiBaseUrl.isNotBlank()

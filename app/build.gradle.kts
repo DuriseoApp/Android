@@ -49,9 +49,13 @@ android {
         // debug = 개발 서버, release = 운영 서버 (ARCHITECTURE.md 6장). applicationId는 둘 다 같다.
         getByName("debug") {
             buildConfigField("String", "API_BASE_URL", localProperty("duriseo.api.devUrl").asBuildConfigString())
+            // 토큰 로그 스위치 (docs/SETUP.md 2장). 이 맥의 local.properties에 `true`로 적었을 때만 켜진다. 기본은 꺼짐
+            buildConfigField("boolean", "LOG_TOKENS", (localProperty("duriseo.debug.logTokens") == "true").toString())
         }
         getByName("release") {
             buildConfigField("String", "API_BASE_URL", localProperty("duriseo.api.prodUrl").asBuildConfigString())
+            // release는 local.properties와 상관없이 항상 꺼짐
+            buildConfigField("boolean", "LOG_TOKENS", "false")
         }
     }
 }

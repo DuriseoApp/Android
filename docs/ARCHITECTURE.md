@@ -71,7 +71,7 @@ ViewModel → Repository.create/update/delete → (오프라인이면 즉시 Off
 
 ## 4. 인증
 
-- 서버가 발급한 access·refresh 토큰(JWT)을 쓴다. 기기에는 **암호화해 저장**한다 (NFR-SEC-01). 토큰을 로그에 남기지 않는다.
+- 서버가 발급한 access·refresh 토큰(JWT)을 쓴다. 기기에는 **암호화해 저장**한다 (NFR-SEC-01). 토큰을 로그에 남기지 않는다 (예외: debug 빌드의 로컬 디버깅 스위치 `duriseo.debug.logTokens`, `docs/SETUP.md` 2장).
 - access가 만료되면 OkHttp `Authenticator`가 refresh를 **한 번만** 부르고(동시 요청은 기다림) 원래 요청을 다시 보낸다.
 - refresh가 세션 끊김 오류로 실패하면 로컬 데이터를 지우고 시작 화면으로 보낸다. 오류 코드별 안내(다른 기기 로그인 등)는 API.md·SCREENS.md를 따른다.
 - 사용자 시간대(`users.time_zone`)는 앱 실행 때 서버에 갱신한다 (ERD 1장).

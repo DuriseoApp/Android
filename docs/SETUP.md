@@ -23,8 +23,11 @@
 | `duriseo.api.prodUrl` | 운영 서버 주소. release 빌드가 써요 |
 | `duriseo.google.webClientId` | Google 웹 애플리케이션 클라이언트 ID (Credential Manager `serverClientId`) |
 | `duriseo.kakao.nativeAppKey` | 카카오 네이티브 앱 키 |
+| `duriseo.debug.logTokens` | (선택, 로컬 디버깅 스위치) `true`면 debug 빌드의 OkHttp 로그(Logcat 태그 `okhttp`)에 `Authorization` 헤더와 토큰 필드를 가리지 않고 남겨요. 없거나 `true`가 아니면 꺼짐. release는 항상 꺼짐 |
 
 새 키를 만들면 이 표, `app/build.gradle.kts`, CI 워크플로를 같은 PR에서 고쳐요.
+
+**`duriseo.debug.logTokens` 주의 (NFR-SEC-01 임시 예외).** 평소에는 적지 않아요. 토큰 값을 꼭 봐야 할 때는 먼저 Android Studio **App Inspection › Network Inspector**(로그에 남지 않음)를 써요. 스위치를 켠 동안은 Logcat에 실제 로그인 토큰이 남으니 로그·버그 리포트·캡처를 공유하지 말고, 쓰고 나면 줄을 지우고 다시 빌드해요. 켜져 있으면 앱 시작 때 `okhttp` 태그로 경고가 한 줄 나와요. CI에는 이 키가 없어 항상 꺼져요.
 
 ### google-services.json (Firebase, 단위 7)
 

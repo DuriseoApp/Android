@@ -90,8 +90,15 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideHttpLoggingInterceptor(): HttpLoggingInterceptor =
-        createLoggingInterceptor(enabled = BuildConfig.DEBUG) { message -> Logger.i("okhttp", message) }
+    fun provideHttpLoggingInterceptor(config: AppConfig): HttpLoggingInterceptor {
+        val enabled = BuildConfig.DEBUG
+        val showTokens = enabled && config.logTokens
+        if (showTokens) {
+            Logger.w("okhttp", "⚠ 토큰 로그가 켜져 있어요 (local.properties duriseo.debug.logTokens). 로그를 공유하지 말고, 쓰고 나면 끄세요")
+        }
+        // 로그 한 줄은 core:common의 Logger(Timber)로 Logcat 태그 `okhttp`에 남긴다
+        return createLoggingInterceptor(enabled = enabled, showTokens = showTokens) { line -> Logger.i("okhttp", line) }
+    }
 
     @Provides
     @Singleton

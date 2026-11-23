@@ -79,6 +79,36 @@ class HttpLoggingTest {
     }
 
     @Test
+    fun `토큰 로그 스위치를 켜면 Authorization과 토큰 필드를 가리지 않는다`() {
+        server.enqueue(
+            MockResponse().setResponseCode(200).setHeader("Content-Type", "application/json")
+                .setBody("""{"accessToken":"$secret-a"}"""),
+        )
+        val client = OkHttpClient.Builder()
+            .addInterceptor(createLoggingInterceptor(enabled = true, showTokens = true) { lines.add(it) })
+            .build()
+        client.newCall(Request.Builder().url(server.url("/api/v1/me")).build()).execute().close()
+        client.newCall(
+            Request.Builder().url(server.url("/api/v1/auth/refresh")).header("Authorization", "Bearer $secret").build(),
+        ).execute().close()
+
+        assertTrue(lines.any { it == "Authorization: Bearer $secret" })
+        assertTrue(lines.any { it.contains("\"accessToken\":\"$secret-a\"") })
+    }
+
+    @Test
+    fun `NFR-SEC-01 로깅이 꺼져 있으면 토큰 로그 스위치가 켜져 있어도 아무것도 남기지 않는다`() {
+        val client = OkHttpClient.Builder()
+            .addInterceptor(createLoggingInterceptor(enabled = false, showTokens = true) { lines.add(it) })
+            .build()
+        client.newCall(
+            Request.Builder().url(server.url("/api/v1/me")).header("Authorization", "Bearer $secret").build(),
+        ).execute().close()
+
+        assertEquals(emptyList<String>(), lines)
+    }
+
+    @Test
     fun `NFR-SEC-01 로깅을 끄면 아무것도 남기지 않는다`() {
         send(enabled = false)
 

@@ -26,6 +26,8 @@ object AppModule {
         apiBaseUrl = BuildConfig.API_BASE_URL,
         googleWebClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID,
         kakaoNativeAppKey = BuildConfig.KAKAO_NATIVE_APP_KEY,
+        // release의 LOG_TOKENS는 항상 false지만, DEBUG가 아니면 한 번 더 막는다
+        logTokens = BuildConfig.DEBUG && BuildConfig.LOG_TOKENS,
     )
 
     /** 앱 정보 카드와 문의 메일의 앱 버전 (FR-SET-02 AC1·AC4). `feature`는 app의 `BuildConfig`를 볼 수 없다 */
