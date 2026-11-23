@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,22 +36,23 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -549,24 +549,8 @@ private fun MonthRow(state: CalendarUiState, onAction: (CalendarAction) -> Unit)
                 onClick = { onAction(CalendarAction.NextMonth) },
             )
         }
-        val toggleLabel = stringResource(if (state.expanded) R.string.calendar_collapse else R.string.calendar_expand)
-        IconButton(
-            onClick = { onAction(CalendarAction.ToggleExpanded) },
-            modifier = Modifier.size(DuriseoSize.Touch).semantics { contentDescription = toggleLabel },
-        ) {
-            // 사각 틀 안의 ⌄(펼치기) / ⌃(접기). 보드는 둥근 사각 + 화살표 선 (`Calendar.dc.html` 54행)
-            Icon(
-                painter = painterResource(DesignR.drawable.ic_chevron_right),
-                contentDescription = null,
-                modifier = Modifier.size(ToggleIcon).rotate(if (state.expanded) -90f else 90f),
-                tint = Ink600,
-            )
-        }
     }
 }
-
-/** 크게 보기 토글 아이콘 22 (54행) */
-private val ToggleIcon = 22.dp
 
 @Composable
 private fun MonthButton(iconRes: Int, description: String, enabled: Boolean, onClick: () -> Unit) {
@@ -612,25 +596,14 @@ private fun WeekdayRow() {
 
 @Composable
 private fun MonthGrid(state: CalendarUiState, onAction: (CalendarAction) -> Unit) {
-    // 끌어서 펼치기·접기 (소스 `dragEnd`): 아래로 40 이상이면 펼치고 위로 40 이상이면 접는다
-    val dragged = remember { mutableFloatStateOf(0f) }
+    // 쓸어서 펼치기·접기 (D-163, 소스 `dragEnd`): 아래로 40 이상이면 펼치고 위로 40 이상이면 접는다
     val thresholdPx = with(androidx.compose.ui.platform.LocalDensity.current) { DRAG_THRESHOLD.dp.toPx() }
     val expanded = state.expanded
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = GridPadding)
-            .pointerInput(expanded) {
-                detectVerticalDragGestures(
-                    onDragStart = { dragged.floatValue = 0f },
-                    onDragEnd = {
-                        val dy = dragged.floatValue
-                        if (dy > thresholdPx && !expanded) onAction(CalendarAction.ToggleExpanded)
-                        if (dy < -thresholdPx && expanded) onAction(CalendarAction.ToggleExpanded)
-                        dragged.floatValue = 0f
-                    },
-                ) { _, delta -> dragged.floatValue += delta }
-            },
+            .foldDrag(expanded, thresholdPx) { onAction(CalendarAction.ToggleExpanded) },
     ) {
         val first = state.visibleMonth.atDay(1)
         // 일요일 시작: 1일 앞의 이전 달 날짜 수 = 요일 값(월 1 ... 일 7)을 7로 나눈 나머지
@@ -891,26 +864,32 @@ private fun DayContent(
     modifier: Modifier = Modifier,
 ) {
     val toggleLabel = stringResource(if (state.expanded) R.string.calendar_collapse else R.string.calendar_expand)
-    val dragged = remember { mutableFloatStateOf(0f) }
     val thresholdPx = with(androidx.compose.ui.platform.LocalDensity.current) { DRAG_THRESHOLD.dp.toPx() }
-    Column(modifier = modifier.fillMaxSize()) {
+    // 날짜 목록(빈 날 포함)에서 쓸기 (D-163)
+    val currentExpanded by rememberUpdatedState(state.expanded)
+    val foldConnection = remember(thresholdPx) {
+        FoldNestedScrollConnection(
+            isExpanded = { currentExpanded },
+            thresholdPx = thresholdPx,
+            onToggle = { onAction(CalendarAction.ToggleExpanded) },
+        )
+    }
+    Column(modifier = modifier.fillMaxSize().nestedScroll(foldConnection)) {
         HorizontalDivider(color = Line100)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(HandleRowHeight)
-                .clickable(role = Role.Button) { onAction(CalendarAction.ToggleExpanded) }
-                .semantics { contentDescription = toggleLabel }
-                .pointerInput(state.expanded) {
-                    detectVerticalDragGestures(
-                        onDragStart = { dragged.floatValue = 0f },
-                        onDragEnd = {
-                            val dy = dragged.floatValue
-                            if (dy > thresholdPx && !state.expanded) onAction(CalendarAction.ToggleExpanded)
-                            if (dy < -thresholdPx && state.expanded) onAction(CalendarAction.ToggleExpanded)
-                            dragged.floatValue = 0f
+                .foldDrag(state.expanded, thresholdPx) { onAction(CalendarAction.ToggleExpanded) }
+                // 버튼이 아니라 쓸기 표시다(탭 없음). 화면 낭독기에는 같은 기능을 접근성 동작으로 준다 (D-163)
+                .semantics {
+                    contentDescription = toggleLabel
+                    customActions = listOf(
+                        CustomAccessibilityAction(toggleLabel) {
+                            onAction(CalendarAction.ToggleExpanded)
+                            true
                         },
-                    ) { _, delta -> dragged.floatValue += delta }
+                    )
                 },
             contentAlignment = Alignment.Center,
         ) {
