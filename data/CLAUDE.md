@@ -4,4 +4,4 @@
 - `data:local`: Room(오프라인 보기용 캐시), DataStore(설정), 암호화 토큰 저장. 로그아웃·탈퇴·다른 기기 로그인으로 세션이 끝나면 모두 지운다.
 - `data:repository`: domain 인터페이스 구현. 읽기는 Room Flow + refresh(API → Room 트랜잭션), 쓰기는 온라인 확인 → API → 성공 시 Room 반영. 낙관적 갱신 없음 (`docs/ARCHITECTURE.md` 2장).
 - 새 API는 `/add-api` 절차로 한다.
-- OkHttp 로깅은 debug 빌드에서만, `Authorization` 헤더는 가린다.
+- OkHttp 로깅은 debug 빌드에서만 (본문까지, Logcat 태그 `okhttp`). `Authorization` 헤더와 본문의 토큰 필드(`accessToken`·`refreshToken`·`token`·`fcmToken`)는 가린다 (`network/HttpLogging.kt`).

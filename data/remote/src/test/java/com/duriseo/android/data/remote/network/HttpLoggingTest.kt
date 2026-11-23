@@ -1,7 +1,9 @@
 package com.duriseo.android.data.remote.network
 
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.logging.HttpLoggingInterceptor
@@ -46,6 +48,34 @@ class HttpLoggingTest {
         assertTrue(lines.any { it.startsWith("Authorization:") })
         assertFalse(lines.any { it.contains(secret) })
         assertFalse(lines.any { it.contains("Bearer") })
+    }
+
+    @Test
+    fun `NFR-SEC-01 본문은 남기되 토큰 필드 값은 가린다`() {
+        server.enqueue(
+            MockResponse().setResponseCode(200).setHeader("Content-Type", "application/json")
+                .setBody("""{"data":{"accessToken":"$secret-a","refreshToken":"$secret-r","nickname":"나"}}"""),
+        )
+        val client = OkHttpClient.Builder()
+            .addInterceptor(createLoggingInterceptor(enabled = true) { lines.add(it) })
+            .build()
+        val body = """{"provider":"KAKAO","token":"$secret-k"}""".toRequestBody("application/json".toMediaType())
+        // setUp에서 넣은 204를 먼저 쓴 뒤 200을 받는다
+        client.newCall(Request.Builder().url(server.url("/api/v1/me")).build()).execute().close()
+        client.newCall(Request.Builder().url(server.url("/api/v1/auth/social")).post(body).build()).execute().close()
+
+        assertFalse(lines.any { it.contains(secret) })
+        assertTrue(lines.any { it.contains("\"token\":\"***\"") })
+        assertTrue(lines.any { it.contains("\"accessToken\":\"***\"") && it.contains("\"refreshToken\":\"***\"") })
+        assertTrue(lines.any { it.contains("\"nickname\":\"나\"") })
+    }
+
+    @Test
+    fun `NFR-SEC-01 토큰 필드만 가리고 다른 필드는 그대로 둔다`() {
+        assertEquals(
+            """{"fcmToken":"***","timezone":"Asia/Seoul","code":"INVITE_CODE_INVALID"}""",
+            redactTokens("""{"fcmToken":"abc\"def","timezone":"Asia/Seoul","code":"INVITE_CODE_INVALID"}"""),
+        )
     }
 
     @Test
