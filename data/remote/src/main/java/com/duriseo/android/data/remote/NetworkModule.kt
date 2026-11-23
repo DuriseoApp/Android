@@ -91,7 +91,8 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideHttpLoggingInterceptor(): HttpLoggingInterceptor =
-        createLoggingInterceptor(enabled = BuildConfig.DEBUG) { message -> Logger.i("okhttp", message) }
+        // debug 빌드에서만 켠다. 한 줄씩 core:common의 Logger(Timber)로 Logcat 태그 `okhttp`에 남긴다
+        createLoggingInterceptor(enabled = BuildConfig.DEBUG) { line -> Logger.i("okhttp", line) }
 
     @Provides
     @Singleton

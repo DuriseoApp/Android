@@ -18,7 +18,7 @@ API.md에 있는 경로만 연결한다. 경로·필드·오류 코드가 문서
 - DTO: `@Serializable data class <이름>Dto(...)`. 필드 이름·타입은 API.md 그대로. 날짜는 문자열로 받고 변환은 매퍼에서.
 - 서비스: Retrofit 인터페이스 `<도메인>Api`에 메서드 하나. 경로는 `/api/v1/…` 그대로. 204는 `Response<Unit>`.
 - 오류: 공용 호출 도우미가 오류 본문을 `ApiError(code, details, traceId)`로 바꾼다. 새 `code`를 쓰면 API.md 5장에 있는지 확인한다.
-- 비밀값·토큰을 로그에 찍지 않는다 (OkHttp 로깅은 debug 빌드에서 헤더 제외).
+- 비밀값·토큰을 release 로그에 찍지 않는다. OkHttp 로깅은 debug 빌드에서만 켜고 요청·응답 전체(토큰 포함)를 남긴다 (루트 CLAUDE.md 규칙 5).
 
 ## 3. domain
 
@@ -45,5 +45,5 @@ API.md에 있는 경로만 연결한다. 경로·필드·오류 코드가 문서
 - [ ] 필드·경로·오류 코드가 API.md와 글자까지 같다
 - [ ] 화면이 서버 응답을 직접 쓰지 않는다 (Room 경유)
 - [ ] 오프라인 쓰기를 실행하지 않는다
-- [ ] 토큰·개인 정보가 로그에 없다
+- [ ] 토큰·개인 정보가 release 로그에 없다
 - [ ] `./gradlew :data:remote:testDebugUnitTest :data:repository:testDebugUnitTest`
