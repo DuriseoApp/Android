@@ -71,6 +71,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
+import kotlin.math.roundToInt
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -692,8 +696,9 @@ private fun MonthGrid(
             .foldDrag(fold, foldRangePx)
             // 높이 = 보이는 달의 주 수 × 칸 높이. 이웃 달이 더 길어도 정착하기 전까지 높이는 그대로다
             .layout { measurable, constraints ->
-                val cell = lerp(CollapsedCellHeight, ExpandedCellHeight, progress()).roundToPx()
-                val height = constraints.constrainHeight(weeksOfVisible * cell)
+                // 칸 높이를 소수 px로 계산하고 합을 한 번만 반올림한다 (줄마다 반올림하면 끄는 동안 주 수만큼 px씩 튄다)
+                val cell = lerp(CollapsedCellHeight, ExpandedCellHeight, progress()).toPx()
+                val height = constraints.constrainHeight((weeksOfVisible * cell).roundToInt())
                 val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
                 layout(placeable.width, height) { placeable.place(0, 0) }
             },
@@ -730,6 +735,7 @@ private fun MonthPage(
                         date = date,
                         inMonth = YearMonth.from(date) == month,
                         column = col,
+                        week = week,
                         state = state,
                         progress = progress,
                         onClick = { onDateClick(date) },
@@ -767,6 +773,7 @@ private fun DayCell(
     date: LocalDate,
     inMonth: Boolean,
     column: Int,
+    week: Int,
     state: CalendarUiState,
     progress: () -> Float,
     onClick: () -> Unit,
@@ -802,9 +809,12 @@ private fun DayCell(
     }
     Column(
         modifier = modifier
-            // 칸 높이 52 ↔ 88: layout 단계에서 progress를 읽어 칸 전체가 재구성되지 않는다
+            // 칸 높이 52 ↔ 88: layout 단계에서 progress를 읽어 칸 전체가 재구성되지 않는다.
+            // 줄 경계를 round(주 × 칸 높이)로 정해 줄마다 생기는 반올림 오차가 쌓이지 않게 한다 (끄는 동안 흔들림 방지)
             .layout { measurable, constraints ->
-                val height = constraints.constrainHeight(lerp(CollapsedCellHeight, ExpandedCellHeight, progress()).roundToPx())
+                val cell = lerp(CollapsedCellHeight, ExpandedCellHeight, progress()).toPx()
+                val rowHeight = (cell * (week + 1)).roundToInt() - (cell * week).roundToInt()
+                val height = constraints.constrainHeight(rowHeight)
                 val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
                 layout(placeable.width, height) { placeable.place(0, 0) }
             }
@@ -822,19 +832,23 @@ private fun DayCell(
         }
         Box(
             modifier = Modifier
-                // 날짜 원 34 ↔ 26
-                .layout { measurable, _ ->
-                    val side = lerp(CollapsedDaySize, ExpandedDaySize, progress()).roundToPx()
-                    val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(side, side))
-                    layout(side, side) { placeable.place(0, 0) }
+                // 자리는 34로 고정하고, 원(34 ↔ 26)과 숫자 위치(원 가운데)는 draw 단계에서 소수 px로 바꾼다.
+                // 크기를 layout에서 바꾸면 px 반올림 때문에 숫자가 1px씩 흔들린다
+                .size(CollapsedDaySize)
+                .graphicsLayer {
+                    // 원 위 끝은 칸 위 4에 붙어 있으니 원이 줄면 가운데가 (34 − 26) / 2 = 4만큼 올라간다
+                    translationY = -lerp(0f, ((CollapsedDaySize - ExpandedDaySize) / 2).toPx(), progress())
                 }
-                .then(
+                .drawBehind {
+                    val radius = lerp(CollapsedDaySize.toPx(), ExpandedDaySize.toPx(), progress()) / 2
                     when {
-                        selected -> Modifier.background(Brand500, CircleShape)
-                        isToday -> Modifier.border(TodayRing, Ink900, CircleShape)
-                        else -> Modifier
-                    },
-                )
+                        selected -> drawCircle(Brand500, radius = radius)
+                        isToday -> {
+                            val stroke = TodayRing.toPx()
+                            drawCircle(Ink900, radius = radius - stroke / 2, style = Stroke(width = stroke))
+                        }
+                    }
+                }
                 .clearAndSetSemantics { },
             contentAlignment = Alignment.Center,
         ) {
@@ -849,14 +863,8 @@ private fun DayCell(
                 color = numberColor,
             )
         }
-        // 원과 점·막대 사이 간격 3 ↔ 4
-        Spacer(
-            Modifier.layout { measurable, constraints ->
-                val gap = lerp(DotGap, DuriseoSpacing.Space1, progress()).roundToPx()
-                val placeable = measurable.measure(constraints.copy(minHeight = gap, maxHeight = gap))
-                layout(placeable.width, gap) { placeable.place(0, 0) }
-            },
-        )
+        // 원과 점 사이 간격 3 (접힘 기준 자리). 펼친 막대는 아래에서 draw 단계로 원 아래 4 자리까지 올린다
+        Spacer(Modifier.height(DotGap))
         if (inMonth && (events.isNotEmpty() || anniversaries.isNotEmpty() || memos.isNotEmpty())) {
             // 점은 앞쪽 절반(p 0..0.5)에 사라지고 막대는 뒤쪽 절반(p 0.5..1)에 나타난다. 두 표시가 같이 보이지 않고,
             // 막대는 칸 높이가 70 이상(2개 + "+N"이 들어갈 만큼 가까울 때)일 때만 보여 잘리지 않는다
@@ -872,7 +880,18 @@ private fun DayCell(
                     DayBars(
                         anniversaries,
                         events,
-                        modifier = Modifier.graphicsLayer { alpha = foldBarsAlpha(progress()) },
+                        modifier = Modifier
+                            // 자리(원 34 + 간격 3)보다 높이가 모자라도 막대를 다 재고, 칸이 잘라 그린다
+                            .wrapContentHeight(align = Alignment.Top, unbounded = true)
+                            .graphicsLayer {
+                                alpha = foldBarsAlpha(progress())
+                                // 접힘 자리(위 4 + 34 + 3)에서 펼침 자리(위 4 + 26 + 4)로: 7만큼 올린다
+                                translationY = -lerp(
+                                    0f,
+                                    (CollapsedDaySize + DotGap - ExpandedDaySize - DuriseoSpacing.Space1).toPx(),
+                                    progress(),
+                                )
+                            },
                     )
                 }
             }
