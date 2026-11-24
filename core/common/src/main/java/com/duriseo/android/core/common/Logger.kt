@@ -12,4 +12,7 @@ object Logger {
     fun i(tag: String, message: String) = Timber.tag(tag).i(message)
     fun w(tag: String, message: String) = Timber.tag(tag).w(message)
     fun e(tag: String, message: String) = Timber.tag(tag).e(message)
+
+    /** 예외의 스택까지 남긴다 */
+    fun w(tag: String, message: String, throwable: Throwable) = Timber.tag(tag).w(throwable, message)
 }

@@ -69,7 +69,7 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun signIn(provider: SocialProvider, token: String): DataResult<LoginResult> =
         networkMonitor.runOnlineWrite {
             completeLogin(authRemote.social(provider, token))
-        }
+        }.also { logSocialResult("POST /auth/social", provider, it) }
 
     override suspend fun link(provider: SocialProvider, token: String): DataResult<Unit> =
         networkMonitor.runOnlineWrite {
@@ -82,7 +82,7 @@ class AuthRepositoryImpl @Inject constructor(
                 else -> endSessionIfNeeded(result)
             }
             result
-        }
+        }.also { logSocialResult("POST /auth/link", provider, it) }
 
     override suspend fun switchAccount(provider: SocialProvider, token: String): DataResult<LoginResult> =
         networkMonitor.runOnlineWrite {
@@ -103,7 +103,7 @@ class AuthRepositoryImpl @Inject constructor(
                     result
                 }
             }
-        }
+        }.also { logSocialResult("POST /auth/switch", provider, it) }
 
     override suspend fun logout(): DataResult<Unit> =
         networkMonitor.runOnlineWrite {
@@ -183,5 +183,23 @@ class AuthRepositoryImpl @Inject constructor(
 
     private companion object {
         const val TAG = "auth"
+
+        /** core:common의 SOCIAL_LOG_TAG와 같은 값. 소셜 로그인 로그를 한 태그로 모은다 */
+        const val SOCIAL_TAG = "social"
+    }
+
+    /**
+     * 소셜 로그인·연동·전환의 서버 결과를 로그로 남긴다 (Logcat `tag:social`).
+     * 서버 로그는 traceId로 찾는다 (Server 레포 docs/DEPLOY.md). 401 SOCIAL_TOKEN_INVALID면 서버의 Google·Kakao 설정을 본다.
+     */
+    private fun logSocialResult(call: String, provider: SocialProvider, result: DataResult<*>) {
+        when (result) {
+            is DataResult.Success -> Logger.i(SOCIAL_TAG, "$call ($provider): 성공")
+            is DataResult.Failure -> when (val error = result.error) {
+                is DataError.ApiError ->
+                    Logger.w(SOCIAL_TAG, "$call ($provider): 실패 code=${error.code} traceId=${error.traceId}")
+                DataError.Offline -> Logger.w(SOCIAL_TAG, "$call ($provider): 서버에 닿지 않음 (연결 없음·시간 초과·주소 오류)")
+            }
+        }
     }
 }

@@ -6,6 +6,7 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
+import com.duriseo.android.core.common.Logger
 import com.duriseo.android.core.common.config.AppConfig
 import com.duriseo.android.domain.me.SocialProvider
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
@@ -27,6 +28,7 @@ class GoogleTokenSource @Inject constructor(
         val serverClientId = config.googleWebClientId
         if (serverClientId.isBlank()) {
             // 설정값이 없는 빌드(CI). 기능만 동작하지 않는다
+            Logger.w(SOCIAL_LOG_TAG, "Google: local.properties duriseo.google.webClientId가 비어 있어 로그인할 수 없어요")
             return SocialTokenResult.Failed(IllegalStateException("Google 웹 클라이언트 ID가 설정되지 않았어요"))
         }
 
@@ -34,22 +36,30 @@ class GoogleTokenSource @Inject constructor(
             .addCredentialOption(GetSignInWithGoogleOption.Builder(serverClientId).build())
             .build()
 
+        Logger.i(SOCIAL_LOG_TAG, "Google: Credential Manager 요청 시작")
         return try {
             val credential = CredentialManager.create(activity).getCredential(activity, request).credential
             if (credential is CustomCredential &&
                 credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
             ) {
                 val idToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
+                Logger.i(SOCIAL_LOG_TAG, "Google: ID 토큰 받음")
                 SocialTokenResult.Success(SocialProvider.GOOGLE, idToken)
             } else {
+                Logger.w(SOCIAL_LOG_TAG, "Google: 예상하지 못한 자격 증명 종류 ${credential.type}")
                 SocialTokenResult.Failed(IllegalStateException("예상하지 못한 자격 증명 종류예요"))
             }
         } catch (e: GetCredentialCancellationException) {
+            Logger.i(SOCIAL_LOG_TAG, "Google: 사용자가 취소 (${e.type}: ${e.errorMessage})")
             SocialTokenResult.Cancelled
         } catch (e: GetCredentialException) {
-            // NoCredentialException(기기에 Google 계정 없음) 포함
+            // NoCredentialException(기기에 Google 계정 없음) 포함.
+            // "[28444] Developer console is not set up correctly"면 Google Cloud의 Android OAuth 클라이언트(패키지 이름 + 이 기기의
+            // 서명 SHA-1, 앱 시작 로그 참고)나 웹 클라이언트 ID가 맞지 않는다
+            Logger.w(SOCIAL_LOG_TAG, "Google: 실패 ${e::class.simpleName} type=${e.type} message=${e.errorMessage}", e)
             SocialTokenResult.Failed(e)
         } catch (e: GoogleIdTokenParsingException) {
+            Logger.w(SOCIAL_LOG_TAG, "Google: ID 토큰 해석 실패", e)
             SocialTokenResult.Failed(e)
         }
     }
