@@ -47,6 +47,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.duriseo.android.core.common.Logger
+import com.duriseo.android.core.common.social.SOCIAL_LOG_TAG
 import com.duriseo.android.core.common.social.SocialTokenResult
 import com.duriseo.android.core.common.social.findActivity
 import com.duriseo.android.core.common.social.socialTokenProvider
@@ -149,6 +151,7 @@ fun AccountRoute(
                     val result = try {
                         val activity = context.findActivity()
                         if (activity == null) {
+                            Logger.w(SOCIAL_LOG_TAG, "${effect.provider}: 화면에서 Activity를 찾지 못해 로그인을 열 수 없어요")
                             SocialTokenResult.Failed()
                         } else {
                             socialTokenProvider.requestToken(activity, effect.provider)
