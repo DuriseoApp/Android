@@ -5,6 +5,11 @@ plugins {
 
 android {
     namespace = "com.duriseo.android.core.designsystem"
+
+    testOptions {
+        // Compose UI 테스트(Robolectric)가 리소스와 문구를 읽는다
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 dependencies {
@@ -22,4 +27,6 @@ dependencies {
     implementation(libs.androidx.activity.compose)
 
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
 }

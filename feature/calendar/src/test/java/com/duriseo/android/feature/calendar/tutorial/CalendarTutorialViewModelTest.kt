@@ -19,6 +19,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 
 /** SCR-CAL-01 캘린더 튜토리얼의 표시 규칙과 단계 진행 (FR-CAL-06, FR-SET-02 AC5) */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -161,6 +162,16 @@ class CalendarTutorialViewModelTest {
 
         vm.environment(onCalendar = false)
         assertNull(vm.uiState.value.step)
+    }
+
+    @Test
+    fun `FR-CAL-06 AC4 본 기록을 저장하지 못해도 튜토리얼은 보여 준다`() = runTest {
+        val repo = FakeCalendarTutorialRepository().apply { markFailure = IOException("디스크 오류") }
+        val vm = viewModel(repo)
+
+        vm.environment()
+
+        assertEquals(CalendarTutorialStep.Calendar, vm.uiState.value.step)
     }
 
     // --- 단계 진행 (AC2·AC3) ---

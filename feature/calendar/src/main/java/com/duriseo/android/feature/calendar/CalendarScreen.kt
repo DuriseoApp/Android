@@ -87,7 +87,6 @@ import com.duriseo.android.core.designsystem.component.DuriseoSheetPanel
 import com.duriseo.android.core.designsystem.component.DuriseoYearMonthWheel
 import com.duriseo.android.core.designsystem.component.StartDatePickerSheet
 import com.duriseo.android.core.designsystem.component.coachMarkTarget
-import com.duriseo.android.feature.calendar.tutorial.CalendarTutorialStep
 import com.duriseo.android.core.designsystem.theme.Brand50
 import com.duriseo.android.core.designsystem.theme.Brand500
 import com.duriseo.android.core.designsystem.theme.Brand700
@@ -116,6 +115,7 @@ import com.duriseo.android.feature.calendar.component.formatEventDate
 import com.duriseo.android.feature.calendar.component.formatTime24
 import com.duriseo.android.feature.calendar.component.label
 import com.duriseo.android.feature.calendar.component.weekdayLabel
+import com.duriseo.android.feature.calendar.tutorial.CalendarTutorialStep
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth

@@ -9,12 +9,12 @@ import com.duriseo.android.data.repository.event.EventRepositoryImpl
 import com.duriseo.android.data.repository.me.MeRepositoryImpl
 import com.duriseo.android.data.repository.memo.MemoRepositoryImpl
 import com.duriseo.android.data.repository.notification.NotificationPermissionGateImpl
-import com.duriseo.android.data.repository.tutorial.CalendarTutorialRepositoryImpl
 import com.duriseo.android.data.repository.notification.NotificationRepositoryImpl
 import com.duriseo.android.data.repository.notification.NotificationSettingsRepositoryImpl
 import com.duriseo.android.data.repository.notification.NotificationTapHandlerImpl
 import com.duriseo.android.data.repository.profile.ProfileRepositoryImpl
 import com.duriseo.android.data.repository.sync.SyncDispatcher
+import com.duriseo.android.data.repository.tutorial.CalendarTutorialRepositoryImpl
 import com.duriseo.android.domain.anniversary.AnniversaryRepository
 import com.duriseo.android.domain.auth.AuthRepository
 import com.duriseo.android.domain.auth.SessionEndNotifier

@@ -2,6 +2,7 @@ package com.duriseo.android.feature.calendar.tutorial
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.duriseo.android.core.common.Logger
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.domain.tutorial.CalendarTutorialRepository
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 
 /**
@@ -81,6 +83,9 @@ class CalendarTutorialViewModel @Inject constructor(
             step.value = null
             return
         }
+        // 이미 뜬 단계는 위치를 잠시 잃어도(회전, 탭 전환) 그대로 두고, 레이어가 다시 잴 때까지 그리지 않는다.
+        // 튜토리얼이 떠 있는 동안에는 전체 메뉴를 열 수 없어 다시 보기 요청이 새로 남지 않는다고 본다. 혹시 남아 있으면
+        // 닫은 뒤 조건이 다시 바뀔 때(탭 전환·시트 닫힘 등) 1단계부터 뜬다
         if (step.value != null || !environment.targetsReady || environment.blocked) return
         if (replay) {
             repository.consumeReplay()
@@ -89,10 +94,18 @@ class CalendarTutorialViewModel @Inject constructor(
         }
         if (firstChecked) return
         firstChecked = true
-        if (repository.markShownIfFirst()) step.value = CalendarTutorialStep.first
+        // 저장에 실패(IOException)해도 튜토리얼은 보여 준다. 다음 실행에 다시 뜰 수 있을 뿐이다
+        val isFirst = try {
+            repository.markShownIfFirst()
+        } catch (e: IOException) {
+            Logger.w(TAG, "튜토리얼 본 기록을 저장하지 못했어요", e)
+            true
+        }
+        if (isFirst) step.value = CalendarTutorialStep.first
     }
 
     private companion object {
         const val STOP_TIMEOUT_MILLIS = 5_000L
+        const val TAG = "CalendarTutorial"
     }
 }

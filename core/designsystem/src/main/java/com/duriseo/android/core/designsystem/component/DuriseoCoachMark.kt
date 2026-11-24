@@ -38,6 +38,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
@@ -113,10 +114,12 @@ private val BubbleSide = DuriseoSpacing.Space5
  *
  * - 화면 아무 곳이나(구멍 안 포함) 누르면 [onNext]. 구멍 안의 기능은 실행되지 않는다 (별도 창이 누름을 받는다).
  * - [건너뛰기]와 뒤로 가기는 [onSkip].
- * - 접근성: 덮개 전체가 하나의 버튼처럼 읽히고(문구 + 진행 표시) 두 번 누르면 [onNext], 단계가 바뀌면 다시 읽는다.
- *   [건너뛰기]는 따로 버튼으로 읽힌다. 새 접근성 문구는 없다.
+ * - 접근성: 덮개 누름 영역과 말풍선은 형제 노드라서 [건너뛰기]는 독립 버튼으로 읽힌다. 진행 표시와 설명 문구는 각각 읽히고
+ *   (단계가 바뀌면 다시 읽는다) 두 번 누르면 [onNext]다. 새 접근성 문구는 없다.
+ * - [target]이 없거나 비어 있으면(회전 직후, 탭 전환 등 아직 못 쟀을 때) 아무것도 그리지 않고 기다린다. 다시 재면 같은 단계로 이어서
+ *   그리며, 처음 나타날 때는 날아오지 않고 대상 자리에서 시작한다.
  *
- * @param target 창 기준 대상 위치. 아직 모르면 null이고 구멍 없이 가운데에 말풍선을 둔다
+ * @param target 창 기준 대상 위치
  * @param holeShape 구멍 모서리. 대상 모양을 따른다 (달력 `radius-lg`, FAB `radius-fab`, 아이콘 버튼·탭 항목·링크 `radius-full`)
  */
 @Composable
@@ -130,6 +133,7 @@ fun DuriseoCoachMarkLayer(
     onSkip: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (target == null || target.isEmpty) return
     DuriseoOverlayWindow(onBack = onSkip, showSnackbar = false) {
         CoachMarkContent(target, holeShape, message, stepNumber, stepCount, onNext, onSkip, modifier)
     }
@@ -137,7 +141,7 @@ fun DuriseoCoachMarkLayer(
 
 @Composable
 private fun CoachMarkContent(
-    target: Rect?,
+    target: Rect,
     holeShape: CornerBasedShape,
     message: String,
     stepNumber: Int,
@@ -148,37 +152,44 @@ private fun CoachMarkContent(
 ) {
     val density = LocalDensity.current
     val scrim = MaterialTheme.colorScheme.scrim
-    val outset = with(density) { HoleOutset.toPx() }
-    val hole = target?.inflate(outset)
-    // 처음에는 대상 자리에서 시작하고, 단계가 바뀌면 새 대상으로 옮겨 간다
-    val animatedHole = animateRectAsState(hole ?: Rect.Zero, label = "coachMarkHole")
+    val hole = target.inflate(with(density) { HoleOutset.toPx() })
+    // 처음에는 대상 자리에서 시작하고(이 구성은 대상이 있을 때만 만들어진다), 단계가 바뀌면 새 대상으로 옮겨 간다
+    val animatedHole = animateRectAsState(hole, label = "coachMarkHole")
     val animatedRadius = animateFloatAsState(
-        targetValue = hole?.let { holeShape.topStart.toPx(it.size, density) } ?: 0f,
+        targetValue = holeShape.topStart.toPx(hole.size, density),
         label = "coachMarkHoleRadius",
     )
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            // 화면 아무 곳이나 누르면 다음 단계. 낭독기에서는 문구와 진행 표시가 한 덩어리로 읽히고 두 번 누르면 다음이다
-            .semantics { liveRegion = LiveRegionMode.Polite }
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onNext,
-            ),
-    ) {
+    Box(modifier = modifier.fillMaxSize()) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val path = Path().apply {
                 fillType = PathFillType.EvenOdd
                 addRect(Rect(Offset.Zero, size))
-                if (hole != null) addRoundRect(RoundRect(animatedHole.value, CornerRadius(animatedRadius.value)))
+                addRoundRect(RoundRect(animatedHole.value, CornerRadius(animatedRadius.value)))
             }
             drawPath(path, scrim)
         }
+        // 덮개 누름 영역: 화면 아무 곳이나 누르면 다음 단계. 말풍선과 형제라서 [건너뛰기]를 감싸지 않는다.
+        // 접근성에서는 뺀다 (이름 없는 버튼을 만들지 않고, 낭독기 두 번 누르기는 아래 말풍선 글자의 클릭이 받는다)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clearAndSetSemantics { }
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onNext,
+                ),
+        )
         Layout(
             content = {
-                CoachMarkBubble(message = message, stepNumber = stepNumber, stepCount = stepCount, onSkip = onSkip)
+                CoachMarkBubble(
+                    message = message,
+                    stepNumber = stepNumber,
+                    stepCount = stepCount,
+                    onNext = onNext,
+                    onSkip = onSkip,
+                )
             },
             modifier = Modifier.fillMaxSize(),
         ) { measurables, constraints ->
@@ -189,13 +200,26 @@ private fun CoachMarkContent(
                 Constraints(minWidth = width, maxWidth = width, maxHeight = constraints.maxHeight),
             )
             val current = animatedHole.value
-            val y = when {
-                hole == null -> (constraints.maxHeight - bubble.height) / 2f
-                // 대상이 화면 아래쪽 반에 있으면 구멍 위, 아니면 구멍 아래
-                hole.center.y > constraints.maxHeight / 2f -> current.top - gap - bubble.height
-                else -> current.bottom + gap
-            }
             val maxY = (constraints.maxHeight - bubble.height).coerceAtLeast(0)
+            val below = current.bottom + gap
+            val above = current.top - gap - bubble.height
+            // 대상이 화면 아래쪽 반에 있으면 구멍 위, 아니면 구멍 아래가 먼저다. 모자라면 반대쪽, 양쪽 다 모자라면(큰 대상)
+            // 구멍 안쪽 아래 끝에서 위로 붙여 화면 안에 둔다
+            val fitsBelow = below + bubble.height <= constraints.maxHeight
+            val fitsAbove = above >= 0f
+            val y = if (hole.center.y > constraints.maxHeight / 2f) {
+                when {
+                    fitsAbove -> above
+                    fitsBelow -> below
+                    else -> current.bottom - bubble.height
+                }
+            } else {
+                when {
+                    fitsBelow -> below
+                    fitsAbove -> above
+                    else -> current.bottom - bubble.height
+                }
+            }
             layout(constraints.maxWidth, constraints.maxHeight) {
                 bubble.place(side, y.roundToInt().coerceIn(0, maxY))
             }
@@ -206,16 +230,26 @@ private fun CoachMarkContent(
 /**
  * 말풍선: `surface-0` 면, 모서리 `radius-lg`, `shadow-dialog`, 안쪽 여백 16. 꼬리는 없다.
  * 맨 위 줄 왼쪽에 진행 표시("1/5", `caption` `ink-500`), 오른쪽에 텍스트 버튼 [건너뛰기](`label` `ink-500`), 아래에 설명 문구(`body-md` `ink-900`).
+ * 진행 표시와 설명 문구는 누르면 다음 단계이고(낭독기 두 번 누르기 포함) 바뀌면 다시 읽는다. [건너뛰기]는 독립 버튼이다.
  */
 @Composable
 private fun CoachMarkBubble(
     message: String,
     stepNumber: Int,
     stepCount: Int,
+    onNext: () -> Unit,
     onSkip: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val shape = MaterialTheme.shapes.large
+    // 글자를 눌러도 덮개를 누른 것과 같다: 다음 단계. 눌림 효과는 없다
+    val nextOnClick = Modifier
+        .semantics { liveRegion = LiveRegionMode.Polite }
+        .clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = onNext,
+        )
     Column(
         modifier = modifier
             .duriseoShadow(shape, DuriseoShadows.Dialog)
@@ -228,11 +262,11 @@ private fun CoachMarkBubble(
         ) {
             Text(
                 text = stringResource(R.string.coach_mark_progress, stepNumber, stepCount),
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).then(nextOnClick),
                 style = MaterialTheme.typography.labelMedium,
                 color = Ink500,
             )
-            // 터치 영역은 44 이상 (size-touch). 버튼으로 읽힌다
+            // 터치 영역은 44 이상 (size-touch). 독립 버튼으로 읽힌다
             Box(
                 modifier = Modifier
                     .heightIn(min = DuriseoSize.Touch)
@@ -249,6 +283,7 @@ private fun CoachMarkBubble(
         }
         Text(
             text = message,
+            modifier = Modifier.fillMaxWidth().then(nextOnClick),
             style = MaterialTheme.typography.bodyMedium,
             color = Ink900,
         )

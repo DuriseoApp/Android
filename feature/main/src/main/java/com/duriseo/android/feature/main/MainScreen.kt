@@ -140,7 +140,9 @@ fun MainScreen(
                     if (linkedSheetVisible) {
                         LinkedSheetRoute()
                     }
-                    // 캘린더 튜토리얼 (FR-CAL-06, D-168). 로그인 뒤 캘린더 탭에 처음 들어오면 뜨고, 연결 완료 시트가 떠 있으면 닫힌 뒤에 뜬다
+                    // 캘린더 튜토리얼 (FR-CAL-06, D-168). 로그인 뒤 캘린더 탭에 처음 들어오면 뜨고, 연결 완료 시트가 떠 있으면 닫힌 뒤에 뜬다.
+                    // 알림: 연결 완료 시트를 닫은 직후의 알림 권한 요청(FR-NOTI-01 AC2)은 앱에 "진행 중" 상태가 없어 blocked에 넣지 못했다.
+                    // 그래서 알림 권한 시스템 창이 튜토리얼 위에 겹칠 수 있다(시스템 창이 위에 떠서, 닫으면 튜토리얼이 보인다)
                     if (startDestination != null) {
                         CalendarTutorialHost(
                             onCalendar = currentTab == MainTab.CALENDAR,
