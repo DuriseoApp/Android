@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.component.CalendarDateRange
+import com.duriseo.android.core.designsystem.component.DuriseoSwitch
 import com.duriseo.android.core.designsystem.component.DuriseoBottomSheetLayer
 import com.duriseo.android.core.designsystem.component.StartDatePickerSheet
 import com.duriseo.android.core.designsystem.theme.DuriseoSize
@@ -139,7 +139,7 @@ fun MemoForm(
                         color = Ink600,
                     )
                 }
-                Switch(
+                DuriseoSwitch(
                     checked = state.notifyPartner,
                     onCheckedChange = { onAction(MemoEditAction.NotifyChanged(it)) },
                     enabled = !state.saving,

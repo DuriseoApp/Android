@@ -2,6 +2,7 @@ package com.duriseo.android.core.designsystem.component
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,10 +21,12 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -42,6 +45,7 @@ import com.duriseo.android.core.designsystem.theme.Ink400
 import com.duriseo.android.core.designsystem.theme.Ink500
 import com.duriseo.android.core.designsystem.theme.Ink900
 import com.duriseo.android.core.designsystem.theme.Surface100
+import kotlinx.coroutines.launch
 import java.time.LocalTime
 
 // 시간 휠 (design-system.md "시간 휠 (TimeWheel)", 보드 `AddEvent.dc.html` 144~163행·275~290행, SCR-CAL-03).
@@ -80,6 +84,13 @@ object TimeWheelValues {
         val scrollPx = firstVisibleIndex * rowHeightPx + firstVisibleOffsetPx
         return ((scrollPx + rowHeightPx / 2) / rowHeightPx).coerceIn(0, itemCount - 1)
     }
+
+    /**
+     * 휠의 [tappedIndex]번째 값을 눌렀을 때 가운데로 보낼 값의 위치 (D-165). 위아래 값을 누르면 그 값이, 가운데 값을 누르면
+     * 지금 값이 그대로다. 목록 밖이면 가까운 끝으로 맞춘다.
+     */
+    fun tapTargetIndex(tappedIndex: Int, itemCount: Int): Int =
+        if (itemCount <= 0) 0 else tappedIndex.coerceIn(0, itemCount - 1)
 
     /** 가운데에서 몇 줄 떨어졌는지(0, 1, 2 이상) → 글자 모양 구분 */
     fun distanceFromSelected(index: Int, selectedIndex: Int): Int = kotlin.math.abs(index - selectedIndex)
@@ -186,6 +197,7 @@ private fun TimeWheelColumn(
         }
     }
     LaunchedEffect(selected) { onSelected(selected) }
+    val scope = rememberCoroutineScope()
     LazyColumn(
         modifier = modifier
             .height(RowHeight * TimeWheelValues.VISIBLE_ROWS)
@@ -196,7 +208,18 @@ private fun TimeWheelColumn(
     ) {
         items(items.size) { index ->
             val distance = TimeWheelValues.distanceFromSelected(index, selected)
-            Box(modifier = Modifier.height(RowHeight).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .height(RowHeight)
+                    .fillMaxWidth()
+                    // 누르면 그 값이 가운데로 와서 골라진다 (D-165). 접근성 동작을 새로 붙이지 않으려 탭 제스처로만 받는다
+                    .pointerInput(items.size) {
+                        detectTapGestures {
+                            scope.launch { listState.animateScrollToItem(TimeWheelValues.tapTargetIndex(index, items.size)) }
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
                 Text(
                     text = items[index],
                     style = when (distance) {

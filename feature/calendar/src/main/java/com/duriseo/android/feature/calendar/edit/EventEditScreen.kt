@@ -27,7 +27,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -57,6 +56,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.permission.LocalNotificationPermissionRequester
 import com.duriseo.android.core.designsystem.component.CalendarDateRange
+import com.duriseo.android.core.designsystem.component.DuriseoSwitch
 import com.duriseo.android.core.designsystem.component.DuriseoBottomSheetLayer
 import com.duriseo.android.core.designsystem.component.DuriseoDialogLayer
 import com.duriseo.android.core.designsystem.component.DuriseoLargeButton
@@ -372,7 +372,7 @@ private fun EditBody(
                         color = Ink600,
                     )
                 }
-                Switch(
+                DuriseoSwitch(
                     checked = state.notifyPartner,
                     onCheckedChange = { onAction(EventEditAction.NotifyPartnerChanged(it)) },
                 )
@@ -528,7 +528,7 @@ private fun SwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
             color = Ink900,
         )
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        DuriseoSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
