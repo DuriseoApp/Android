@@ -1,6 +1,5 @@
 package com.duriseo.android.core.designsystem.component
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,8 +54,12 @@ private val LoadingStroke = 4.dp
  */
 @Composable
 fun DuriseoLoadingOverlay(modifier: Modifier = Modifier) {
-    // 요청이 도는 동안 뒤로 가기로 화면이 닫히지 않게 한다
-    BackHandler(enabled = true, onBack = {})
+    // 별도 창(하단 탭·시스템 바 위, 먼저 떠 있던 시트·다이얼로그 위). 요청이 도는 동안 뒤로 가기는 막는다(onBack = null)
+    DuriseoOverlayWindow(onBack = null, showSnackbar = false) { LoadingOverlayContent(modifier) }
+}
+
+@Composable
+private fun LoadingOverlayContent(modifier: Modifier) {
     val shape = MaterialTheme.shapes.large
     Box(
         modifier = modifier

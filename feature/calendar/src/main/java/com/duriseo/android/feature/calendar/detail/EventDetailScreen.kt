@@ -46,7 +46,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.activity.compose.BackHandler
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -167,7 +166,6 @@ fun EventDetailScreen(
 ) {
     val event = state.event
     // 삭제 요청 중에는 뒤로 가기로 다이얼로그가 닫히지 않는다
-    BackHandler(enabled = state.deleteDialogVisible) { onAction(EventDetailAction.DeleteCancelled) }
     DuriseoDialogLayer(
         dialogVisible = state.deleteDialogVisible,
         dialog = {

@@ -1,6 +1,5 @@
 package com.duriseo.android.feature.anniversary.list
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -169,7 +168,6 @@ fun AnniversaryListScreen(
         dialog = {
             if (sheet != null) {
                 // 처음 만난 날 선택 시트 (SCR-SET-01 소속 시트 재사용). 저장 요청 중에는 뒤 막과 뒤로 가기로 닫히지 않는다
-                BackHandler(enabled = !sheet.saving) { onAction(AnniversaryListAction.StartDateSheetDismissed) }
                 DuriseoBottomSheetLayer(
                     onDismissRequest = if (sheet.saving) null else ({ onAction(AnniversaryListAction.StartDateSheetDismissed) }),
                 ) {

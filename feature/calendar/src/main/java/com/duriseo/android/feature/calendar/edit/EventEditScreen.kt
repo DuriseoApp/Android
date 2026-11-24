@@ -1,6 +1,5 @@
 package com.duriseo.android.feature.calendar.edit
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -153,7 +152,6 @@ fun EventEditScreen(
     // [메모] 탭이 현재 탭이다: 슬롯이 있고 새로 쓰는 중일 때만 (D-133)
     val memo = memoTab?.takeIf { !state.isEdit && state.kind == EditKind.Memo }
     val sheet = state.sheet
-    BackHandler(enabled = memo == null && sheet != null) { onAction(EventEditAction.SheetDismissed) }
     DuriseoDialogLayer(
         dialogVisible = if (memo != null) memo.dateSheetVisible else sheet != null,
         dialog = {

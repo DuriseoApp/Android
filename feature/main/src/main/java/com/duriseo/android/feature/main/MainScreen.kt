@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.CompositionLocalProvider
+import com.duriseo.android.core.designsystem.component.DuriseoOverlaySnackbar
+import com.duriseo.android.core.designsystem.component.LocalOverlaySnackbar
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -95,8 +98,14 @@ fun MainScreen(
     val snackbarAtTop = navigator.snackbarAtTop(linkedSheetVisible)
     // 일정 색 등 사람 색은 내 정보의 색 키에서 온다 (FR-CAL-04 AC1)
     val loadingHost = remember { DuriseoLoadingHostState() }
+    // 시트·다이얼로그·덮개는 별도 창이라 아래 스낵바를 가린다. 같은 스낵바를 그 창 위에도 그린다 (D-126)
+    val showBottomBar = navigator.showBottomBar()
+    val overlaySnackbar = remember(snackbarHostState, snackbarAtTop, showBottomBar) {
+        DuriseoOverlaySnackbar(snackbarHostState, atTop = snackbarAtTop, aboveBottomBar = showBottomBar)
+    }
     DuriseoTheme(personColors = personColors) {
         // 로딩 덮개는 하단 탭(MainScaffold 소속)까지 덮어야 해서 가장 위층에서 그린다 (D-115 "화면 전체")
+        CompositionLocalProvider(LocalOverlaySnackbar provides overlaySnackbar) {
         DuriseoLoadingHost(state = loadingHost) {
         Box {
             MainScaffold(
@@ -122,6 +131,7 @@ fun MainScreen(
             if (linkedSheetVisible) {
                 LinkedSheetRoute()
             }
+        }
         }
         }
     }

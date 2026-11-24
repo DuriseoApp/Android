@@ -26,6 +26,7 @@ sealed interface CalendarSideEffect { ... }  // 한 번만 일어나는 일 (이
 - 사람 색(나·상대·함께)은 `PersonColors`로 쓰고, 색만으로 뜻을 전하지 않는다 (라벨이나 아바타 글자를 함께, FR-CAL-04).
 - 터치 영역은 `size-touch` 이상, 아이콘 버튼에는 `contentDescription`을 넣는다.
 - 수정·삭제 메뉴는 PRD 7장 권한 매트릭스대로 보이거나 숨긴다.
+- 하단 시트·다이얼로그·요청 중 덮개는 공통 레이어(`DuriseoBottomSheetLayer`·`DuriseoDialogLayer`·`DuriseoLoadingLayer`)로만 그린다. 별도 창이라 하단 탭 위에 뜨고, 화면 안에 scrim `Box`·`ModalBottomSheet`·`AlertDialog`를 직접 쓰면 `OverlayRulesTest`가 실패한다.
 
 ## 문구
 

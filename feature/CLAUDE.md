@@ -5,3 +5,4 @@
 - 화면 구성·문구·상태는 `../Docs/docs/SCREENS.md` 그대로. 화면이 어느 모듈인지는 `docs/MODULES.md` 2장.
 - 하단 탭은 캘린더·메모 두 개 (D-30). 전체 메뉴(설정)는 캘린더 앱바에서 들어간다.
 - 쓰기 동작은 오프라인이면 실행하지 않고 "인터넷 연결이 필요해요"를 보여 준다 (NFR-OFF-02).
+- **하단 시트·다이얼로그·요청 중 덮개는 반드시 `DuriseoBottomSheetLayer`·`DuriseoDialogLayer`(`DuriseoDialog`)·`DuriseoLoadingLayer`로만 그린다.** 이 레이어는 별도 창에 그려 하단 탭·시스템 바 위에 뜬다. 화면 안에 scrim `Box`나 M3 `ModalBottomSheet`·`AlertDialog`를 직접 쓰지 않는다 (`OverlayRulesTest`). 시트·다이얼로그의 뒤로 가기는 레이어가 받으니 화면에 `BackHandler`를 따로 두지 않는다.

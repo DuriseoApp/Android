@@ -1,6 +1,5 @@
 package com.duriseo.android.feature.settings.menu
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -232,7 +231,6 @@ fun SettingsScreen(
         dialog = {
             if (sheet != null) {
                 // 처음 만난 날 선택 시트 (D-74). 저장 요청 중에는 뒤 막과 뒤로 가기로 닫히지 않는다
-                BackHandler(enabled = !sheet.saving) { onAction(SettingsAction.StartDateSheetDismissed) }
                 DuriseoBottomSheetLayer(
                     onDismissRequest = if (sheet.saving) null else ({ onAction(SettingsAction.StartDateSheetDismissed) }),
                 ) {

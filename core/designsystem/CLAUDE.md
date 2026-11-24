@@ -6,3 +6,5 @@
 - 공용 컴포넌트(버튼, 다이얼로그, 아래쪽 시트, 날짜 시트, 앱바, 배너, 메뉴 행, 아바타, 커플 표시, 스낵바, 하단 탭)는 design-system.md "컴포넌트"를 기준으로 여기 둔다. 기능 로직을 넣지 않는다. 한 모듈에서만 쓰는 부품(캘린더의 FAB 등)은 그 feature 모듈에 둔다 (`docs/MODULES.md`).
 - 다크 모드는 design-system.md에 정의되기 전까지 만들지 않는다.
 - 컴포넌트마다 `@Preview`를 둔다.
+- **하단 시트·다이얼로그·요청 중 덮개는 반드시 `DuriseoBottomSheetLayer`·`DuriseoDialogLayer`(`DuriseoDialog`)·`DuriseoLoadingLayer`로만 그린다.** 이 레이어는 별도 창(`DuriseoOverlayWindow`)에 그려 하단 탭·시스템 바 위에 뜬다. 화면 안에 scrim `Box`나 M3 `ModalBottomSheet`·`AlertDialog`를 직접 쓰지 않는다 (`OverlayRulesTest`가 막는다). 새 덮개 종류가 필요하면 여기에 레이어로 추가한다.
+- 덮개 창은 뒤로 가기를 직접 받는다(`onBackPress`/`onDismissRequest`). 호출부의 `BackHandler`는 창이 떠 있는 동안 닿지 않는다. 창 위에도 앱 스낵바가 보이게 `LocalOverlaySnackbar`를 쓴다 (D-126).

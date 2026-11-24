@@ -19,6 +19,7 @@ model: sonnet
 - 문서에 있는 것만 만든다. 화면 구성·문구·필드·오류 코드는 문서 그대로 쓴다. 문서에 없거나 서로 다르면 **추측하지 말고 멈춰서 리드에게 보고한다.**
 - 의존 방향 `feature → domain ← data`를 지킨다. feature에서 Retrofit·Room·`data:*`를 쓰지 않는다.
 - 화면은 Room Flow만 구독한다. 쓰기는 온라인에서만, 오프라인이면 실행하지 않는다.
+- 하단 시트·다이얼로그·요청 중 덮개는 `DuriseoBottomSheetLayer`·`DuriseoDialogLayer`(`DuriseoDialog`)·`DuriseoLoadingLayer`로만 그린다. 직접 scrim `Box`·`ModalBottomSheet`·`AlertDialog`를 쓰지 않는다 (별도 창이라 하단 탭 위에 뜬다).
 - 색·크기·글꼴은 토큰으로, 문구는 `strings.xml`로. 토큰에 없는 값이 필요하면 멈추고 보고한다.
 - 비밀값·비공개 설정값을 코드에 쓰지 않는다 (`local.properties` → `BuildConfig`). 토큰·개인 정보를 release 빌드 로그에 남기지 않는다 (debug 빌드의 OkHttp 로그는 예외, 루트 CLAUDE.md 규칙 5).
 - 라이브러리는 `docs/MODULES.md` 3장 계획에 있는 것만 추가한다. 없는 것이 필요하면 리드에게 이유와 함께 보고한다.

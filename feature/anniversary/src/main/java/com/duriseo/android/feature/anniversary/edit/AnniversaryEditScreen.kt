@@ -1,6 +1,5 @@
 package com.duriseo.android.feature.anniversary.edit
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -122,7 +121,6 @@ fun AnniversaryEditScreen(
     padding: PaddingValues = PaddingValues(),
 ) {
     val sheet = state.dateSheet
-    BackHandler(enabled = sheet != null) { onAction(AnniversaryEditAction.DateSheetDismissed) }
     DuriseoDialogLayer(
         dialogVisible = sheet != null || state.deleteDialogVisible,
         dialog = {

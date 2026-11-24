@@ -1,6 +1,5 @@
 package com.duriseo.android.feature.couple.linkedsheet
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -50,9 +49,11 @@ import com.duriseo.android.core.designsystem.component.DuriseoBottomSheetLayer
 import com.duriseo.android.core.designsystem.component.DuriseoButtonStyle
 import com.duriseo.android.core.designsystem.component.DuriseoDialog
 import com.duriseo.android.core.designsystem.component.DuriseoDialogLayer
+import com.duriseo.android.core.designsystem.component.DuriseoOverlaySnackbar
+import com.duriseo.android.core.designsystem.component.LocalOverlaySnackbar
+import androidx.compose.runtime.CompositionLocalProvider
 import com.duriseo.android.core.designsystem.component.DuriseoLargeButton
 import com.duriseo.android.core.designsystem.component.DuriseoSheetPanel
-import com.duriseo.android.core.designsystem.component.DuriseoSnackbarHost
 import com.duriseo.android.core.designsystem.component.StartDatePickerSheet
 import com.duriseo.android.core.designsystem.theme.Brand500
 import com.duriseo.android.core.designsystem.theme.Brand700
@@ -105,7 +106,6 @@ private val CardBorderWidth = 1.dp
 private val CardSelectedBorderWidth = 2.dp
 
 /** 스낵바는 위에서 40 (D-126) */
-private val SnackbarTop = 40.dp
 
 /**
  * 연결 완료 시트. 호스트(`feature:main`)가 SCR-CAL-01 위에 그리고, 띄울지는 `MeRepository.observeLinkedSheetNeeded()`가 정한다.
@@ -137,22 +137,23 @@ fun LinkedSheetRoute(
         }
     }
 
-    // 뒤로 가기는 늘 이 시트가 받는다. 열린 겹부터 닫고, 기록이 있으면 마지막 겹은 닫지 않는다
-    BackHandler(onBack = { viewModel.onAction(LinkedSheetAction.BackPressed) })
-
-    LinkedSheetScreen(
-        state = state,
-        onAction = viewModel::onAction,
-        snackbarHost = { DuriseoSnackbarHost(hostState = snackbarHostState) },
-        modifier = modifier,
-    )
+    // 시트·다이얼로그가 별도 창이라 창 위에서도 이 스낵바가 보이게 위에서 40으로 제공한다 (D-126)
+    val overlaySnackbar = remember(snackbarHostState) {
+        DuriseoOverlaySnackbar(hostState = snackbarHostState, atTop = true, aboveBottomBar = false)
+    }
+    CompositionLocalProvider(LocalOverlaySnackbar provides overlaySnackbar) {
+        LinkedSheetScreen(
+            state = state,
+            onAction = viewModel::onAction,
+            modifier = modifier,
+        )
+    }
 }
 
 @Composable
 fun LinkedSheetScreen(
     state: LinkedSheetUiState,
     onAction: (LinkedSheetAction) -> Unit,
-    snackbarHost: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -167,6 +168,8 @@ fun LinkedSheetScreen(
                 } else {
                     null
                 },
+                // 뒤로 가기는 늘 이 시트가 받는다. 열린 겹부터 닫고, 기록이 있으면 마지막 겹은 닫지 않는다
+                onBackPress = { onAction(LinkedSheetAction.BackPressed) },
             ) {
                 SheetPanel(state = state, onAction = onAction)
             }
@@ -188,15 +191,6 @@ fun LinkedSheetScreen(
                     saveEnabled = picker.selected != null,
                 )
             }
-        }
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .padding(top = SnackbarTop),
-        ) {
-            snackbarHost()
         }
     }
 }
@@ -462,7 +456,7 @@ private fun PreviewLinkedSheet(state: LinkedSheetUiState) {
     DuriseoTheme {
         // 뒤 화면(캘린더) 자리: 시트가 덮는 색 면
         Box(modifier = Modifier.fillMaxSize().background(Surface0)) {
-            LinkedSheetScreen(state = state, onAction = {}, snackbarHost = {})
+            LinkedSheetScreen(state = state, onAction = {})
         }
     }
 }

@@ -1,6 +1,5 @@
 package com.duriseo.android.feature.memo.detail
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -143,7 +142,6 @@ fun MemoDetailScreen(
     padding: PaddingValues = PaddingValues(),
 ) {
     val memo = state.memo
-    BackHandler(enabled = state.deleteDialogVisible && !state.deleting) { onAction(MemoDetailAction.DeleteCancelled) }
     DuriseoDialogLayer(
         dialogVisible = state.deleteDialogVisible,
         dialog = {

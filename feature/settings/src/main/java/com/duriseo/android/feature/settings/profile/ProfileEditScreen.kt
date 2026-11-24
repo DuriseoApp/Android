@@ -1,7 +1,6 @@
 package com.duriseo.android.feature.settings.profile
 
 import android.graphics.Bitmap
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -195,7 +194,6 @@ fun ProfileEditScreen(
     DuriseoDialogLayer(
         dialogVisible = state.sheetVisible,
         dialog = {
-            BackHandler { onAction(ProfileEditAction.SheetDismissed) }
             DuriseoBottomSheetLayer(onDismissRequest = { onAction(ProfileEditAction.SheetDismissed) }) {
                 PhotoSheet(
                     cameraAvailable = state.cameraAvailable,
