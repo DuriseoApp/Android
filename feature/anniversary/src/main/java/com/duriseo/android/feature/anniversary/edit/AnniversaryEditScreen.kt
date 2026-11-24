@@ -21,7 +21,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,6 +46,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.duriseo.android.core.designsystem.permission.LocalNotificationPermissionRequester
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.component.CalendarDateRange
+import com.duriseo.android.core.designsystem.component.DuriseoSwitch
 import com.duriseo.android.core.designsystem.component.DuriseoBottomSheetLayer
 import com.duriseo.android.core.designsystem.component.DuriseoButtonStyle
 import com.duriseo.android.core.designsystem.component.DuriseoDialog
@@ -254,7 +254,7 @@ private fun EditBody(state: AnniversaryEditUiState, onAction: (AnniversaryEditAc
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 RowLabel(iconRes = DesignR.drawable.ic_repeat, text = stringResource(R.string.anniversary_edit_yearly_label))
-                Switch(
+                DuriseoSwitch(
                     checked = state.repeatsYearly,
                     onCheckedChange = { onAction(AnniversaryEditAction.YearlyChanged(it)) },
                     enabled = !state.saving,

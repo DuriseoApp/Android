@@ -17,8 +17,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.component.DuriseoLoadingLayer
+import com.duriseo.android.core.designsystem.component.DuriseoSwitch
 import com.duriseo.android.core.designsystem.component.DuriseoTopAppBar
 import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
@@ -43,7 +42,6 @@ import com.duriseo.android.core.designsystem.theme.Ink500
 import com.duriseo.android.core.designsystem.theme.Ink600
 import com.duriseo.android.core.designsystem.theme.Ink900
 import com.duriseo.android.core.designsystem.theme.Line100
-import com.duriseo.android.core.designsystem.theme.Line200
 import com.duriseo.android.core.designsystem.theme.Surface0
 import com.duriseo.android.domain.notification.NotificationSettingKind
 import com.duriseo.android.domain.notification.NotificationSettings
@@ -168,16 +166,7 @@ private fun SettingRow(
                 color = if (dimmed) Ink500 else Ink600,
             )
         }
-        Switch(
-            checked = checked,
-            onCheckedChange = null,
-            enabled = enabled,
-            colors = SwitchDefaults.colors(
-                disabledUncheckedTrackColor = Line100,
-                disabledUncheckedThumbColor = Surface0,
-                disabledUncheckedBorderColor = Line200,
-            ),
-        )
+        DuriseoSwitch(checked = checked, onCheckedChange = null, enabled = enabled)
     }
 }
 

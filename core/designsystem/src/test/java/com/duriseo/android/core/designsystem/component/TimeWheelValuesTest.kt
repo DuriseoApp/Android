@@ -83,4 +83,19 @@ class TimeWheelValuesTest {
         assertEquals(1, TimeWheelValues.distanceFromSelected(6, 7))
         assertEquals(2, TimeWheelValues.distanceFromSelected(9, 7))
     }
+
+    @Test
+    fun `D-165 눌린 값의 위치가 그대로 가운데로 갈 위치다`() {
+        // 오후(1)일 때 위의 오전(0)을 누르면 0, 가운데 값을 누르면 그대로
+        assertEquals(0, TimeWheelValues.tapTargetIndex(0, 2))
+        assertEquals(1, TimeWheelValues.tapTargetIndex(1, 2))
+        assertEquals(31, TimeWheelValues.tapTargetIndex(31, 60))
+    }
+
+    @Test
+    fun `D-165 목록 밖 위치는 가까운 끝으로 맞춘다`() {
+        assertEquals(0, TimeWheelValues.tapTargetIndex(-1, 12))
+        assertEquals(11, TimeWheelValues.tapTargetIndex(12, 12))
+        assertEquals(0, TimeWheelValues.tapTargetIndex(3, 0))
+    }
 }
