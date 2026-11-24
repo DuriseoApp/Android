@@ -50,8 +50,15 @@ class GoogleTokenSource @Inject constructor(
                 SocialTokenResult.Failed(IllegalStateException("예상하지 못한 자격 증명 종류예요"))
             }
         } catch (e: GetCredentialCancellationException) {
-            Logger.i(SOCIAL_LOG_TAG, "Google: 사용자가 취소 (${e.type}: ${e.errorMessage})")
-            SocialTokenResult.Cancelled
+            if (e.isReauthFailure()) {
+                // 이름은 취소지만 사용자가 취소한 게 아니다. 계정을 고른 직후 Google이 거부한 것으로,
+                // 대개 Android OAuth 클라이언트(패키지 이름·SHA-1)가 등록되지 않았을 때다. 공통 오류로 알린다
+                Logger.w(SOCIAL_LOG_TAG, "Google: 실패 (취소로 온 재인증 실패) ${e.type}: ${e.errorMessage}", e)
+                SocialTokenResult.Failed(e)
+            } else {
+                Logger.i(SOCIAL_LOG_TAG, "Google: 사용자가 취소 (${e.type}: ${e.errorMessage})")
+                SocialTokenResult.Cancelled
+            }
         } catch (e: GetCredentialException) {
             // NoCredentialException(기기에 Google 계정 없음) 포함.
             // "[28444] Developer console is not set up correctly"면 Google Cloud의 Android OAuth 클라이언트(패키지 이름 + 이 기기의
@@ -62,5 +69,13 @@ class GoogleTokenSource @Inject constructor(
             Logger.w(SOCIAL_LOG_TAG, "Google: ID 토큰 해석 실패", e)
             SocialTokenResult.Failed(e)
         }
+    }
+
+    /** `[16] Account reauth failed`: 취소 예외로 오지만 실제로는 설정 오류다 */
+    private fun GetCredentialCancellationException.isReauthFailure(): Boolean =
+        errorMessage?.toString()?.contains(REAUTH_FAILED, ignoreCase = true) == true
+
+    private companion object {
+        const val REAUTH_FAILED = "reauth failed"
     }
 }
