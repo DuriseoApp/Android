@@ -166,6 +166,13 @@ class CalendarViewModel @Inject constructor(
                 moveToMonth(action.month)
             }
             is CalendarAction.DateSelected -> selectDate(action.date)
+            is CalendarAction.DateDoubleTapped -> {
+                selectDate(action.date)
+                // 범위 밖 날짜는 고르지 않았으니 열지 않는다
+                if (local.value.selectedDate == action.date) {
+                    effectChannel.trySend(CalendarSideEffect.OpenCreate(action.date))
+                }
+            }
             CalendarAction.ToggleExpanded -> local.update { it.copy(expanded = !it.expanded) }
             is CalendarAction.EventClicked -> effectChannel.trySend(CalendarSideEffect.OpenEvent(action.id))
             is CalendarAction.MemoClicked -> effectChannel.trySend(CalendarSideEffect.OpenMemo(action.id))

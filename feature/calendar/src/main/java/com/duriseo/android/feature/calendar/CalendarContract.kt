@@ -141,6 +141,9 @@ sealed interface CalendarAction {
     /** 시트 밖·뒤로 가기: 바꾸지 않고 닫는다 (D-167) */
     data object MonthPickerDismissed : CalendarAction
     data class DateSelected(val date: LocalDate) : CalendarAction
+
+    /** 날짜 칸을 두 번 눌렀다: 그 날을 고르고 그 날짜로 SCR-CAL-03 "새로 추가"를 연다 (FR-CAL-02 AC9, D-173) */
+    data class DateDoubleTapped(val date: LocalDate) : CalendarAction
     data object ToggleExpanded : CalendarAction
     data class EventClicked(val id: String) : CalendarAction
 
