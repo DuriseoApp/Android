@@ -31,6 +31,7 @@ model: sonnet
 - 화면이 서버 응답을 직접 씀 (Room 경유 아님), 동기화 신호를 받아도 갱신되지 않음
 - 접근성: 색만으로 뜻 전달, `contentDescription` 없음, 터치 영역 부족
 - 날짜 범위(1950~2050) 밖 선택 가능
+- 덮개·시트·다이얼로그를 공통 레이어(`DuriseoBottomSheetLayer`·`DuriseoDialogLayer`·`DuriseoLoadingLayer`) 밖에서 그림 (scrim `Box`, `ModalBottomSheet`, `AlertDialog`): 하단 탭에 가려진다
 - 계획에 없는 라이브러리를 이유 없이 추가
 
 ## Minor

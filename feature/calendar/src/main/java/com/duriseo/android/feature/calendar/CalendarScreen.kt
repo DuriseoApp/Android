@@ -1,6 +1,5 @@
 package com.duriseo.android.feature.calendar
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -296,7 +295,6 @@ fun CalendarScreen(
         dialog = {
             if (state.monthPickerOpen) {
                 // 연도와 월 시트 (D-167): 시트 밖·뒤로 가기는 바꾸지 않고 닫는다
-                BackHandler { onAction(CalendarAction.MonthPickerDismissed) }
                 DuriseoBottomSheetLayer(onDismissRequest = { onAction(CalendarAction.MonthPickerDismissed) }) {
                     MonthPickerSheet(
                         initial = state.visibleMonth,
@@ -305,7 +303,6 @@ fun CalendarScreen(
                 }
             } else if (sheet != null) {
                 // 처음 만난 날 선택 시트 (D-74). 저장 요청 중에는 뒤 막과 뒤로 가기로 닫히지 않는다
-                BackHandler(enabled = !sheet.saving) { onAction(CalendarAction.StartDateSheetDismissed) }
                 DuriseoBottomSheetLayer(
                     onDismissRequest = if (sheet.saving) null else ({ onAction(CalendarAction.StartDateSheetDismissed) }),
                 ) {

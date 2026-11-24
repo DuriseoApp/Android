@@ -1,6 +1,5 @@
 package com.duriseo.android.core.designsystem.component
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -49,8 +48,8 @@ private val DialogMaxWidth = 320.dp
  * 화면 내용과 다이얼로그를 함께 그리는 틀. 다이얼로그가 떠 있는 동안 뒤 화면([content])을 접근성 트리에서 빼서
  * TalkBack 초점이 뒤 화면으로 가지 않게 한다. 다이얼로그는 화면 전체를 덮는 오버레이로 그린다.
  *
- * 시스템 창(Compose `Dialog`)을 쓰지 않은 이유: 창은 Preview에 그려지지 않아 "화면 상태마다 Preview"를 할 수 없고,
- * 창의 기본 뒤 막(dim)이 토큰 `scrim`과 달라서 창 속성을 따로 고쳐야 한다. 대신 이 틀이 뒤 화면 접근성을 막는다.
+ * 다이얼로그·시트 자체는 [DuriseoOverlayWindow]의 별도 창에 그려져 하단 탭 위에 뜬다 (Preview에서는 화면 안).
+ * 이 틀은 뒤 화면 접근성을 막고, 요청 중 덮개 자리를 둔다.
  *
  * [loading]이 true면 다이얼로그 위까지 로딩 덮개([DuriseoLoadingOverlay])로 덮는다 (D-115).
  *
@@ -89,8 +88,8 @@ fun DuriseoDialogLayer(
 }
 
 /**
- * 확인 다이얼로그. 화면 위에 덮는 오버레이이고 [DuriseoDialogLayer] 안에서 쓴다.
- * 시스템 창을 따로 열지 않아서 뒤 막이 토큰 `scrim` 그대로이고 Preview에서도 보인다.
+ * 확인 다이얼로그. 별도 창에 그려 하단 탭·시스템 바 위에 뜨고 [DuriseoDialogLayer] 안에서 쓴다.
+ * 창 기본 dim은 꺼서 뒤 막이 토큰 `scrim` 그대로이고, Preview에서는 화면 안에 그려 보인다.
  * 열리면 초점이 패널로 오고(`FocusRequester`), 패널은 `paneTitle`로 제목이 읽힌다.
  *
  * 뒤 막: 화면 전체, 누르거나 뒤로 가기를 누르면 [onDismissRequest] (접근성 라벨 "닫기").
@@ -116,13 +115,14 @@ fun DuriseoDialog(
     onDismissRequest: () -> Unit = onCancel,
     extra: (@Composable () -> Unit)? = null,
 ) {
-    BackHandler(enabled = buttonsEnabled, onBack = onDismissRequest)
     val shape = MaterialTheme.shapes.extraLarge
     val scrimLabel = stringResource(R.string.nav_close)
     val focusRequester = remember { FocusRequester() }
     // 열릴 때 초점(과 TalkBack 읽기)이 뒤 화면이 아니라 다이얼로그로 간다
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
+    // 별도 창: 하단 탭·시스템 바 위에 뜬다. 뒤로 가기는 창이 받고, 요청 중(buttonsEnabled=false)에는 막는다
+    DuriseoOverlayWindow(onBack = if (buttonsEnabled) onDismissRequest else null) {
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -203,6 +203,7 @@ fun DuriseoDialog(
                 )
             }
         }
+    }
     }
 }
 

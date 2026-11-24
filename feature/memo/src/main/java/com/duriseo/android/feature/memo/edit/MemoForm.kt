@@ -1,6 +1,5 @@
 package com.duriseo.android.feature.memo.edit
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -160,7 +159,6 @@ fun MemoDateSheet(
     modifier: Modifier = Modifier,
 ) {
     val sheet = state.dateSheet ?: return
-    BackHandler { onAction(MemoEditAction.DateSheetDismissed) }
     DuriseoBottomSheetLayer(onDismissRequest = { onAction(MemoEditAction.DateSheetDismissed) }, modifier = modifier) {
         StartDatePickerSheet(
             visibleMonth = sheet.visibleMonth,

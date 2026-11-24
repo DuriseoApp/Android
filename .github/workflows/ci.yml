@@ -36,11 +36,24 @@ jobs:
           else
             echo "::notice title=Firebase::GOOGLE_SERVICES_JSON Secret이 없어 FCM 없이 빌드해요"
           fi
+      # Robolectric이 받는 android-all jar 캐시. 받는 도중 네트워크가 끊겨 core:push 테스트가 실패하는 일을 줄인다
+      # (키: libs.versions.toml 해시. robolectric 버전이 거기 있다)
+      - name: Robolectric jar 캐시
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: robolectric-${{ runner.os }}-
       # local.properties 설정값은 CI에 없다. 빌드는 빈 값으로 되고, 설정값이 필요한 테스트는 가짜 값을 쓴다
       - name: ./gradlew assembleDebug testDebugUnitTest
+        # 처음 한 번 실패하면(jar 다운로드 같은 일시적인 네트워크 오류) 한 번 더 돌린다. 통과한 작업은 건너뛰어 빠르다
         run: |
           set -o pipefail
-          ./gradlew assembleDebug testDebugUnitTest --no-daemon 2>&1 | tee gradle-output.log
+          for attempt in 1 2; do
+            ./gradlew assembleDebug testDebugUnitTest --no-daemon 2>&1 | tee -a gradle-output.log && exit 0
+            echo "::warning title=재시도::Gradle이 실패해 한 번 더 돌려요 (시도 $attempt/2)"
+          done
+          exit 1
       # 실패하면 Gradle 출력의 오류 부분을 Annotations에 올린다 (로그를 열지 않고도 원인을 보게)
       - name: 빌드 오류 요약
         if: failure()

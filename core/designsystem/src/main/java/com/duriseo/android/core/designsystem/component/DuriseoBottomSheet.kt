@@ -97,19 +97,23 @@ fun DuriseoSheetPanel(
 }
 
 /**
- * 화면 전체를 덮는 뒤 막(토큰 `scrim`)과 그 위 아래쪽의 시트 [content]. [DuriseoDialog]처럼 시스템 창을 열지 않아
- * Preview에 그려진다. 시트가 열린 동안 뒤 화면의 접근성 처리는 부르는 쪽이 한다 ([DuriseoDialogLayer]).
+ * 화면 전체를 덮는 뒤 막(토큰 `scrim`)과 그 위 아래쪽의 시트 [content]. **별도 창**에 그려서 하단 탭·상태바·내비게이션 바
+ * 위에 뜬다 ([DuriseoOverlayWindow]). Preview에서는 창을 열 수 없어 화면 안에 그린다.
+ * 시트가 열린 동안 뒤 화면의 접근성 처리는 부르는 쪽이 한다 ([DuriseoDialogLayer]).
  *
  * @param onDismissRequest 뒤 막을 눌렀을 때. null이면 뒤 막을 눌러도 닫히지 않는다 (연결 완료 시트에서 기록을 고르기 전).
- *   기기 뒤로 가기는 부르는 쪽이 `BackHandler`로 처리한다.
+ * @param onBackPress 기기 뒤로 가기. 창이 직접 받으므로 부르는 쪽의 `BackHandler`는 이 시트가 떠 있는 동안 닿지 않는다.
+ *   기본은 [onDismissRequest]이고, null이면 뒤로 가기를 막는다 (요청 중).
  */
 @Composable
 fun DuriseoBottomSheetLayer(
     onDismissRequest: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    onBackPress: (() -> Unit)? = onDismissRequest,
     content: @Composable () -> Unit,
 ) {
     val scrimLabel = stringResource(R.string.nav_close)
+    DuriseoOverlayWindow(onBack = onBackPress, snackbarAtTop = true) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Box(
             modifier = Modifier
@@ -140,6 +144,7 @@ fun DuriseoBottomSheetLayer(
                 ),
         )
         content()
+    }
     }
 }
 
