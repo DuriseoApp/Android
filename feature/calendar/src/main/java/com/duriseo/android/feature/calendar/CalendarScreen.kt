@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -38,7 +40,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -78,6 +83,9 @@ import com.duriseo.android.core.designsystem.component.DuriseoAvatar
 import com.duriseo.android.core.designsystem.component.DuriseoAvatarSize
 import com.duriseo.android.core.designsystem.component.DuriseoBottomSheetLayer
 import com.duriseo.android.core.designsystem.component.DuriseoDialogLayer
+import com.duriseo.android.core.designsystem.component.DuriseoLargeButton
+import com.duriseo.android.core.designsystem.component.DuriseoSheetPanel
+import com.duriseo.android.core.designsystem.component.DuriseoYearMonthWheel
 import com.duriseo.android.core.designsystem.component.StartDatePickerSheet
 import com.duriseo.android.core.designsystem.theme.Brand50
 import com.duriseo.android.core.designsystem.theme.Brand500
@@ -110,6 +118,8 @@ import com.duriseo.android.feature.calendar.component.weekdayLabel
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
+import kotlin.math.abs
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 // SCR-CAL-01 캘린더 홈 (FR-CAL-01, FR-COUPLE-04 AC2). 수치는 보드 `Calendar.dc.html`, `CalendarExpanded.dc.html`.
 // 토큰에 없는 수치는 이름 붙인 상수로 두고 보드 행을 적는다. 하단 탭(80)과 FAB(오른쪽 20, 탭 위 20)는 SCREENS.md 공통 표.
@@ -282,9 +292,18 @@ fun CalendarScreen(
         weekCount(state.visibleMonth) * (ExpandedCellHeight - CollapsedCellHeight).toPx()
     }
     DuriseoDialogLayer(
-        dialogVisible = sheet != null,
+        dialogVisible = sheet != null || state.monthPickerOpen,
         dialog = {
-            if (sheet != null) {
+            if (state.monthPickerOpen) {
+                // 연도와 월 시트 (D-167): 시트 밖·뒤로 가기는 바꾸지 않고 닫는다
+                BackHandler { onAction(CalendarAction.MonthPickerDismissed) }
+                DuriseoBottomSheetLayer(onDismissRequest = { onAction(CalendarAction.MonthPickerDismissed) }) {
+                    MonthPickerSheet(
+                        initial = state.visibleMonth,
+                        onConfirm = { onAction(CalendarAction.MonthPicked(it)) },
+                    )
+                }
+            } else if (sheet != null) {
                 // 처음 만난 날 선택 시트 (D-74). 저장 요청 중에는 뒤 막과 뒤로 가기로 닫히지 않는다
                 BackHandler(enabled = !sheet.saving) { onAction(CalendarAction.StartDateSheetDismissed) }
                 DuriseoBottomSheetLayer(
@@ -539,12 +558,22 @@ private fun MonthRow(state: CalendarUiState, onAction: (CalendarAction) -> Unit)
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = stringResource(R.string.calendar_month_title, state.visibleMonth.year, state.visibleMonth.monthValue),
-                modifier = Modifier.padding(end = DuriseoSpacing.Space1).semantics { heading() },
-                style = MaterialTheme.typography.titleLarge,
-                color = Ink900,
-            )
+            // 월 제목은 버튼이다 (D-167): 누르면 시트 "연도와 월". 이름은 보이는 글자 그대로 읽힌다
+            Box(
+                modifier = Modifier
+                    .heightIn(min = DuriseoSize.Touch)
+                    .padding(end = DuriseoSpacing.Space1)
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable(role = Role.Button, onClick = { onAction(CalendarAction.MonthTitleClicked) }),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(R.string.calendar_month_title, state.visibleMonth.year, state.visibleMonth.monthValue),
+                    modifier = Modifier.semantics { heading() },
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Ink900,
+                )
+            }
             MonthButton(
                 iconRes = DesignR.drawable.ic_back,
                 description = stringResource(R.string.calendar_previous_month),
@@ -603,6 +632,11 @@ private fun WeekdayRow() {
     }
 }
 
+/**
+ * 달력 칸. 한 쪽이 한 달인 HorizontalPager다 (D-166): 옆으로 쓸면 달이 바뀌고, 위아래 끌기는 기존대로 펼치기·접기(D-163)다.
+ * 높이와 펼치기·접기 범위는 보이는(정착한) 달의 주 수 기준이라 넘기는 동안 높이가 튀지 않는다.
+ * 일정·기념일·메모와 선택한 날은 보이는 달만 가지고 있어서, 넘기는 중에 들어오는 달은 정착한 뒤에 채워진다.
+ */
 @Composable
 private fun MonthGrid(
     state: CalendarUiState,
@@ -612,33 +646,105 @@ private fun MonthGrid(
 ) {
     // 쓸어서 펼치기·접기 (D-163): 끄는 동안 칸이 손가락을 따라 늘고 준다. progress는 layout·draw 단계에서만 읽는다
     val progress = { fold.progress }
-    Column(
+    val pagerState = rememberPagerState(initialPage = monthPage(state.visibleMonth)) { MONTH_PAGE_COUNT }
+    val visibleMonth by rememberUpdatedState(state.visibleMonth)
+    val currentOnAction by rememberUpdatedState(onAction)
+
+    // 버튼·연도와 월 시트로 달이 바뀌면 그 쪽으로 간다: 이웃 달은 움직여서, 먼 달은 바로
+    LaunchedEffect(state.visibleMonth) {
+        val target = monthPage(state.visibleMonth)
+        val distance = abs(pagerState.currentPage - target)
+        when {
+            distance == 0 -> Unit
+            distance == 1 -> pagerState.animateScrollToPage(target)
+            else -> pagerState.scrollToPage(target)
+        }
+    }
+    // 쓸어서 정착한 달을 ViewModel에 알린다 (정착하기 전에는 알리지 않는다)
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.settledPage }
+            .distinctUntilChanged()
+            .collect { page ->
+                val month = pageMonth(page)
+                if (month != visibleMonth) currentOnAction(CalendarAction.MonthSwiped(month))
+            }
+    }
+
+    val weeksOfVisible = weekCount(state.visibleMonth)
+    HorizontalPager(
+        state = pagerState,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = GridPadding)
-            .foldDrag(fold, foldRangePx),
-    ) {
-        val first = state.visibleMonth.atDay(1)
+            .foldDrag(fold, foldRangePx)
+            // 높이 = 보이는 달의 주 수 × 칸 높이. 이웃 달이 더 길어도 정착하기 전까지 높이는 그대로다
+            .layout { measurable, constraints ->
+                val cell = lerp(CollapsedCellHeight, ExpandedCellHeight, progress()).roundToPx()
+                val height = constraints.constrainHeight(weeksOfVisible * cell)
+                val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
+                layout(placeable.width, height) { placeable.place(0, 0) }
+            },
+        verticalAlignment = Alignment.Top,
+        key = { it },
+    ) { page ->
+        val month = pageMonth(page)
+        MonthPage(
+            month = month,
+            state = if (month == state.visibleMonth) state else state.copy(visibleMonth = month),
+            progress = progress,
+            onDateClick = { onAction(CalendarAction.DateSelected(it)) },
+        )
+    }
+}
+
+@Composable
+private fun MonthPage(
+    month: YearMonth,
+    state: CalendarUiState,
+    progress: () -> Float,
+    onDateClick: (LocalDate) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = GridPadding)) {
+        val first = month.atDay(1)
         // 일요일 시작: 1일 앞의 이전 달 날짜 수 = 요일 값(월 1 ... 일 7)을 7로 나눈 나머지
         val leading = first.dayOfWeek.value % DAYS_PER_WEEK
         val start = first.minusDays(leading.toLong())
-        val weeks = (leading + state.visibleMonth.lengthOfMonth() + DAYS_PER_WEEK - 1) / DAYS_PER_WEEK
-        repeat(weeks) { week ->
+        repeat(weekCount(month)) { week ->
             Row(modifier = Modifier.fillMaxWidth()) {
                 repeat(DAYS_PER_WEEK) { col ->
                     val date = start.plusDays((week * DAYS_PER_WEEK + col).toLong())
                     DayCell(
                         date = date,
-                        inMonth = YearMonth.from(date) == state.visibleMonth,
+                        inMonth = YearMonth.from(date) == month,
                         column = col,
                         state = state,
                         progress = progress,
-                        onClick = { onAction(CalendarAction.DateSelected(date)) },
+                        onClick = { onDateClick(date) },
                         modifier = Modifier.weight(1f),
                     )
                 }
             }
         }
+    }
+}
+
+/** 연도와 월 시트 (D-167): 손잡이·제목·휠 2줄·[완료]. 시간 선택 시트와 같은 모양이다 */
+@Composable
+private fun MonthPickerSheet(initial: YearMonth, onConfirm: (YearMonth) -> Unit) {
+    var picked by remember { mutableStateOf(initial) }
+    DuriseoSheetPanel {
+        Text(
+            text = stringResource(R.string.calendar_month_picker_title),
+            modifier = Modifier.padding(top = DuriseoSpacing.Space1).semantics { heading() },
+            style = MaterialTheme.typography.titleLarge,
+            color = Ink900,
+        )
+        DuriseoYearMonthWheel(initial = initial, onChange = { picked = it })
+        DuriseoLargeButton(
+            text = stringResource(DesignR.string.action_done),
+            onClick = { onConfirm(picked) },
+            container = Brand500,
+            contentColor = OnBrand,
+        )
     }
 }
 
@@ -1406,6 +1512,7 @@ private fun previewState(
     anniversaries: Map<LocalDate, List<CalendarAnniversary>> = sampleAnniversaries(),
     memos: Map<LocalDate, List<CalendarMemo>> = emptyMap(),
     startDateSheet: CalendarStartDateSheet? = null,
+    monthPickerOpen: Boolean = false,
     refreshing: Boolean = false,
     unread: Boolean = false,
 ) = CalendarUiState(
@@ -1418,6 +1525,7 @@ private fun previewState(
     anniversariesByDay = anniversaries,
     memosByDay = memos,
     startDateSheet = startDateSheet,
+    monthPickerOpen = monthPickerOpen,
     refreshing = refreshing,
     hasUnreadNotifications = unread,
 )
@@ -1518,6 +1626,11 @@ private fun CalendarPreview_StartDateSheet() = PreviewScreen(
         startDateSheet = CalendarStartDateSheet(YearMonth.of(2026, 10), null),
     ),
 )
+
+/** 연도와 월 시트 (D-167, 보고 있는 2026년 10월이 골라져 있다) */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun CalendarPreview_MonthPicker() = PreviewScreen(previewState(monthPickerOpen = true))
 
 /** 날짜 목록 카드: 일정, 기념일(자동·직접)과 펼친 행 */
 @Preview(showBackground = true, widthDp = 390)

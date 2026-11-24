@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -120,6 +121,50 @@ fun DuriseoTimeWheel(
     var hour12 by remember { mutableStateOf(TimeWheelValues.hour12(time.hour)) }
     var minute by remember { mutableStateOf(time.minute) }
     val meridiems = listOf(stringResource(R.string.time_wheel_am), stringResource(R.string.time_wheel_pm))
+    DuriseoWheelFrame(modifier = modifier, description = description) {
+        DuriseoWheelColumn(
+            items = meridiems,
+            initialIndex = if (pm) 1 else 0,
+            label = stringResource(R.string.time_wheel_meridiem),
+            onSelected = {
+                pm = it == 1
+                onTimeChange(TimeWheelValues.time(pm, hour12, minute))
+            },
+            modifier = Modifier.weight(1f),
+        )
+        DuriseoWheelColumn(
+            items = TimeWheelValues.HOURS.map { it.toString() },
+            initialIndex = TimeWheelValues.HOURS.indexOf(hour12),
+            label = stringResource(R.string.time_wheel_hour),
+            onSelected = {
+                hour12 = TimeWheelValues.HOURS[it]
+                onTimeChange(TimeWheelValues.time(pm, hour12, minute))
+            },
+            modifier = Modifier.weight(1f),
+        )
+        DuriseoWheelColumn(
+            items = TimeWheelValues.MINUTES.map { it.toString() },
+            initialIndex = TimeWheelValues.MINUTES.indexOf(minute),
+            label = stringResource(R.string.time_wheel_minute),
+            onSelected = {
+                minute = TimeWheelValues.MINUTES[it]
+                onTimeChange(TimeWheelValues.time(pm, hour12, minute))
+            },
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/**
+ * 휠 묶음의 틀: 높이 5줄(220), 휠을 같은 폭으로 나란히(칸 사이 8), 가운데 줄에 `surface-100` 띠가 휠 전체에 걸쳐 이어진다.
+ * 시간 휠과 연도·월 휠(D-167)이 같이 쓴다. 휠은 [DuriseoWheelColumn]에 `Modifier.weight(1f)`를 줘서 놓는다.
+ */
+@Composable
+fun DuriseoWheelFrame(
+    modifier: Modifier = Modifier,
+    description: String? = null,
+    wheels: @Composable RowScope.() -> Unit,
+) {
     val bandShape = MaterialTheme.shapes.medium
     Box(
         modifier = modifier
@@ -139,45 +184,18 @@ fun DuriseoTimeWheel(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(WheelGap),
-        ) {
-            val wheelModifier = Modifier.weight(1f)
-            TimeWheelColumn(
-                items = meridiems,
-                initialIndex = if (pm) 1 else 0,
-                label = stringResource(R.string.time_wheel_meridiem),
-                onSelected = {
-                    pm = it == 1
-                    onTimeChange(TimeWheelValues.time(pm, hour12, minute))
-                },
-                modifier = wheelModifier,
-            )
-            TimeWheelColumn(
-                items = TimeWheelValues.HOURS.map { it.toString() },
-                initialIndex = TimeWheelValues.HOURS.indexOf(hour12),
-                label = stringResource(R.string.time_wheel_hour),
-                onSelected = {
-                    hour12 = TimeWheelValues.HOURS[it]
-                    onTimeChange(TimeWheelValues.time(pm, hour12, minute))
-                },
-                modifier = wheelModifier,
-            )
-            TimeWheelColumn(
-                items = TimeWheelValues.MINUTES.map { it.toString() },
-                initialIndex = TimeWheelValues.MINUTES.indexOf(minute),
-                label = stringResource(R.string.time_wheel_minute),
-                onSelected = {
-                    minute = TimeWheelValues.MINUTES[it]
-                    onTimeChange(TimeWheelValues.time(pm, hour12, minute))
-                },
-                modifier = wheelModifier,
-            )
-        }
+            content = wheels,
+        )
     }
 }
 
+/**
+ * 휠 한 줄. 쓸어서 돌리고, 위아래 값을 누르면 그 값이 가운데로 와서 골라진다 (D-165). 스크롤이 멈추면 가장 가까운 줄로 붙고
+ * 값이 바뀔 때마다 [onSelected]에 값 목록의 위치를 알린다.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TimeWheelColumn(
+fun DuriseoWheelColumn(
     items: List<String>,
     initialIndex: Int,
     label: String,

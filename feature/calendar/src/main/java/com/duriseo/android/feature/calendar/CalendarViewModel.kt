@@ -72,6 +72,7 @@ class CalendarViewModel @Inject constructor(
         val selectedDate: LocalDate,
         val expanded: Boolean = false,
         val startDateSheet: CalendarStartDateSheet? = null,
+        val monthPickerOpen: Boolean = false,
         val refreshing: Boolean = false,
     )
 
@@ -131,6 +132,7 @@ class CalendarViewModel @Inject constructor(
             canGoPrevious = EventRules.previousMonth(local.visibleMonth) != null,
             canGoNext = EventRules.nextMonth(local.visibleMonth) != null,
             startDateSheet = local.startDateSheet,
+            monthPickerOpen = local.monthPickerOpen,
             refreshing = local.refreshing,
         )
     }.combine(notificationRepository.observeUnreadCount()) { state, unreadCount ->
@@ -156,6 +158,13 @@ class CalendarViewModel @Inject constructor(
             CalendarAction.AnniversariesClicked -> effectChannel.trySend(CalendarSideEffect.OpenAnniversaries)
             CalendarAction.PreviousMonth -> moveMonth(forward = false)
             CalendarAction.NextMonth -> moveMonth(forward = true)
+            is CalendarAction.MonthSwiped -> moveToMonth(action.month)
+            CalendarAction.MonthTitleClicked -> local.update { it.copy(monthPickerOpen = true) }
+            CalendarAction.MonthPickerDismissed -> local.update { it.copy(monthPickerOpen = false) }
+            is CalendarAction.MonthPicked -> {
+                local.update { it.copy(monthPickerOpen = false) }
+                moveToMonth(action.month)
+            }
             is CalendarAction.DateSelected -> selectDate(action.date)
             CalendarAction.ToggleExpanded -> local.update { it.copy(expanded = !it.expanded) }
             is CalendarAction.EventClicked -> effectChannel.trySend(CalendarSideEffect.OpenEvent(action.id))
@@ -211,15 +220,21 @@ class CalendarViewModel @Inject constructor(
     }
 
     private fun moveMonth(forward: Boolean) {
+        val current = local.value.visibleMonth
+        val next = if (forward) EventRules.nextMonth(current) else EventRules.previousMonth(current)
+        if (next != null) moveToMonth(next)
+    }
+
+    /**
+     * 버튼·옆으로 쓸기(D-166)·연도와 월 시트(D-167)가 같이 쓰는 달 이동. 1950-01 ~ 2050-12 밖이거나 보이는 달이면 아무것도 하지 않는다.
+     * 선택한 날은 새 달 안에 있어야 한다: 같은 날짜가 있으면 그 날, 없으면 말일 (FR-CAL-01 AC6·AC7)
+     */
+    private fun moveToMonth(month: YearMonth) {
+        if (month < EventRules.MIN_MONTH || month > EventRules.MAX_MONTH) return
+        if (month == local.value.visibleMonth) return
         local.update { current ->
-            val next = if (forward) EventRules.nextMonth(current.visibleMonth) else EventRules.previousMonth(current.visibleMonth)
-            if (next == null) {
-                current
-            } else {
-                // 선택한 날은 새 달 안에 있어야 한다: 같은 날짜가 있으면 그 날, 없으면 말일
-                val day = current.selectedDate.dayOfMonth.coerceAtMost(next.lengthOfMonth())
-                current.copy(visibleMonth = next, selectedDate = next.atDay(day))
-            }
+            val day = current.selectedDate.dayOfMonth.coerceAtMost(month.lengthOfMonth())
+            current.copy(visibleMonth = month, selectedDate = month.atDay(day))
         }
         refreshVisibleMonth()
     }
