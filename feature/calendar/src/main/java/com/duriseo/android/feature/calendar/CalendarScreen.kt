@@ -854,7 +854,7 @@ private fun DayCell(
         ) {
             Text(
                 text = date.dayOfMonth.toString(),
-                // 비교용: 글자는 15 그대로 두고 칸 높이·날짜 원만 바뀐다 (글자 크기가 함께 바뀌면 끄는 동안 끊겨 보임, 사용자 요청 2026-11-24)
+                // 글자는 15 그대로 두고 칸 높이·날짜 원만 바뀐다 (D-171)
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = DayNumberCollapsed,
                     lineHeight = DayNumberLineHeight,
@@ -902,7 +902,7 @@ private fun DayCell(
 /** 오늘 표시 테두리 1.5 (`box-shadow: inset 0 0 0 1.5px`) */
 private val TodayRing = 1.5.dp
 
-/** 날짜 숫자 글자 크기 15(접힘·펼침 같음, 비교용)와 행간 20 (보드 값) */
+/** 날짜 숫자 글자 크기 15(접힘·펼침 같음, D-171)와 행간 20 (보드 값) */
 private val DayNumberCollapsed = 15.sp
 private val DayNumberLineHeight = 20.sp
 
