@@ -5,6 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -278,119 +281,128 @@ fun SettingsScreen(
             )
             val account = state.account
             if (account != null) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
-                        .padding(
-                            start = DuriseoSpacing.Space5,
-                            end = DuriseoSpacing.Space5,
-                            top = ContentTop,
-                        ),
-                    verticalArrangement = Arrangement.spacedBy(BlockGap),
-                ) {
-                    if (account is SettingsAccount.Guest) {
-                        DuriseoGuestBanner(
-                            title = stringResource(R.string.settings_guest_banner_title),
-                            body = stringResource(R.string.settings_guest_banner_body),
-                            action = {
-                                DuriseoButton(
-                                    text = stringResource(R.string.settings_guest_banner_action),
-                                    onClick = onOpenAccount,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    style = DuriseoButtonStyle.Filled,
+                // 앱 정보 카드는 메뉴 목록 맨 끝에서 함께 스크롤된다. 메뉴가 화면보다 짧으면 화면 맨 아래에 붙는다 (D-170)
+                BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    val viewportHeight = maxHeight
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                            .heightIn(min = viewportHeight),
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .padding(
+                                    start = DuriseoSpacing.Space5,
+                                    end = DuriseoSpacing.Space5,
+                                    top = ContentTop,
+                                ),
+                            verticalArrangement = Arrangement.spacedBy(BlockGap),
+                        ) {
+                            if (account is SettingsAccount.Guest) {
+                                DuriseoGuestBanner(
+                                    title = stringResource(R.string.settings_guest_banner_title),
+                                    body = stringResource(R.string.settings_guest_banner_body),
+                                    action = {
+                                        DuriseoButton(
+                                            text = stringResource(R.string.settings_guest_banner_action),
+                                            onClick = onOpenAccount,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            style = DuriseoButtonStyle.Filled,
+                                            enabled = !state.requesting,
+                                        )
+                                    },
+                                )
+                            }
+
+                            // 우리 프로필 카드 (FR-SET-01). 게스트도 "혼자" 모양이다. [상대와 연결하기]는 SCR-COUPLE-01로 가고,
+                            // 게스트면 거기서 로그인 안내(guest 모양)가 나온다
+                            state.space?.let { space ->
+                                SettingsProfileCard(
+                                    space = space,
+                                    onEditProfile = { onAction(SettingsAction.ProfileEditClicked) },
+                                    onEditStartDate = { onAction(SettingsAction.StartDateEditClicked) },
+                                    onConnect = onOpenConnect,
                                     enabled = !state.requesting,
                                 )
-                            },
-                        )
-                    }
+                            }
 
-                    // 우리 프로필 카드 (FR-SET-01). 게스트도 "혼자" 모양이다. [상대와 연결하기]는 SCR-COUPLE-01로 가고,
-                    // 게스트면 거기서 로그인 안내(guest 모양)가 나온다
-                    state.space?.let { space ->
-                        SettingsProfileCard(
-                            space = space,
-                            onEditProfile = { onAction(SettingsAction.ProfileEditClicked) },
-                            onEditStartDate = { onAction(SettingsAction.StartDateEditClicked) },
-                            onConnect = onOpenConnect,
-                            enabled = !state.requesting,
-                        )
-                    }
+                            // 꾸미기 › 우리 색상 (단위 3)
+                            if (state.colorKeys.isNotEmpty()) {
+                                Column {
+                                    DuriseoSectionTitle(text = stringResource(R.string.settings_section_deco))
+                                    DuriseoMenuRow(
+                                        label = stringResource(R.string.settings_colors),
+                                        onClick = onOpenColors,
+                                        iconRes = DesignR.drawable.ic_palette,
+                                        trailing = { ColorDots(state.colorKeys) },
+                                    )
+                                }
+                            }
 
-                    // 꾸미기 › 우리 색상 (단위 3)
-                    if (state.colorKeys.isNotEmpty()) {
-                        Column {
-                            DuriseoSectionTitle(text = stringResource(R.string.settings_section_deco))
-                            DuriseoMenuRow(
-                                label = stringResource(R.string.settings_colors),
-                                onClick = onOpenColors,
-                                iconRes = DesignR.drawable.ic_palette,
-                                trailing = { ColorDots(state.colorKeys) },
-                            )
+                            Column {
+                                DuriseoSectionTitle(text = stringResource(R.string.settings_section_settings))
+                                // 알림 설정 -> SCR-SET-02 (보드 `Menu.dc.html` 126행: 종 아이콘, 값 없음. 게스트도 바꿀 수 있다, D-62)
+                                DuriseoMenuRow(
+                                    label = stringResource(R.string.settings_notification_settings),
+                                    onClick = onOpenNotificationSettings,
+                                    iconRes = DesignR.drawable.ic_bell,
+                                )
+                                // 연결 정보: 값은 "연결됨"/"혼자 사용 중". 게스트는 [상대와 연결하기]와 같이 SCR-COUPLE-01(guest)로 간다
+                                // (SCREENS.md "게스트의 연결 정보 행", FR-AUTH-04 AC2)
+                                state.space?.let { space ->
+                                    DuriseoMenuRow(
+                                        label = stringResource(R.string.settings_connection),
+                                        onClick = if (account is SettingsAccount.Guest) onOpenConnect else onOpenConnectionInfo,
+                                        iconRes = DesignR.drawable.ic_link,
+                                        value = stringResource(
+                                            if (space is SettingsSpace.Couple) {
+                                                R.string.settings_connection_connected
+                                            } else {
+                                                R.string.settings_connection_alone
+                                            },
+                                        ),
+                                    )
+                                }
+                                DuriseoMenuRow(
+                                    label = stringResource(R.string.settings_account),
+                                    onClick = onOpenAccount,
+                                    iconRes = DesignR.drawable.ic_user,
+                                    value = accountValue(account),
+                                    highlightValue = account is SettingsAccount.Guest,
+                                )
+                            }
+
+                            // 정보 (FR-SET-02 AC1~AC3, 보드 130~134행): 앞 아이콘 없는 높이 52 행
+                            Column {
+                                DuriseoSectionTitle(text = stringResource(R.string.settings_section_info))
+                                // 첫 행: 다른 정보 행과 같은 모양 (FR-SET-02 AC5, D-169)
+                                DuriseoInfoRow(
+                                    label = stringResource(R.string.settings_tutorial_replay),
+                                    onClick = { onAction(SettingsAction.TutorialReplayClicked) },
+                                )
+                                DuriseoInfoRow(label = stringResource(R.string.settings_contact), onClick = onContact)
+                                DuriseoInfoRow(label = stringResource(R.string.settings_terms), onClick = onOpenTerms)
+                                DuriseoInfoRow(
+                                    label = stringResource(R.string.settings_licenses),
+                                    onClick = { onAction(SettingsAction.LicensesClicked) },
+                                )
+                            }
+
+                            if (state.canLogout) {
+                                Column {
+                                    HorizontalDivider(color = Line100)
+                                    LogoutRow(
+                                        enabled = !state.requesting,
+                                        onClick = { onAction(SettingsAction.LogoutClicked) },
+                                    )
+                                }
+                            }
                         }
-                    }
-
-                    Column {
-                        DuriseoSectionTitle(text = stringResource(R.string.settings_section_settings))
-                        // 알림 설정 -> SCR-SET-02 (보드 `Menu.dc.html` 126행: 종 아이콘, 값 없음. 게스트도 바꿀 수 있다, D-62)
-                        DuriseoMenuRow(
-                            label = stringResource(R.string.settings_notification_settings),
-                            onClick = onOpenNotificationSettings,
-                            iconRes = DesignR.drawable.ic_bell,
-                        )
-                        // 연결 정보: 값은 "연결됨"/"혼자 사용 중". 게스트는 [상대와 연결하기]와 같이 SCR-COUPLE-01(guest)로 간다
-                        // (SCREENS.md "게스트의 연결 정보 행", FR-AUTH-04 AC2)
-                        state.space?.let { space ->
-                            DuriseoMenuRow(
-                                label = stringResource(R.string.settings_connection),
-                                onClick = if (account is SettingsAccount.Guest) onOpenConnect else onOpenConnectionInfo,
-                                iconRes = DesignR.drawable.ic_link,
-                                value = stringResource(
-                                    if (space is SettingsSpace.Couple) {
-                                        R.string.settings_connection_connected
-                                    } else {
-                                        R.string.settings_connection_alone
-                                    },
-                                ),
-                            )
-                        }
-                        DuriseoMenuRow(
-                            label = stringResource(R.string.settings_account),
-                            onClick = onOpenAccount,
-                            iconRes = DesignR.drawable.ic_user,
-                            value = accountValue(account),
-                            highlightValue = account is SettingsAccount.Guest,
-                        )
-                    }
-
-                    // 정보 (FR-SET-02 AC1~AC3, 보드 130~134행): 앞 아이콘 없는 높이 52 행
-                    Column {
-                        DuriseoSectionTitle(text = stringResource(R.string.settings_section_info))
-                        // 첫 행: 다른 정보 행과 같은 모양 (FR-SET-02 AC5, D-169)
-                        DuriseoInfoRow(
-                            label = stringResource(R.string.settings_tutorial_replay),
-                            onClick = { onAction(SettingsAction.TutorialReplayClicked) },
-                        )
-                        DuriseoInfoRow(label = stringResource(R.string.settings_contact), onClick = onContact)
-                        DuriseoInfoRow(label = stringResource(R.string.settings_terms), onClick = onOpenTerms)
-                        DuriseoInfoRow(
-                            label = stringResource(R.string.settings_licenses),
-                            onClick = { onAction(SettingsAction.LicensesClicked) },
-                        )
-                    }
-
-                    if (state.canLogout) {
-                        Column {
-                            HorizontalDivider(color = Line100)
-                            LogoutRow(
-                                enabled = !state.requesting,
-                                onClick = { onAction(SettingsAction.LogoutClicked) },
-                            )
-                        }
+                        Spacer(modifier = Modifier.weight(1f))
+                        AppInfoCard(state = appUpdate, onUpdate = onUpdate)
                     }
                 }
-                // 앱 정보 카드는 스크롤 밖 맨 아래에 붙는다 (보드 `footer`: flex-shrink 0)
-                AppInfoCard(state = appUpdate, onUpdate = onUpdate)
             }
         }
     }
