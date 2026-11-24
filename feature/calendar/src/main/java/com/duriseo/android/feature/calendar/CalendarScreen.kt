@@ -86,6 +86,7 @@ import com.duriseo.android.core.designsystem.component.DuriseoLargeButton
 import com.duriseo.android.core.designsystem.component.DuriseoSheetPanel
 import com.duriseo.android.core.designsystem.component.DuriseoYearMonthWheel
 import com.duriseo.android.core.designsystem.component.StartDatePickerSheet
+import com.duriseo.android.core.designsystem.component.coachMarkTarget
 import com.duriseo.android.core.designsystem.theme.Brand50
 import com.duriseo.android.core.designsystem.theme.Brand500
 import com.duriseo.android.core.designsystem.theme.Brand700
@@ -114,6 +115,7 @@ import com.duriseo.android.feature.calendar.component.formatEventDate
 import com.duriseo.android.feature.calendar.component.formatTime24
 import com.duriseo.android.feature.calendar.component.label
 import com.duriseo.android.feature.calendar.component.weekdayLabel
+import com.duriseo.android.feature.calendar.tutorial.CalendarTutorialStep
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
@@ -334,13 +336,20 @@ fun CalendarScreen(
                     onStartDatePromptClick = { onAction(CalendarAction.StartDatePromptClicked) },
                 )
                 MonthRow(state = state, onAction = onAction)
-                WeekdayRow()
-                MonthGrid(state = state, onAction = onAction, fold = fold, foldRangePx = foldRangePx)
+                // 튜토리얼 1단계의 구멍: 요일 행 + 월간 달력 (FR-CAL-06 AC2)
+                Column(modifier = Modifier.coachMarkTarget(CalendarTutorialStep.Calendar)) {
+                    WeekdayRow()
+                    MonthGrid(state = state, onAction = onAction, fold = fold, foldRangePx = foldRangePx)
+                }
                 DaySection(state = state, onAction = onAction, fold = fold, foldRangePx = foldRangePx, modifier = Modifier.weight(1f))
             }
             CalendarFab(
                 onClick = { onAction(CalendarAction.AddClicked) },
-                modifier = Modifier.align(Alignment.BottomEnd).padding(end = FabEnd, bottom = calendarFabBottom(snackbarVisible)),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = FabEnd, bottom = calendarFabBottom(snackbarVisible))
+                    // 튜토리얼 2단계의 구멍 (FR-CAL-06 AC2)
+                    .coachMarkTarget(CalendarTutorialStep.Fab),
             )
         }
     }
@@ -409,7 +418,11 @@ private fun CalendarAppBar(
             }
         }
         NotificationButton(hasUnread = hasUnreadNotifications, onClick = onNotificationsClick)
-        IconButton(onClick = onOpenMenu, modifier = Modifier.size(DuriseoSize.ButtonMd)) {
+        // 튜토리얼 5단계의 구멍: 전체 메뉴 버튼 (FR-CAL-06 AC2)
+        IconButton(
+            onClick = onOpenMenu,
+            modifier = Modifier.size(DuriseoSize.ButtonMd).coachMarkTarget(CalendarTutorialStep.MenuButton),
+        ) {
             Icon(
                 painter = painterResource(DesignR.drawable.ic_menu),
                 contentDescription = stringResource(R.string.calendar_menu_description),
@@ -478,6 +491,8 @@ private fun CoupleTitle(dayNumber: Long?, onAnniversariesClick: () -> Unit, onSt
         // 커플 + 처음 만난 날 없음: "처음 만난 날 입력하기 ›" → 시트 (FR-COUPLE-04 AC2)
         Row(
             modifier = Modifier
+                // 튜토리얼 3단계의 구멍: "처음 만난 날 입력하기 ›" (FR-CAL-06 AC2)
+                .coachMarkTarget(CalendarTutorialStep.Anniversary)
                 .height(DuriseoSize.Touch)
                 .clickable(role = Role.Button, onClick = onStartDatePromptClick),
             verticalAlignment = Alignment.CenterVertically,
@@ -519,6 +534,8 @@ private fun AppBarLink(title: String, link: String, description: String, onClick
             color = Ink900,
         )
         Row(
+            // 튜토리얼 3단계의 구멍: "함께한 지 D+N ›"·"기념일 ›" 링크 줄 (FR-CAL-06 AC2)
+            modifier = Modifier.coachMarkTarget(CalendarTutorialStep.Anniversary),
             horizontalArrangement = Arrangement.spacedBy(LinkGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {

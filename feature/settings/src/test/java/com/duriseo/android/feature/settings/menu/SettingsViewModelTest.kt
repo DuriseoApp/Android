@@ -7,6 +7,7 @@ import com.duriseo.android.domain.me.SocialProvider
 import com.duriseo.android.domain.profile.ProfileImage
 import com.duriseo.android.domain.result.DataResult
 import com.duriseo.android.feature.settings.FakeAuthRepository
+import com.duriseo.android.feature.settings.FakeCalendarTutorialRepository
 import com.duriseo.android.feature.settings.FakeCoupleRepository
 import com.duriseo.android.feature.settings.coupleMe
 import com.duriseo.android.feature.settings.FakeMeRepository
@@ -41,6 +42,7 @@ class SettingsViewModelTest {
     private val me = FakeMeRepository()
     private val auth = FakeAuthRepository(me)
     private val couple = FakeCoupleRepository()
+    private val tutorial = FakeCalendarTutorialRepository()
 
     /** 오늘은 2026-10-31 (UTC 03:00은 서울 12:00) */
     private val clock: Clock = Clock.fixed(Instant.parse("2026-10-31T03:00:00Z"), ZoneId.of("Asia/Seoul"))
@@ -56,7 +58,7 @@ class SettingsViewModelTest {
     }
 
     private fun TestScope.viewModel(): SettingsViewModel {
-        val vm = SettingsViewModel(auth, me, couple, clock)
+        val vm = SettingsViewModel(auth, me, couple, tutorial, clock)
         // stateIn(WhileSubscribed)라서 값을 읽는 동안 구독해 둔다
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect { } }
         return vm
@@ -250,7 +252,7 @@ class SettingsViewModelTest {
     @Test
     fun `Q-14 내 정보를 한 번도 받지 못하고 갱신도 실패하면 공통 오류 스낵바를 보여 준다`() = runTest {
         me.refreshResult = apiError("INTERNAL_ERROR")
-        val vm = SettingsViewModel(auth, me, couple, clock)
+        val vm = SettingsViewModel(auth, me, couple, tutorial, clock)
 
         vm.effects.test {
             assertEquals(SettingsSideEffect.ShowMessage(DesignR.string.error_common), awaitItem())
@@ -475,5 +477,31 @@ class SettingsViewModelTest {
             vm.onAction(SettingsAction.LicensesClicked)
             assertEquals(SettingsSideEffect.NavigateToLicenses, awaitItem())
         }
+    }
+
+    @Test
+    fun `FR-SET-02 AC5 튜토리얼 다시 보기를 누르면 요청을 남기고 전체 메뉴를 닫는다`() = runTest {
+        me.me.value = memberMe()
+        val vm = viewModel()
+
+        vm.effects.test {
+            vm.onAction(SettingsAction.TutorialReplayClicked)
+            assertEquals(SettingsSideEffect.CloseForTutorial, awaitItem())
+        }
+        assertEquals(1, tutorial.replayRequests)
+        assertTrue(tutorial.replayRequested.value)
+    }
+
+    @Test
+    fun `FR-SET-02 AC5 오프라인(내 정보 갱신 실패)이어도 튜토리얼 다시 보기는 같다`() = runTest {
+        me.me.value = memberMe()
+        me.refreshResult = DataResult.Failure(DataError.Offline)
+        val vm = viewModel()
+
+        vm.effects.test {
+            vm.onAction(SettingsAction.TutorialReplayClicked)
+            assertEquals(SettingsSideEffect.CloseForTutorial, awaitItem())
+        }
+        assertTrue(tutorial.replayRequested.value)
     }
 }

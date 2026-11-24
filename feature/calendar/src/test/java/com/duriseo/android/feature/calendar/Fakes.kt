@@ -35,13 +35,16 @@ import com.duriseo.android.domain.memo.MemoRepository
 import com.duriseo.android.domain.memo.MemoView
 import com.duriseo.android.domain.memo.NewMemo
 import com.duriseo.android.domain.result.DataResult
+import com.duriseo.android.domain.tutorial.CalendarTutorialRepository
 import com.duriseo.android.domain.error.ErrorCode
 import com.duriseo.android.domain.error.hasCode
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
+import java.io.IOException
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -391,5 +394,32 @@ class FakeNotificationPermissionGate(private var asked: Boolean = false) : com.d
         if (asked) return false
         asked = true
         return true
+    }
+}
+
+/** 캘린더 튜토리얼 가짜: "봤음" 기록(처음 한 번만 true)과 다시 보기 요청 (FR-CAL-06, FR-SET-02 AC5) */
+class FakeCalendarTutorialRepository(var shown: Boolean = false) : CalendarTutorialRepository {
+    var markCalls = 0
+        private set
+    private val replay = MutableStateFlow(false)
+
+    /** 설정하면 markShownIfFirst가 이 오류로 실패한다 (저장 실패) */
+    var markFailure: IOException? = null
+
+    override suspend fun markShownIfFirst(): Boolean {
+        markCalls += 1
+        markFailure?.let { throw it }
+        if (shown) return false
+        shown = true
+        return true
+    }
+
+    override val replayRequested: StateFlow<Boolean> = replay
+    override fun requestReplay() {
+        replay.value = true
+    }
+
+    override fun consumeReplay() {
+        replay.value = false
     }
 }

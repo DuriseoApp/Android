@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.duriseo.android.core.designsystem.component.DuriseoBottomNav
 import com.duriseo.android.core.designsystem.component.DuriseoBottomNavItem
+import com.duriseo.android.core.designsystem.component.coachMarkTarget
+import com.duriseo.android.feature.calendar.tutorial.CalendarTutorialStep
 
 /**
  * 하단 탭. `feature:main`은 선택 상태와 클릭만 넘기고 그림은 `core:designsystem`의 [DuriseoBottomNav]가 그린다.
@@ -42,6 +44,8 @@ fun MainBottomBar(
                     selected = tab == currentTab,
                     onClick = { onTabSelected(tab) },
                     iconRes = tab.iconRes,
+                    // 튜토리얼 4단계의 구멍: 메모 탭 항목 (FR-CAL-06 AC2)
+                    modifier = if (tab == MainTab.MEMO) Modifier.coachMarkTarget(CalendarTutorialStep.MemoTab) else Modifier,
                 )
             },
         )

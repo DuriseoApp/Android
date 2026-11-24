@@ -150,6 +150,8 @@ fun SettingsRoute(
                 is SettingsSideEffect.ShowMessage -> onShowSnackBar(effect.messageRes)
                 SettingsSideEffect.NavigateToProfileEdit -> onOpenProfileEdit()
                 SettingsSideEffect.NavigateToLicenses -> onOpenLicenses()
+                // 튜토리얼 다시 보기: 전체 메뉴를 닫고 캘린더로 (FR-SET-02 AC5)
+                SettingsSideEffect.CloseForTutorial -> onClose()
                 SettingsSideEffect.NavigateToStart -> onLoggedOut()
             }
         }
@@ -364,6 +366,11 @@ fun SettingsScreen(
                     // 정보 (FR-SET-02 AC1~AC3, 보드 130~134행): 앞 아이콘 없는 높이 52 행
                     Column {
                         DuriseoSectionTitle(text = stringResource(R.string.settings_section_info))
+                        // 첫 행: 다른 정보 행과 같은 모양 (FR-SET-02 AC5, D-169)
+                        DuriseoInfoRow(
+                            label = stringResource(R.string.settings_tutorial_replay),
+                            onClick = { onAction(SettingsAction.TutorialReplayClicked) },
+                        )
                         DuriseoInfoRow(label = stringResource(R.string.settings_contact), onClick = onContact)
                         DuriseoInfoRow(label = stringResource(R.string.settings_terms), onClick = onOpenTerms)
                         DuriseoInfoRow(

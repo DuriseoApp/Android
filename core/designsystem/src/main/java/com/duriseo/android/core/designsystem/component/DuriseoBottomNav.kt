@@ -71,6 +71,8 @@ data class DuriseoBottomNavItem(
     val selected: Boolean,
     val onClick: () -> Unit,
     @DrawableRes val iconRes: Int? = null,
+    /** 칸 전체에 붙일 Modifier. 튜토리얼이 칸의 위치를 재려고 `coachMarkTarget`을 붙인다 (FR-CAL-06) */
+    val modifier: Modifier = Modifier,
 )
 
 /**
@@ -138,6 +140,7 @@ private fun BottomNavTab(
 
     Column(
         modifier = modifier
+            .then(item.modifier)
             .fillMaxHeight()
             .selectable(
                 selected = item.selected,

@@ -108,6 +108,9 @@ sealed interface SettingsAction {
     /** 프로필 카드의 [내 프로필 수정]과 내 아바타의 연필 배지 -> SCR-SET-04 (D-149). 둘은 같은 곳으로 간다 */
     data object ProfileEditClicked : SettingsAction
 
+    /** 정보 › 튜토리얼 다시 보기: 전체 메뉴를 닫고 캘린더에서 튜토리얼을 1단계부터 보여 준다 (FR-SET-02 AC5, D-169) */
+    data object TutorialReplayClicked : SettingsAction
+
     /** 정보 › 오픈소스 라이선스 -> SCR-SET-05 (FR-SET-02 AC3) */
     data object LicensesClicked : SettingsAction
 
@@ -135,6 +138,9 @@ sealed interface SettingsSideEffect {
 
     /** 내 프로필 수정(SCR-SET-04)으로 간다 */
     data object NavigateToProfileEdit : SettingsSideEffect
+
+    /** 전체 메뉴를 닫고 캘린더(SCR-CAL-01)로 돌아간다. 튜토리얼 다시 보기 요청은 이미 남겼다 (FR-SET-02 AC5) */
+    data object CloseForTutorial : SettingsSideEffect
 
     /** 오픈소스 라이선스(SCR-SET-05)로 간다 */
     data object NavigateToLicenses : SettingsSideEffect
