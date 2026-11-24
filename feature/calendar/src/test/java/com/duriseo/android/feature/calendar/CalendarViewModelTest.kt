@@ -294,6 +294,27 @@ class CalendarViewModelTest {
     }
 
     @Test
+    fun `FR-CAL-02 AC9 날짜 칸을 두 번 누르면 그 날을 고르고 그 날짜로 새로 추가를 연다`() = runTest {
+        val vm = viewModel()
+        val day = today.plusDays(3)
+        vm.effects.test {
+            vm.onAction(CalendarAction.DateDoubleTapped(day))
+            assertEquals(CalendarSideEffect.OpenCreate(day), awaitItem())
+        }
+        assertEquals(day, vm.uiState.value.selectedDate)
+    }
+
+    @Test
+    fun `FR-CAL-02 AC9 범위 밖 날짜는 두 번 눌러도 새로 추가를 열지 않는다`() = runTest {
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(CalendarAction.DateDoubleTapped(LocalDate.of(1949, 12, 31)))
+            expectNoEvents()
+        }
+        assertEquals(today, vm.uiState.value.selectedDate)
+    }
+
+    @Test
     fun `FR-CAL-02 AC1 날짜 목록의 더하기는 선택한 날로 작성 화면을 연다`() = runTest {
         val vm = viewModel()
         vm.effects.test {

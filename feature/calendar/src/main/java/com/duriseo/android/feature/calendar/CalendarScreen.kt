@@ -71,6 +71,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
+import androidx.compose.ui.platform.LocalViewConfiguration
+import android.os.SystemClock
 import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -175,6 +177,9 @@ private val AnnBarBorder = 1.dp
 private val BarHeight = 16.dp
 private val BarRadius = 4.dp
 private val BarGap = 2.dp
+
+/** 펼친 칸 막대의 좌우 안쪽 여백 2: 이웃 막대 사이 틈 4 = `space-1` (D-172) */
+private val BarSideInset = DuriseoSpacing.Space1 / 2
 private const val MAX_BARS = 2
 private val BarFontSize = 10.sp
 private val BarLineHeight = 16.sp
@@ -711,6 +716,7 @@ private fun MonthGrid(
             state = if (month == state.visibleMonth) state else state.copy(visibleMonth = month),
             progress = progress,
             onDateClick = { onAction(CalendarAction.DateSelected(it)) },
+            onDateDoubleTap = { onAction(CalendarAction.DateDoubleTapped(it)) },
         )
     }
 }
@@ -721,7 +727,11 @@ private fun MonthPage(
     state: CalendarUiState,
     progress: () -> Float,
     onDateClick: (LocalDate) -> Unit,
+    onDateDoubleTap: (LocalDate) -> Unit,
 ) {
+    // 두 번 누르기 (D-173): 첫 누름은 기다리지 않고 바로 고르고, 같은 칸을 간격 안에 다시 누르면 "새로 추가"를 연다
+    val doubleTapTimeout = LocalViewConfiguration.current.doubleTapTimeoutMillis
+    val lastTap = remember { LastTap() }
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = GridPadding)) {
         val first = month.atDay(1)
         // 일요일 시작: 1일 앞의 이전 달 날짜 수 = 요일 값(월 1 ... 일 7)을 7로 나눈 나머지
@@ -738,7 +748,18 @@ private fun MonthPage(
                         week = week,
                         state = state,
                         progress = progress,
-                        onClick = { onDateClick(date) },
+                        onClick = {
+                            val now = SystemClock.uptimeMillis()
+                            if (lastTap.date == date && now - lastTap.atMillis <= doubleTapTimeout) {
+                                lastTap.date = null
+                                onDateDoubleTap(date)
+                            } else {
+                                lastTap.date = date
+                                lastTap.atMillis = now
+                                onDateClick(date)
+                            }
+                        },
+                        onDoubleTap = { onDateDoubleTap(date) },
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -777,6 +798,7 @@ private fun DayCell(
     state: CalendarUiState,
     progress: () -> Float,
     onClick: () -> Unit,
+    onDoubleTap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val events = if (inMonth) state.eventsByDay[date].orEmpty() else emptyList()
@@ -785,6 +807,7 @@ private fun DayCell(
     val selected = inMonth && date == state.selectedDate
     val isToday = inMonth && date == state.today
     val description = stringResource(R.string.calendar_day_description, date.monthValue, date.dayOfMonth)
+    val addLabel = stringResource(R.string.event_edit_title_new)
     // joinToString 람다는 @Composable이 아니라서 문구와 대상 라벨을 먼저 읽어 둔다
     val resources = LocalContext.current.resources
     val targetLabels = mapOf(
@@ -820,7 +843,13 @@ private fun DayCell(
             }
             .clipToBounds()
             .clickable(enabled = inMonth, role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = label }
+            .semantics {
+                contentDescription = label
+                // 화면 낭독기의 두 번 누르기는 "활성화"라서, 같은 기능을 접근성 동작 "새로 추가"로 준다 (D-173)
+                if (inMonth) {
+                    customActions = listOf(CustomAccessibilityAction(addLabel) { onDoubleTap(); true })
+                }
+            }
             .padding(top = DuriseoSpacing.Space1),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -934,7 +963,8 @@ private fun DayMarks(marks: CalendarDayMarks, modifier: Modifier = Modifier) {
 private fun DayBars(anniversaries: List<CalendarAnniversary>, events: List<CalendarEvent>, modifier: Modifier = Modifier) {
     val total = anniversaries.size + events.size
     Column(
-        modifier = modifier.fillMaxWidth().clearAndSetSemantics { },
+        // 칸 좌우에서 2씩 안쪽: 이웃한 날의 막대 사이에 4의 틈 (D-172)
+        modifier = modifier.fillMaxWidth().padding(horizontal = BarSideInset).clearAndSetSemantics { },
         verticalArrangement = Arrangement.spacedBy(BarGap),
     ) {
         val shape = RoundedCornerShape(BarRadius)
@@ -1675,4 +1705,10 @@ private fun CalendarPreview_Cards() {
             MemoRow(CalendarMemo("m2", "여행 숙소 후보 정리했어", EventTarget.PARTNER), {})
         }
     }
+}
+
+/** 마지막으로 누른 날짜 칸과 시각 (D-173). 그리기와 무관해서 상태로 두지 않는다 */
+private class LastTap {
+    var date: LocalDate? = null
+    var atMillis: Long = 0L
 }
