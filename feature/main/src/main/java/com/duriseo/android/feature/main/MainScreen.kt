@@ -7,7 +7,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.CompositionLocalProvider
+import com.duriseo.android.core.designsystem.component.CoachMarkTargets
 import com.duriseo.android.core.designsystem.component.DuriseoOverlaySnackbar
+import com.duriseo.android.core.designsystem.component.LocalCoachMarkTargets
 import com.duriseo.android.core.designsystem.component.LocalOverlaySnackbar
 import com.duriseo.android.core.designsystem.component.overlayAwareSnackbar
 import androidx.compose.material3.SnackbarHostState
@@ -32,6 +34,7 @@ import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 import com.duriseo.android.feature.calendar.CalendarScreen
 import com.duriseo.android.feature.calendar.CalendarStartDateSheet
 import com.duriseo.android.feature.calendar.CalendarUiState
+import com.duriseo.android.feature.calendar.tutorial.CalendarTutorialHost
 import com.duriseo.android.feature.couple.linkedsheet.LinkedSheetRoute
 import com.duriseo.android.feature.main.component.MainBottomBar
 import com.duriseo.android.feature.main.component.MainTab
@@ -104,9 +107,14 @@ fun MainScreen(
     val overlaySnackbar = remember(snackbarHostState, snackbarAtTop, showBottomBar) {
         DuriseoOverlaySnackbar(snackbarHostState, atTop = snackbarAtTop, aboveBottomBar = showBottomBar)
     }
+    // 캘린더 튜토리얼의 구멍 대상 위치 (FR-CAL-06). 캘린더 화면과 하단 탭이 위치를 알리고, 튜토리얼이 하단 탭까지 덮는다
+    val coachMarkTargets = remember { CoachMarkTargets() }
     DuriseoTheme(personColors = personColors) {
         // 로딩 덮개는 하단 탭(MainScaffold 소속)까지 덮어야 해서 가장 위층에서 그린다 (D-115 "화면 전체")
-        CompositionLocalProvider(LocalOverlaySnackbar provides overlaySnackbar) {
+        CompositionLocalProvider(
+            LocalOverlaySnackbar provides overlaySnackbar,
+            LocalCoachMarkTargets provides coachMarkTargets,
+        ) {
             DuriseoLoadingHost(state = loadingHost) {
                 Box {
                     MainScaffold(
@@ -131,6 +139,13 @@ fun MainScreen(
                     // 연결 완료 시트(SCR-COUPLE-04)는 캘린더(SCR-CAL-01) 위에 뜬다 (D-48, D-49). 새 내비게이션 경로가 아니다
                     if (linkedSheetVisible) {
                         LinkedSheetRoute()
+                    }
+                    // 캘린더 튜토리얼 (FR-CAL-06, D-168). 로그인 뒤 캘린더 탭에 처음 들어오면 뜨고, 연결 완료 시트가 떠 있으면 닫힌 뒤에 뜬다
+                    if (startDestination != null) {
+                        CalendarTutorialHost(
+                            onCalendar = currentTab == MainTab.CALENDAR,
+                            blocked = linkedSheetVisible,
+                        )
                     }
                 }
             }

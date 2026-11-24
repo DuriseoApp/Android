@@ -20,10 +20,12 @@ import com.duriseo.android.domain.me.SocialProvider
 import com.duriseo.android.domain.me.SpaceType
 import com.duriseo.android.domain.profile.ProfileRepository
 import com.duriseo.android.domain.result.DataResult
+import com.duriseo.android.domain.tutorial.CalendarTutorialRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import java.time.Instant
 import java.time.LocalDate
 
@@ -253,5 +255,22 @@ class FakeProfileRepository(private val meRepository: FakeMeRepository) : Profil
         val result = deleteResults.removeFirstOrNull() ?: DataResult.Success(Unit)
         if (result is DataResult.Success) meRepository.me.value = meRepository.me.value?.copy(profileImageVersion = null)
         return result
+    }
+}
+
+/** 캘린더 튜토리얼 가짜: 다시 보기 요청만 기록한다 (전체 메뉴는 "봤음" 기록을 쓰지 않는다) */
+class FakeCalendarTutorialRepository : CalendarTutorialRepository {
+    private val replay = MutableStateFlow(false)
+    var replayRequests = 0
+        private set
+
+    override suspend fun markShownIfFirst(): Boolean = error("전체 메뉴는 쓰지 않아요")
+    override val replayRequested: StateFlow<Boolean> = replay
+    override fun requestReplay() {
+        replayRequests += 1
+        replay.value = true
+    }
+    override fun consumeReplay() {
+        replay.value = false
     }
 }

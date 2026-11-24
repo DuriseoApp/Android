@@ -19,6 +19,10 @@
     <string name="nav_back">뒤로 가기</string>
     <string name="nav_close">닫기</string>
 
+    <!-- 코치 마크(튜토리얼 말풍선, SCREENS.md SCR-CAL-01 "튜토리얼", FR-CAL-06, D-168): 진행 표시 "1/5"와 [건너뛰기] -->
+    <string name="coach_mark_progress">%1$d/%2$d</string>
+    <string name="coach_mark_skip">건너뛰기</string>
+
     <!-- 로그아웃 확인 다이얼로그: SCREENS.md SCR-SET-01 "다이얼로그 > 로그아웃 확인". 전체 메뉴·계정 화면·SCR-COUPLE-01이 같이 쓴다 (FR-AUTH-05, D-80) -->
     <string name="action_logout">로그아웃</string>
     <string name="logout_dialog_title">로그아웃할까요?</string>

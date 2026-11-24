@@ -173,6 +173,7 @@
 
     <!-- SCR-SET-01 정보 섹션 (보드 Menu.dc.html 130~134행, SCREENS.md "정보") -->
     <string name="settings_section_info">정보</string>
+    <string name="settings_tutorial_replay">튜토리얼 다시 보기</string>
     <string name="settings_contact">문의하기</string>
     <string name="settings_terms">이용약관 · 개인정보처리방침</string>
     <string name="settings_licenses">오픈소스 라이선스</string>

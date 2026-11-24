@@ -41,9 +41,12 @@ open class LocalDataCleaner @Inject constructor(
 /**
  * 로그아웃·탈퇴·세션 끊김에도 지우지 않는 기기 단위 설정 키. 사용자가 아니라 이 기기에 대한 기록이다.
  * 알림 권한을 이미 물었는지 (FR-NOTI-01 AC3, D-144): 지우면 같은 기기에서 다시 로그인할 때 시스템 권한창을 또 띄운다.
+ * 캘린더 튜토리얼을 이미 보여 줬는지 (FR-CAL-06 AC4, D-168): 기기마다 한 번이라 로그아웃·탈퇴·연결 해제로 지우지 않는다.
  */
 internal object DeviceLevelKeys {
     val NOTIFICATION_PERMISSION_ASKED = booleanPreferencesKey("notification_permission_asked")
 
-    val ALL: List<Preferences.Key<Boolean>> = listOf(NOTIFICATION_PERMISSION_ASKED)
+    val CALENDAR_TUTORIAL_SHOWN = booleanPreferencesKey("calendar_tutorial_shown")
+
+    val ALL: List<Preferences.Key<Boolean>> = listOf(NOTIFICATION_PERMISSION_ASKED, CALENDAR_TUTORIAL_SHOWN)
 }

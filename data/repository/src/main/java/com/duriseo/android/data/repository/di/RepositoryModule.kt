@@ -9,6 +9,7 @@ import com.duriseo.android.data.repository.event.EventRepositoryImpl
 import com.duriseo.android.data.repository.me.MeRepositoryImpl
 import com.duriseo.android.data.repository.memo.MemoRepositoryImpl
 import com.duriseo.android.data.repository.notification.NotificationPermissionGateImpl
+import com.duriseo.android.data.repository.tutorial.CalendarTutorialRepositoryImpl
 import com.duriseo.android.data.repository.notification.NotificationRepositoryImpl
 import com.duriseo.android.data.repository.notification.NotificationSettingsRepositoryImpl
 import com.duriseo.android.data.repository.notification.NotificationTapHandlerImpl
@@ -23,6 +24,7 @@ import com.duriseo.android.domain.event.EventRepository
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.memo.MemoRepository
 import com.duriseo.android.domain.notification.NotificationPermissionGate
+import com.duriseo.android.domain.tutorial.CalendarTutorialRepository
 import com.duriseo.android.domain.notification.NotificationRepository
 import com.duriseo.android.domain.notification.NotificationSettingsRepository
 import com.duriseo.android.domain.notification.NotificationTapHandler
@@ -72,6 +74,10 @@ abstract class RepositoryModule {
     /** 알림 권한 "이미 물었는지" 기록 (D-144) */
     @Binds
     abstract fun bindNotificationPermissionGate(impl: NotificationPermissionGateImpl): NotificationPermissionGate
+
+    /** 캘린더 튜토리얼: 기기 단위 "봤음" 기록과 "다시 보기" 요청 (FR-CAL-06, FR-SET-02 AC5) */
+    @Binds
+    abstract fun bindCalendarTutorialRepository(impl: CalendarTutorialRepositoryImpl): CalendarTutorialRepository
 
     /** 누른 알림 처리: 읽음 + 갈 곳 (목록·푸시 진입 공통, FR-NOTI-03·05) */
     @Binds

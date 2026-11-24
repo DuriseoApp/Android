@@ -13,6 +13,7 @@ import com.duriseo.android.domain.me.AccountType
 import com.duriseo.android.domain.me.Me
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.result.DataResult
+import com.duriseo.android.domain.tutorial.CalendarTutorialRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,6 +39,7 @@ class SettingsViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val meRepository: MeRepository,
     private val coupleRepository: CoupleRepository,
+    private val calendarTutorialRepository: CalendarTutorialRepository,
     private val clock: Clock,
 ) : ViewModel() {
 
@@ -91,6 +93,12 @@ class SettingsViewModel @Inject constructor(
             SettingsAction.LogoutConfirmed -> logout()
             SettingsAction.ProfileEditClicked -> {
                 if (!local.value.requesting) effectChannel.trySend(SettingsSideEffect.NavigateToProfileEdit)
+            }
+            SettingsAction.TutorialReplayClicked -> {
+                if (local.value.requesting) return
+                // 서버를 쓰지 않아 오프라인에서도 같다. 요청을 남기고 메뉴를 닫으면 캘린더가 1단계부터 띄운다 (FR-SET-02 AC5)
+                calendarTutorialRepository.requestReplay()
+                effectChannel.trySend(SettingsSideEffect.CloseForTutorial)
             }
             SettingsAction.LicensesClicked -> {
                 if (!local.value.requesting) effectChannel.trySend(SettingsSideEffect.NavigateToLicenses)

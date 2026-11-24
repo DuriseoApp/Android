@@ -393,3 +393,26 @@ class FakeNotificationPermissionGate(private var asked: Boolean = false) : com.d
         return true
     }
 }
+
+/** 캘린더 튜토리얼 가짜: "봤음" 기록(처음 한 번만 true)과 다시 보기 요청 (FR-CAL-06, FR-SET-02 AC5) */
+class FakeCalendarTutorialRepository(var shown: Boolean = false) : com.duriseo.android.domain.tutorial.CalendarTutorialRepository {
+    var markCalls = 0
+        private set
+    private val replay = MutableStateFlow(false)
+
+    override suspend fun markShownIfFirst(): Boolean {
+        markCalls += 1
+        if (shown) return false
+        shown = true
+        return true
+    }
+
+    override val replayRequested: kotlinx.coroutines.flow.StateFlow<Boolean> = replay
+    override fun requestReplay() {
+        replay.value = true
+    }
+
+    override fun consumeReplay() {
+        replay.value = false
+    }
+}

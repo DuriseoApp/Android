@@ -117,4 +117,12 @@
     <string name="event_time_pm">오후 %1$d:%2$02d</string>
     <string name="event_date_time_format">%1$s %2$s</string>
     <string name="event_time_24h">%1$02d:%2$02d</string>
+
+    <!-- 캘린더 튜토리얼 5단계 (FR-CAL-06 AC2, D-168, SCREENS.md SCR-CAL-01 "튜토리얼"). 진행 표시·[건너뛰기]는 core:designsystem -->
+    <string name="calendar_tutorial_calendar">옆으로 쓸면 다른 달로 가고, 아래로 쓸어 내리면 달력을 크게 볼 수 있어요.</string>
+    <string name="calendar_tutorial_fab">여기를 누르면 일정이나 메모를 추가할 수 있어요.</string>
+    <string name="calendar_tutorial_anniversary_couple">함께한 날과 기념일은 여기서 볼 수 있어요.</string>
+    <string name="calendar_tutorial_anniversary_solo">기념일은 여기서 볼 수 있어요.</string>
+    <string name="calendar_tutorial_memo_tab">메모는 여기서 모아 볼 수 있어요.</string>
+    <string name="calendar_tutorial_menu">프로필과 알림 설정은 전체 메뉴에서 바꿀 수 있어요.</string>
 </resources>
