@@ -113,7 +113,7 @@ fun DuriseoBottomSheetLayer(
     content: @Composable () -> Unit,
 ) {
     val scrimLabel = stringResource(R.string.nav_close)
-    DuriseoOverlayWindow(onBack = onBackPress) {
+    DuriseoOverlayWindow(onBack = onBackPress, snackbarAtTop = true) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Box(
             modifier = Modifier

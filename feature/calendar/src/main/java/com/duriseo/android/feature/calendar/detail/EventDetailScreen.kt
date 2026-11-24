@@ -165,7 +165,7 @@ fun EventDetailScreen(
     padding: PaddingValues = PaddingValues(),
 ) {
     val event = state.event
-    // 삭제 요청 중에는 뒤로 가기로 다이얼로그가 닫히지 않는다
+    // 삭제 요청 중에는 뒤로 가기로 다이얼로그가 닫히지 않는다 (DuriseoDialog의 buttonsEnabled)
     DuriseoDialogLayer(
         dialogVisible = state.deleteDialogVisible,
         dialog = {

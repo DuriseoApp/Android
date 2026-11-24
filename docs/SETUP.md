@@ -40,6 +40,7 @@ FCM 푸시에 쓰는 Firebase 설정 파일이에요. 비밀값이라 커밋하�
 - `.github/workflows/ci.yml`이 PR과 main push마다 `./gradlew assembleDebug testDebugUnitTest`를 돌려요. 결과 요약은 실행 화면의 Annotations에 나와요.
 - 작업 브랜치는 push만으로는 CI가 돌지 않아요. PR을 열어야 돌아요 (Gradle을 못 돌리는 환경이면 draft PR을 먼저 열어요).
 - 레포 Settings › Rules › Rulesets의 main 규칙에서 Require status checks에 **빌드와 테스트**를 넣어 두면 CI가 실패한 PR은 머지할 수 없어요.
+- Robolectric 테스트가 받는 android-all jar는 `actions/cache`로 `~/.m2/repository/org/robolectric`에 캐시하고(키: `gradle/libs.versions.toml` 해시), Gradle이 실패하면 한 번 더 돌려요. jar 다운로드 오류(`MavenArtifactFetcher`)가 일시적으로 나도 통과하게 하려는 거예요.
 - CI에는 `local.properties` 값이 없어요. 설정값이 필요한 테스트는 가짜 값을 써요.
 
 ## 4. 소셜 로그인 콘솔 설정 (한 번)

@@ -105,8 +105,6 @@ private val CardPaddingHorizontal = DuriseoSpacing.Space4
 private val CardBorderWidth = 1.dp
 private val CardSelectedBorderWidth = 2.dp
 
-/** 스낵바는 위에서 40 (D-126) */
-
 /**
  * 연결 완료 시트. 호스트(`feature:main`)가 SCR-CAL-01 위에 그리고, 띄울지는 `MeRepository.observeLinkedSheetNeeded()`가 정한다.
  * 기록을 고르기 전에는 닫을 수 없다: 뒤 막·밀기·뒤로 가기가 모두 막힌다 (FR-COUPLE-03 AC4).

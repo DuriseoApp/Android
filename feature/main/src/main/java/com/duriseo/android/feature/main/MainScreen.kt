@@ -9,6 +9,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.CompositionLocalProvider
 import com.duriseo.android.core.designsystem.component.DuriseoOverlaySnackbar
 import com.duriseo.android.core.designsystem.component.LocalOverlaySnackbar
+import com.duriseo.android.core.designsystem.component.overlayAwareSnackbar
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -106,33 +107,33 @@ fun MainScreen(
     DuriseoTheme(personColors = personColors) {
         // 로딩 덮개는 하단 탭(MainScaffold 소속)까지 덮어야 해서 가장 위층에서 그린다 (D-115 "화면 전체")
         CompositionLocalProvider(LocalOverlaySnackbar provides overlaySnackbar) {
-        DuriseoLoadingHost(state = loadingHost) {
-        Box {
-            MainScaffold(
-                currentTab = currentTab,
-                showBottomBar = navigator.showBottomBar(),
-                snackbarHostState = snackbarHostState,
-                onTabSelected = navigator::navigate,
-                snackbarAtTop = snackbarAtTop,
-            ) { padding ->
-                // 토큰 저장소를 읽는 동안은 문구 없는 빈 화면이다 (FR-AUTH-01)
-                if (startDestination != null) {
-                    MainNavHost(
-                        navigator = navigator,
-                        // 스낵바가 위에 뜨면(시트가 떠 있을 때) FAB은 올라가지 않는다 (D-126)
-                        snackbarVisible = !snackbarAtTop && snackbarHostState.currentSnackbarData != null,
-                        startDestination = startDestination,
-                        padding = padding,
-                        onShowSnackBar = onShowSnackBar,
-                    )
+            DuriseoLoadingHost(state = loadingHost) {
+                Box {
+                    MainScaffold(
+                        currentTab = currentTab,
+                        showBottomBar = showBottomBar,
+                        snackbarHostState = snackbarHostState,
+                        onTabSelected = navigator::navigate,
+                        snackbarAtTop = snackbarAtTop,
+                    ) { padding ->
+                        // 토큰 저장소를 읽는 동안은 문구 없는 빈 화면이다 (FR-AUTH-01)
+                        if (startDestination != null) {
+                            MainNavHost(
+                                navigator = navigator,
+                                // 스낵바가 위에 뜨면(시트가 떠 있을 때) FAB은 올라가지 않는다 (D-126)
+                                snackbarVisible = !snackbarAtTop && snackbarHostState.currentSnackbarData != null,
+                                startDestination = startDestination,
+                                padding = padding,
+                                onShowSnackBar = onShowSnackBar,
+                            )
+                        }
+                    }
+                    // 연결 완료 시트(SCR-COUPLE-04)는 캘린더(SCR-CAL-01) 위에 뜬다 (D-48, D-49). 새 내비게이션 경로가 아니다
+                    if (linkedSheetVisible) {
+                        LinkedSheetRoute()
+                    }
                 }
             }
-            // 연결 완료 시트(SCR-COUPLE-04)는 캘린더(SCR-CAL-01) 위에 뜬다 (D-48, D-49). 새 내비게이션 경로가 아니다
-            if (linkedSheetVisible) {
-                LinkedSheetRoute()
-            }
-        }
-        }
         }
     }
 }
@@ -157,7 +158,7 @@ internal fun MainScaffold(
                 if (!snackbarAtTop) {
                     DuriseoSnackbarHost(
                         hostState = snackbarHostState,
-                        modifier = if (showBottomBar) Modifier.padding(bottom = SnackbarAboveTab) else Modifier,
+                        modifier = (if (showBottomBar) Modifier.padding(bottom = SnackbarAboveTab) else Modifier).overlayAwareSnackbar(),
                     )
                 }
             },
@@ -172,7 +173,10 @@ internal fun MainScaffold(
         )
         // 하단 탭이 없는 화면과 연결 완료 시트가 뜬 동안의 스낵바는 위에서 40 (D-126)
         if (snackbarAtTop) {
-            DuriseoTopSnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.TopCenter))
+            DuriseoTopSnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.align(Alignment.TopCenter).overlayAwareSnackbar(),
+            )
         }
     }
 }
