@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,6 +42,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -59,8 +61,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
+import androidx.compose.ui.util.lerp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -162,9 +169,6 @@ private val MoreLineHeight = 12.sp
 private val HandleRowHeight = 24.dp
 private val HandleWidth = 36.dp
 private val HandleHeight = 4.dp
-
-/** 이만큼(dp) 끌면 펼치거나 접는다 (소스 `dragEnd`의 40) */
-private const val DRAG_THRESHOLD = 40f
 
 /** 선택한 날 제목 줄: 좌우 20, 아래 10, 제목 17/700, "오늘" 배지 11/600, 개수 13 */
 private val DayHeaderBottom = 10.dp
@@ -272,6 +276,11 @@ fun CalendarScreen(
     snackbarVisible: Boolean = false,
 ) {
     val sheet = state.startDateSheet
+    // 펼침 진행도(D-163): 달력 칸과 날짜 목록 끌기가 같이 쓴다. 끄는 범위 = 주 수 × (88 − 52)
+    val fold = rememberCalendarFoldState(state.expanded) { onAction(CalendarAction.ToggleExpanded) }
+    val foldRangePx = with(LocalDensity.current) {
+        weekCount(state.visibleMonth) * (ExpandedCellHeight - CollapsedCellHeight).toPx()
+    }
     DuriseoDialogLayer(
         dialogVisible = sheet != null,
         dialog = {
@@ -310,8 +319,8 @@ fun CalendarScreen(
                 )
                 MonthRow(state = state, onAction = onAction)
                 WeekdayRow()
-                MonthGrid(state = state, onAction = onAction)
-                DaySection(state = state, onAction = onAction, modifier = Modifier.weight(1f))
+                MonthGrid(state = state, onAction = onAction, fold = fold, foldRangePx = foldRangePx)
+                DaySection(state = state, onAction = onAction, fold = fold, foldRangePx = foldRangePx, modifier = Modifier.weight(1f))
             }
             CalendarFab(
                 onClick = { onAction(CalendarAction.AddClicked) },
@@ -595,15 +604,19 @@ private fun WeekdayRow() {
 }
 
 @Composable
-private fun MonthGrid(state: CalendarUiState, onAction: (CalendarAction) -> Unit) {
-    // 쓸어서 펼치기·접기 (D-163, 소스 `dragEnd`): 아래로 40 이상이면 펼치고 위로 40 이상이면 접는다
-    val thresholdPx = with(androidx.compose.ui.platform.LocalDensity.current) { DRAG_THRESHOLD.dp.toPx() }
-    val expanded = state.expanded
+private fun MonthGrid(
+    state: CalendarUiState,
+    onAction: (CalendarAction) -> Unit,
+    fold: CalendarFoldState,
+    foldRangePx: Float,
+) {
+    // 쓸어서 펼치기·접기 (D-163): 끄는 동안 칸이 손가락을 따라 늘고 준다. progress는 layout·draw 단계에서만 읽는다
+    val progress = { fold.progress }
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = GridPadding)
-            .foldDrag(expanded, thresholdPx) { onAction(CalendarAction.ToggleExpanded) },
+            .foldDrag(fold, foldRangePx),
     ) {
         val first = state.visibleMonth.atDay(1)
         // 일요일 시작: 1일 앞의 이전 달 날짜 수 = 요일 값(월 1 ... 일 7)을 7로 나눈 나머지
@@ -619,6 +632,7 @@ private fun MonthGrid(state: CalendarUiState, onAction: (CalendarAction) -> Unit
                         inMonth = YearMonth.from(date) == state.visibleMonth,
                         column = col,
                         state = state,
+                        progress = progress,
                         onClick = { onAction(CalendarAction.DateSelected(date)) },
                         modifier = Modifier.weight(1f),
                     )
@@ -634,16 +648,15 @@ private fun DayCell(
     inMonth: Boolean,
     column: Int,
     state: CalendarUiState,
+    progress: () -> Float,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val expanded = state.expanded
     val events = if (inMonth) state.eventsByDay[date].orEmpty() else emptyList()
     val anniversaries = if (inMonth) state.anniversariesByDay[date].orEmpty() else emptyList()
     val memos = if (inMonth) state.memosByDay[date].orEmpty() else emptyList()
     val selected = inMonth && date == state.selectedDate
     val isToday = inMonth && date == state.today
-    val circle = if (expanded) ExpandedDaySize else CollapsedDaySize
     val description = stringResource(R.string.calendar_day_description, date.monthValue, date.dayOfMonth)
     // joinToString 람다는 @Composable이 아니라서 문구와 대상 라벨을 먼저 읽어 둔다
     val resources = LocalContext.current.resources
@@ -669,11 +682,16 @@ private fun DayCell(
     }
     Column(
         modifier = modifier
-            .height(if (expanded) ExpandedCellHeight else CollapsedCellHeight)
+            // 칸 높이 52 ↔ 88: layout 단계에서 progress를 읽어 칸 전체가 재구성되지 않는다
+            .layout { measurable, constraints ->
+                val height = constraints.constrainHeight(lerp(CollapsedCellHeight, ExpandedCellHeight, progress()).roundToPx())
+                val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
+                layout(placeable.width, height) { placeable.place(0, 0) }
+            }
+            .clipToBounds()
             .clickable(enabled = inMonth, role = Role.Button, onClick = onClick)
             .semantics { contentDescription = label }
             .padding(top = DuriseoSpacing.Space1),
-        verticalArrangement = Arrangement.spacedBy(if (expanded) DuriseoSpacing.Space1 else DotGap),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         val numberColor = when {
@@ -684,7 +702,12 @@ private fun DayCell(
         }
         Box(
             modifier = Modifier
-                .size(circle)
+                // 날짜 원 34 ↔ 26
+                .layout { measurable, _ ->
+                    val side = lerp(CollapsedDaySize, ExpandedDaySize, progress()).roundToPx()
+                    val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(side, side))
+                    layout(side, side) { placeable.place(0, 0) }
+                }
                 .then(
                     when {
                         selected -> Modifier.background(Brand500, CircleShape)
@@ -697,20 +720,46 @@ private fun DayCell(
         ) {
             Text(
                 text = date.dayOfMonth.toString(),
+                // 글자 15 ↔ 13: 15로 그리고 draw 단계에서 비율만 줄인다 (글자 크기를 바꾸면 칸마다 다시 측정해야 해서)
+                modifier = Modifier.graphicsLayer {
+                    val scale = lerp(1f, DayNumberExpanded.value / DayNumberCollapsed.value, progress())
+                    scaleX = scale
+                    scaleY = scale
+                },
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = if (expanded) DayNumberExpanded else DayNumberCollapsed,
+                    fontSize = DayNumberCollapsed,
                     lineHeight = DayNumberLineHeight,
                     fontWeight = if (selected || isToday) FontWeight.Bold else if (inMonth) FontWeight.Medium else FontWeight.Normal,
                 ),
                 color = numberColor,
             )
         }
+        // 원과 점·막대 사이 간격 3 ↔ 4
+        Spacer(
+            Modifier.layout { measurable, constraints ->
+                val gap = lerp(DotGap, DuriseoSpacing.Space1, progress()).roundToPx()
+                val placeable = measurable.measure(constraints.copy(minHeight = gap, maxHeight = gap))
+                layout(placeable.width, gap) { placeable.place(0, 0) }
+            },
+        )
         if (inMonth && (events.isNotEmpty() || anniversaries.isNotEmpty() || memos.isNotEmpty())) {
-            if (expanded) {
+            // 점은 앞쪽 절반(p 0..0.5)에 사라지고 막대는 뒤쪽 절반(p 0.5..1)에 나타난다. 두 표시가 같이 보이지 않고,
+            // 막대는 칸 높이가 70 이상(2개 + "+N"이 들어갈 만큼 가까울 때)일 때만 보여 잘리지 않는다
+            Box(modifier = Modifier.fillMaxWidth()) {
+                DayMarks(
+                    marks = calendarDayMarks(hasAnniversary = anniversaries.isNotEmpty(), events = events, memos = memos),
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .graphicsLayer { alpha = foldDotsAlpha(progress()) },
+                )
                 // 펼친 칸의 막대는 기념일·일정만이다: 메모 막대는 문서에 없다 (unit-6.md 결정 17)
-                DayBars(anniversaries, events)
-            } else {
-                DayMarks(calendarDayMarks(hasAnniversary = anniversaries.isNotEmpty(), events = events, memos = memos))
+                if (anniversaries.isNotEmpty() || events.isNotEmpty()) {
+                    DayBars(
+                        anniversaries,
+                        events,
+                        modifier = Modifier.graphicsLayer { alpha = foldBarsAlpha(progress()) },
+                    )
+                }
             }
         }
     }
@@ -729,9 +778,9 @@ private val NoteLineHeight = 19.5.sp
 
 /** 접힌 칸의 표시: 기념일 고리 하나 + 사람 색 점, 합쳐서 최대 3개 (D-65·D-118). 규칙은 [calendarDayMarks] */
 @Composable
-private fun DayMarks(marks: CalendarDayMarks) {
+private fun DayMarks(marks: CalendarDayMarks, modifier: Modifier = Modifier) {
     Row(
-        modifier = Modifier.height(DotRowHeight).clearAndSetSemantics { },
+        modifier = modifier.height(DotRowHeight).clearAndSetSemantics { },
         horizontalArrangement = Arrangement.spacedBy(DotGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -749,10 +798,10 @@ private fun DayMarks(marks: CalendarDayMarks) {
  * 막대 안 글자는 기념일이 `brand-700` 700, 일정은 사람 색 위 글자 (`annBarStyle`·`barStyle`)
  */
 @Composable
-private fun DayBars(anniversaries: List<CalendarAnniversary>, events: List<CalendarEvent>) {
+private fun DayBars(anniversaries: List<CalendarAnniversary>, events: List<CalendarEvent>, modifier: Modifier = Modifier) {
     val total = anniversaries.size + events.size
     Column(
-        modifier = Modifier.fillMaxWidth().clearAndSetSemantics { },
+        modifier = modifier.fillMaxWidth().clearAndSetSemantics { },
         verticalArrangement = Arrangement.spacedBy(BarGap),
     ) {
         val shape = RoundedCornerShape(BarRadius)
@@ -808,6 +857,8 @@ private val BarPadding = 3.dp
 private fun DaySection(
     state: CalendarUiState,
     onAction: (CalendarAction) -> Unit,
+    fold: CalendarFoldState,
+    foldRangePx: Float,
     modifier: Modifier = Modifier,
 ) {
     val pullState = rememberPullToRefreshState()
@@ -825,7 +876,7 @@ private fun DaySection(
             )
         },
     ) {
-        DayContent(state = state, onAction = onAction)
+        DayContent(state = state, onAction = onAction, fold = fold, foldRangePx = foldRangePx)
     }
 }
 
@@ -861,17 +912,18 @@ private fun RefreshIndicator(refreshing: Boolean, fraction: Float, modifier: Mod
 private fun DayContent(
     state: CalendarUiState,
     onAction: (CalendarAction) -> Unit,
+    fold: CalendarFoldState,
+    foldRangePx: Float,
     modifier: Modifier = Modifier,
 ) {
     val toggleLabel = stringResource(if (state.expanded) R.string.calendar_collapse else R.string.calendar_expand)
-    val thresholdPx = with(androidx.compose.ui.platform.LocalDensity.current) { DRAG_THRESHOLD.dp.toPx() }
     // 날짜 목록(빈 날 포함)에서 쓸기 (D-163)
-    val currentExpanded by rememberUpdatedState(state.expanded)
-    val foldConnection = remember(thresholdPx) {
+    val currentRange by rememberUpdatedState(foldRangePx)
+    val foldConnection = remember(fold) {
         FoldNestedScrollConnection(
-            isExpanded = { currentExpanded },
-            thresholdPx = thresholdPx,
-            onToggle = { onAction(CalendarAction.ToggleExpanded) },
+            progress = { fold.progress },
+            dragBy = { dy -> fold.dragBy(dy, currentRange) },
+            onRelease = { velocity -> fold.settle(velocity, currentRange) },
         )
     }
     Column(modifier = modifier.fillMaxSize().nestedScroll(foldConnection)) {
@@ -880,7 +932,7 @@ private fun DayContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(HandleRowHeight)
-                .foldDrag(state.expanded, thresholdPx) { onAction(CalendarAction.ToggleExpanded) }
+                .foldDrag(fold, foldRangePx)
                 // 버튼이 아니라 쓸기 표시다(탭 없음). 화면 낭독기에는 같은 기능을 접근성 동작으로 준다 (D-163)
                 .semantics {
                     contentDescription = toggleLabel
