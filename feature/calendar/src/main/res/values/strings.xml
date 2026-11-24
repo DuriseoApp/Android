@@ -16,6 +16,8 @@
     <string name="calendar_anniversary_link">기념일</string>
     <string name="calendar_start_date_prompt">처음 만난 날 입력하기</string>
     <string name="calendar_month_title">%1$d년 %2$d월</string>
+    <!-- 월 제목을 누르면 뜨는 하단 시트의 제목 (D-167) -->
+    <string name="calendar_month_picker_title">연도와 월</string>
     <string name="calendar_previous_month">이전 달</string>
     <string name="calendar_next_month">다음 달</string>
     <string name="calendar_expand">달력 크게 보기</string>

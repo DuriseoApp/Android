@@ -97,6 +97,8 @@ data class CalendarUiState(
     val canGoPrevious: Boolean = true,
     val canGoNext: Boolean = true,
     val startDateSheet: CalendarStartDateSheet? = null,
+    /** 하단 시트 "연도와 월"이 열려 있다 (D-167). 처음 고른 값은 [visibleMonth]다 */
+    val monthPickerOpen: Boolean = false,
     /** 당겨서 새로고침 중 (Q-16). 화면에 들어올 때·달을 넘길 때의 다시 불러오기에는 켜지 않는다 (D-112) */
     val refreshing: Boolean = false,
     /** 안 읽은 알림이 있다. 앱바 알림 버튼에 점이 보인다 (FR-CAL-01 AC4, 안 읽은 개수 > 0) */
@@ -126,6 +128,18 @@ sealed interface CalendarAction {
     data object Shown : CalendarAction
     data object PreviousMonth : CalendarAction
     data object NextMonth : CalendarAction
+
+    /** 달력을 옆으로 쓸어 [month]에 정착했다 (D-166). 범위 밖이면 무시한다 */
+    data class MonthSwiped(val month: YearMonth) : CalendarAction
+
+    /** 월 제목을 눌렀다: 시트 "연도와 월"을 연다 (D-167) */
+    data object MonthTitleClicked : CalendarAction
+
+    /** 시트 "연도와 월"의 [완료]: [month]로 이동하고 닫는다 (D-167) */
+    data class MonthPicked(val month: YearMonth) : CalendarAction
+
+    /** 시트 밖·뒤로 가기: 바꾸지 않고 닫는다 (D-167) */
+    data object MonthPickerDismissed : CalendarAction
     data class DateSelected(val date: LocalDate) : CalendarAction
     data object ToggleExpanded : CalendarAction
     data class EventClicked(val id: String) : CalendarAction

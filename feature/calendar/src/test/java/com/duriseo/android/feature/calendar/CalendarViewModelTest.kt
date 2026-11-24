@@ -593,4 +593,80 @@ class CalendarViewModelTest {
             assertEquals(CalendarSideEffect.OpenNotifications, awaitItem())
         }
     }
+
+    // --- D-166 옆으로 쓸어 달 바꾸기 ---
+
+    @Test
+    fun `D-166 옆으로 쓸어 넘긴 달로 이동하고 선택한 날은 같은 날짜가 된다`() = runTest {
+        val vm = viewModel()
+        vm.onAction(CalendarAction.MonthSwiped(YearMonth.of(2026, 11)))
+        assertEquals(YearMonth.of(2026, 11), vm.uiState.value.visibleMonth)
+        assertEquals(LocalDate.of(2026, 11, 12), vm.uiState.value.selectedDate)
+        vm.onAction(CalendarAction.MonthSwiped(YearMonth.of(2026, 10)))
+        assertEquals(LocalDate.of(2026, 10, 12), vm.uiState.value.selectedDate)
+    }
+
+    @Test
+    fun `D-166 같은 날짜가 없으면 새 달의 말일이 선택된다`() = runTest {
+        val vm = viewModel()
+        vm.onAction(CalendarAction.DateSelected(LocalDate.of(2026, 10, 31)))
+        vm.onAction(CalendarAction.MonthSwiped(YearMonth.of(2026, 11)))
+        assertEquals(LocalDate.of(2026, 11, 30), vm.uiState.value.selectedDate)
+    }
+
+    @Test
+    fun `D-166 FR-CAL-01 AC6 1950년 1월 앞과 2050년 12월 뒤로는 넘어가지 않는다`() = runTest {
+        val vm = viewModel()
+        vm.onAction(CalendarAction.DateSelected(LocalDate.of(1950, 1, 10)))
+        vm.onAction(CalendarAction.MonthSwiped(YearMonth.of(1949, 12)))
+        assertEquals(YearMonth.of(1950, 1), vm.uiState.value.visibleMonth)
+        assertEquals(LocalDate.of(1950, 1, 10), vm.uiState.value.selectedDate)
+        vm.onAction(CalendarAction.DateSelected(LocalDate.of(2050, 12, 10)))
+        vm.onAction(CalendarAction.MonthSwiped(YearMonth.of(2051, 1)))
+        assertEquals(YearMonth.of(2050, 12), vm.uiState.value.visibleMonth)
+        assertEquals(LocalDate.of(2050, 12, 10), vm.uiState.value.selectedDate)
+    }
+
+    @Test
+    fun `D-166 쓸어 넘긴 달도 버튼처럼 그 달을 다시 불러온다`() = runTest {
+        val vm = viewModel()
+        vm.onAction(CalendarAction.Shown)
+        vm.onAction(CalendarAction.MonthSwiped(YearMonth.of(2026, 11)))
+        assertEquals(LocalDate.of(2026, 10, 31) to LocalDate.of(2026, 12, 1), events.refreshRanges.last())
+    }
+
+    // --- D-167 연도와 월 시트 ---
+
+    @Test
+    fun `D-167 월 제목을 누르면 시트가 열리고 바깥을 누르면 달을 바꾸지 않고 닫힌다`() = runTest {
+        val vm = viewModel()
+        assertFalse(vm.uiState.value.monthPickerOpen)
+        vm.onAction(CalendarAction.MonthTitleClicked)
+        assertTrue(vm.uiState.value.monthPickerOpen)
+        vm.onAction(CalendarAction.MonthPickerDismissed)
+        assertFalse(vm.uiState.value.monthPickerOpen)
+        assertEquals(YearMonth.of(2026, 10), vm.uiState.value.visibleMonth)
+        assertEquals(today, vm.uiState.value.selectedDate)
+    }
+
+    @Test
+    fun `D-167 완료를 누르면 먼 달로 이동하고 31일을 골랐으면 28일이 된다`() = runTest {
+        val vm = viewModel()
+        vm.onAction(CalendarAction.DateSelected(LocalDate.of(2026, 10, 31)))
+        vm.onAction(CalendarAction.MonthTitleClicked)
+        vm.onAction(CalendarAction.MonthPicked(YearMonth.of(1999, 2)))
+        val state = vm.uiState.value
+        assertEquals(YearMonth.of(1999, 2), state.visibleMonth)
+        assertEquals(LocalDate.of(1999, 2, 28), state.selectedDate)
+        assertFalse(state.monthPickerOpen)
+    }
+
+    @Test
+    fun `D-167 완료로 범위 밖 달은 고를 수 없다`() = runTest {
+        val vm = viewModel()
+        vm.onAction(CalendarAction.MonthTitleClicked)
+        vm.onAction(CalendarAction.MonthPicked(YearMonth.of(2051, 1)))
+        assertEquals(YearMonth.of(2026, 10), vm.uiState.value.visibleMonth)
+        assertFalse(vm.uiState.value.monthPickerOpen)
+    }
 }
