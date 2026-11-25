@@ -9,6 +9,7 @@ import com.duriseo.android.domain.appops.ForceUpdateSignal
 import com.duriseo.android.domain.appops.OsCondition
 import com.duriseo.android.domain.appops.PopupImage
 import com.duriseo.android.domain.appops.PopupLink
+import com.duriseo.android.domain.appops.PopupPreset
 import com.duriseo.android.domain.appops.UpdateMode
 import com.duriseo.android.domain.appops.isHttpsUrl
 import com.duriseo.android.domain.appops.parsePopupImage
@@ -102,6 +103,9 @@ object AppOpsJsonParser {
             else -> parseOs(raw) ?: return null
         }
         val text = obj.text() ?: return null
+        // 규칙에 image가 없으면(null·생략) 앱은 preset:update를 쓴다 (FR-APP-02 AC7). 모르는 값은 이미지 없음 그대로다
+        val imageRaw = obj["image"]
+        val image = if (imageRaw == null || imageRaw == JsonNull) PopupImage.Preset(PopupPreset.UPDATE) else text.image
         return AppUpdateRule(
             id = id,
             mode = mode,
@@ -110,7 +114,7 @@ object AppOpsJsonParser {
             os = os,
             title = text.title,
             body = text.body,
-            image = text.image,
+            image = image,
             imageAlt = text.imageAlt,
         )
     }
@@ -220,25 +224,32 @@ object AppOpsJsonParser {
 
 /**
  * 426 `details`를 강제 업데이트 신호로 읽는다 (API.md 1.1 `APP_VERSION_UNSUPPORTED`).
- * `details`가 비었거나 모양이 틀리면 문구·이미지 없는 신호다(앱 기본 문구, `preset:update`).
- * 제목이 없는 규칙(이미지만 넣은 팝업)이 `https://` 이미지·`imageAlt`를 못 채우면 그림 없이 기본 문구로 보이게 문구를 비운다 (D-183).
+ * `details`가 비었거나 모양이 틀리면 문구 없는 신호다(앱 기본 문구, 이미지는 `preset:update`). `image`가 없을 때도 `preset:update`다.
+ * 제목이 없는 규칙(이미지만 넣은 팝업)이 `https://` 이미지·`imageAlt`를 못 채우면 기본 문구와 `preset:update`로 보이게 문구를 비운다 (D-183).
  */
 internal fun parseForceUpdateDetails(details: JsonElement?): ForceUpdateSignal {
     val obj = details as? JsonObject
-        ?: return ForceUpdateSignal(ruleId = null, title = null, body = null, image = PopupImage.None, imageAlt = null)
+        ?: return ForceUpdateSignal(
+            ruleId = null,
+            title = null,
+            body = null,
+            image = PopupImage.Preset(PopupPreset.UPDATE),
+            imageAlt = null,
+        )
     fun string(key: String): String? =
         (obj[key] as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotEmpty() }
 
     val title = string("title")
     val body = string("body")
-    val image = parsePopupImage(string("image"))
+    val rawImage = string("image")
+    val image = if (rawImage == null) PopupImage.Preset(PopupPreset.UPDATE) else parsePopupImage(rawImage)
     val imageAlt = string("imageAlt")
     val imageOnly = title == null && body == null && image is PopupImage.Web && imageAlt != null
     return ForceUpdateSignal(
         ruleId = string("ruleId"),
         title = title,
         body = if (title == null) null else body,
-        image = if (title == null && !imageOnly) PopupImage.None else image,
-        imageAlt = imageAlt,
+        image = if (title == null && !imageOnly) PopupImage.Preset(PopupPreset.UPDATE) else image,
+        imageAlt = if (title == null && !imageOnly) null else imageAlt,
     )
 }

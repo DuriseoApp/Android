@@ -143,4 +143,24 @@ class AppOpsJsonParserTest {
         assertEquals(BuildCondition.Range(5, 9), parsed[3].build)
         assertEquals(OsCondition(30, 34), parsed[4].os)
     }
+
+    @Test
+    fun `FR-APP-02 AC7 규칙에 image가 없으면 preset update이고 모르는 값은 이미지 없음이다`() {
+        val parsed = rules(
+            rule("""{"op":"EQ","value":1}""", id = "none"),
+            rule("""{"op":"EQ","value":1}""", ""","image":null""", id = "null"),
+            rule("""{"op":"EQ","value":1}""", ""","image":"preset:nope"""", id = "unknown"),
+            rule("""{"op":"EQ","value":1}""", ""","image":"preset:error"""", id = "error"),
+        )
+
+        assertEquals(
+            listOf(
+                PopupImage.Preset(PopupPreset.UPDATE),
+                PopupImage.Preset(PopupPreset.UPDATE),
+                PopupImage.None,
+                PopupImage.Preset(PopupPreset.ERROR),
+            ),
+            parsed.map { it.image },
+        )
+    }
 }

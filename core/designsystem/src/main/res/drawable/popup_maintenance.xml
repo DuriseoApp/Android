@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 기본 팝업 이미지 maintenance (D-181). design/illustrations/popup-maintenance.svg를 그대로 옮겼다 (viewBox 120, 화면 112dp). 색은 파일의 hex 값이고 토큰 대응은 design-system.md "공지·업데이트 팝업"의 표다. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="112dp"
+    android:height="112dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+    <path
+        android:pathData="M4,60 a56,56 0 1 0 112,0 a56,56 0 1 0 -112,0"
+        android:fillColor="#F3F0FD"/>
+    <path
+        android:pathData="M58,25 H62 a4,4 0 0 1 4,4 V37 a4,4 0 0 1 -4,4 H58 a4,4 0 0 1 -4,-4 V29 a4,4 0 0 1 4,-4 Z"
+        android:fillColor="#6D4AE0"/>
+    <group android:pivotX="60" android:pivotY="60" android:rotation="45">
+        <path
+            android:pathData="M58,25 H62 a4,4 0 0 1 4,4 V37 a4,4 0 0 1 -4,4 H58 a4,4 0 0 1 -4,-4 V29 a4,4 0 0 1 4,-4 Z"
+            android:fillColor="#6D4AE0"/>
+    </group>
+    <group android:pivotX="60" android:pivotY="60" android:rotation="90">
+        <path
+            android:pathData="M58,25 H62 a4,4 0 0 1 4,4 V37 a4,4 0 0 1 -4,4 H58 a4,4 0 0 1 -4,-4 V29 a4,4 0 0 1 4,-4 Z"
+            android:fillColor="#6D4AE0"/>
+    </group>
+    <group android:pivotX="60" android:pivotY="60" android:rotation="135">
+        <path
+            android:pathData="M58,25 H62 a4,4 0 0 1 4,4 V37 a4,4 0 0 1 -4,4 H58 a4,4 0 0 1 -4,-4 V29 a4,4 0 0 1 4,-4 Z"
+            android:fillColor="#6D4AE0"/>
+    </group>
+    <group android:pivotX="60" android:pivotY="60" android:rotation="180">
+        <path
+            android:pathData="M58,25 H62 a4,4 0 0 1 4,4 V37 a4,4 0 0 1 -4,4 H58 a4,4 0 0 1 -4,-4 V29 a4,4 0 0 1 4,-4 Z"
+            android:fillColor="#6D4AE0"/>
+    </group>
+    <group android:pivotX="60" android:pivotY="60" android:rotation="225">
+        <path
+            android:pathData="M58,25 H62 a4,4 0 0 1 4,4 V37 a4,4 0 0 1 -4,4 H58 a4,4 0 0 1 -4,-4 V29 a4,4 0 0 1 4,-4 Z"
+            android:fillColor="#6D4AE0"/>
+    </group>
+    <group android:pivotX="60" android:pivotY="60" android:rotation="270">
+        <path
+            android:pathData="M58,25 H62 a4,4 0 0 1 4,4 V37 a4,4 0 0 1 -4,4 H58 a4,4 0 0 1 -4,-4 V29 a4,4 0 0 1 4,-4 Z"
+            android:fillColor="#6D4AE0"/>
+    </group>
+    <group android:pivotX="60" android:pivotY="60" android:rotation="315">
+        <path
+            android:pathData="M58,25 H62 a4,4 0 0 1 4,4 V37 a4,4 0 0 1 -4,4 H58 a4,4 0 0 1 -4,-4 V29 a4,4 0 0 1 4,-4 Z"
+            android:fillColor="#6D4AE0"/>
+    </group>
+    <path
+        android:pathData="M37,60 a23,23 0 1 0 46,0 a23,23 0 1 0 -46,0"
+        android:fillColor="#6D4AE0"/>
+    <path
+        android:pathData="M51,60 a9,9 0 1 0 18,0 a9,9 0 1 0 -18,0"
+        android:fillColor="#F3F0FD"/>
+</vector>

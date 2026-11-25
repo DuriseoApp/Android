@@ -19,7 +19,11 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
@@ -51,6 +55,9 @@ import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
  * - 나중에 연 창이 위에 뜬다. 요청 중 덮개는 요청이 시작될 때 열려서 이미 떠 있는 시트·다이얼로그 위에 온다.
  * - Preview(`LocalInspectionMode`)에서는 창을 열지 못하므로 화면 안에 그린다.
  *
+ * @param alwaysOnTop true면 이 창은 항상 맨 위다: 이 창이 열려 있는 동안 다른 덮개 창(시트·다이얼로그·요청 중 덮개)이 새로 열려도
+ *   그 위로 다시 올라온다(창을 다시 만든다). 앱 전체 공지·업데이트 팝업이 쓴다 ([DuriseoPopupDialog]). 이 창이 있으면 다른 덮개 창의 내용은
+ *   접근성 트리에서 뺀다. 이 창은 스낵바를 그리지 않는다
  * @param snackbarAtTop true면 스낵바를 늘 위에서 40에 그린다 (하단 시트 창). 아니면 [LocalOverlaySnackbar]의 위치 그대로
  * @param showSnackbar 앱 스낵바([LocalOverlaySnackbar])를 이 창 위에도 그릴지. 창이 화면을 덮으면 아래 스낵바가 가려지기 때문이다
  */
@@ -59,6 +66,7 @@ internal fun DuriseoOverlayWindow(
     onBack: (() -> Unit)?,
     showSnackbar: Boolean = true,
     snackbarAtTop: Boolean = false,
+    alwaysOnTop: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     if (LocalInspectionMode.current) {
@@ -68,10 +76,13 @@ internal fun DuriseoOverlayWindow(
     // 열린 창 목록에 등록한다. 등록 순서가 곧 위아래 순서다 (나중에 연 창이 위)
     val token = remember { Any() }
     DisposableEffect(token) {
-        DuriseoOverlayWindows.open(token)
+        DuriseoOverlayWindows.open(token, pinned = alwaysOnTop)
         onDispose { DuriseoOverlayWindows.close(token) }
     }
-    val isTop = DuriseoOverlayWindows.isTop(token)
+    val isTop = DuriseoOverlayWindows.isTop(token, pinned = alwaysOnTop)
+    // 항상 맨 위인 창: 다른 창이 새로 열릴 때마다 키가 바뀌어 창을 다시 만든다. 나중에 만든 창이 위에 뜨므로 다시 맨 위가 된다
+    val generation = if (alwaysOnTop) DuriseoOverlayWindows.generation else 0
+    key(generation) {
     Dialog(
         // dismissOnBackPress를 항상 true로 두어 뒤로 가기를 이 창이 받는다. onBack이 null이면 아무것도 하지 않고 막는다
         onDismissRequest = { onBack?.invoke() },
@@ -91,8 +102,9 @@ internal fun DuriseoOverlayWindow(
         ) {
             content()
             // 스낵바는 맨 위 창만 그린다 (같은 스낵바를 창 수만큼 읽지 않게)
-            if (showSnackbar && isTop) OverlaySnackbar(forceTop = snackbarAtTop)
+            if (showSnackbar && isTop && !alwaysOnTop) OverlaySnackbar(forceTop = snackbarAtTop)
         }
+    }
     }
 }
 
@@ -103,19 +115,40 @@ internal fun DuriseoOverlayWindow(
 object DuriseoOverlayWindows {
     private val tokens = mutableStateListOf<Any>()
 
-    /** 덮개 창이 하나라도 열려 있으면 true */
-    val isOpen: Boolean get() = tokens.isNotEmpty()
+    /** 항상 맨 위인 창(공지·업데이트 팝업). 보통 창 위에 둔다 */
+    private val pinnedTokens = mutableStateListOf<Any>()
 
-    internal fun open(token: Any) {
-        tokens.add(token)
+    /** 항상 맨 위인 창이 열려 있는 동안 보통 창이 새로 열릴 때마다 하나씩 늘어난다. 맨 위 창이 다시 만들어질 때를 알린다 */
+    internal var generation by mutableIntStateOf(0)
+        private set
+
+    /** 덮개 창이 하나라도 열려 있으면 true */
+    val isOpen: Boolean get() = tokens.isNotEmpty() || pinnedTokens.isNotEmpty()
+
+    internal fun open(token: Any, pinned: Boolean = false) {
+        if (pinned) {
+            pinnedTokens.add(token)
+        } else {
+            tokens.add(token)
+            if (pinnedTokens.isNotEmpty()) generation++
+        }
     }
 
     internal fun close(token: Any) {
         tokens.remove(token)
+        pinnedTokens.remove(token)
     }
 
-    /** 등록 전(첫 프레임)에는 목록이 비어 있어 맨 위로 본다 */
-    internal fun isTop(token: Any): Boolean = tokens.isEmpty() || tokens.last() === token
+    /**
+     * 맨 위 창인가. 항상 맨 위인 창이 열려 있으면 보통 창은 맨 위가 아니다.
+     * 등록 전(첫 프레임)에는 목록이 비어 있어 맨 위로 본다.
+     */
+    internal fun isTop(token: Any, pinned: Boolean = false): Boolean =
+        if (pinned) {
+            pinnedTokens.isEmpty() || pinnedTokens.last() === token
+        } else {
+            pinnedTokens.isEmpty() && (tokens.isEmpty() || tokens.last() === token)
+        }
 }
 
 /**

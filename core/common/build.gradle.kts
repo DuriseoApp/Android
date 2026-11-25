@@ -28,4 +28,5 @@ dependencies {
     implementation(libs.play.app.update.ktx)
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

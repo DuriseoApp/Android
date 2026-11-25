@@ -87,7 +87,7 @@ class ForceUpdateInterceptorTest {
 
         remote.getMe()
 
-        assertEquals(ForceUpdateSignal(null, null, null, PopupImage.None, null), hub.current.value)
+        assertEquals(ForceUpdateSignal(null, null, null, PopupImage.Preset(PopupPreset.UPDATE), null), hub.current.value)
     }
 
     @Test

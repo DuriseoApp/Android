@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 기본 팝업 이미지 error (D-181). design/illustrations/popup-error.svg를 그대로 옮겼다 (viewBox 120, 화면 112dp). 색은 파일의 hex 값이고 토큰 대응은 design-system.md "공지·업데이트 팝업"의 표다. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="112dp"
+    android:height="112dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+    <path
+        android:pathData="M4,60 a56,56 0 1 0 112,0 a56,56 0 1 0 -112,0"
+        android:fillColor="#FDF1E8"/>
+    <path
+        android:pathData="M60,31 L90,83 H30 Z"
+        android:fillColor="#C93545"
+        android:strokeColor="#C93545"
+        android:strokeWidth="10"
+        android:strokeLineJoin="round"/>
+    <path
+        android:pathData="M60,50 V66"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"/>
+    <path
+        android:pathData="M56,76 a4,4 0 1 0 8,0 a4,4 0 1 0 -8,0"
+        android:fillColor="#FFFFFF"/>
+</vector>

@@ -49,6 +49,9 @@ private class FakeAppUpdateSource : AppUpdateSource {
         return startResult
     }
 
+    override suspend fun startImmediateUpdate(activity: Activity): com.duriseo.android.core.common.update.ImmediateUpdateResult =
+        com.duriseo.android.core.common.update.ImmediateUpdateResult.UNAVAILABLE
+
     override fun start() = Unit
     override fun completeIfDownloaded() = Unit
 }

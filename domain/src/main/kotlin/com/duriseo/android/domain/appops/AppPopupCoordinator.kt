@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Clock
 import java.time.LocalDate
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * 두 곳의 값 → 지금 띄울 팝업 하나 → (필요하면) 이미지 미리 받기까지 묶는다 (D-178, D-179, Q-23, FR-APP-01·02).
@@ -31,15 +32,36 @@ class AppPopupCoordinator(
      * @param isLaunch 앱 실행 때(Activity 생성)인지. 돌아올 때는 false
      */
     suspend fun check(isLaunch: Boolean): AppPopup? {
+        // [확인]·[닫기]는 "이번만"이라 실행·돌아올 때 다시 확인하면 그 팝업이 다시 뜬다 (D-179)
+        dismissed.set(emptySet())
         val start = uptimeMillis()
         val snapshot = repository.check()
+        lastSnapshot.set(snapshot)
         val budget = if (isLaunch) LAUNCH_BUDGET_MILLIS - (uptimeMillis() - start) else IMAGE_BUDGET_MILLIS
         return present(snapshot, budget)
     }
 
-    /** Remote Config 값이 바뀔 때마다 다시 판단한 결과 (이미지는 [IMAGE_BUDGET_MILLIS]까지) */
+    /** Remote Config 값이 바뀔 때마다 다시 판단한 결과 (이미지는 [IMAGE_BUDGET_MILLIS]까지). 이번에 닫은 팝업은 빼고 고른다 */
     val changes: Flow<AppPopup?>
-        get() = repository.changes.map { present(it, IMAGE_BUDGET_MILLIS) }
+        get() = repository.changes.map {
+            lastSnapshot.set(it)
+            present(it, IMAGE_BUDGET_MILLIS)
+        }
+
+    /**
+     * [확인]·[닫기]·뒤로 가기: 이번에만 닫는다. 다음 실행·돌아올 때([check]) 다시 뜬다.
+     * 기억하지 않으므로 [오늘 하루 안 보기]와 다르다. 강제 업데이트·앱을 막는 공지는 닫을 수 없어 아무것도 하지 않는다.
+     */
+    fun dismissForNow(popup: AppPopup) {
+        if (!popup.kind.canHideToday) return
+        dismissed.updateAndGet { it + popup.identity }
+    }
+
+    /** 마지막으로 읽은 값으로 다음 팝업을 다시 고른다 (서버를 부르지 않는다). 닫거나 숨긴 뒤 다음 순서를 보일 때 쓴다 */
+    suspend fun next(): AppPopup? {
+        val snapshot = lastSnapshot.get() ?: return null
+        return present(snapshot, IMAGE_BUDGET_MILLIS)
+    }
 
     /** 서버가 426을 줄 때마다 그 강제 업데이트 팝업. 프로세스가 사는 동안 마지막 신호가 유지돼 늦게 구독해도 받는다 */
     val forceUpdates: Flow<AppPopup>
@@ -62,7 +84,9 @@ class AppPopupCoordinator(
             forceSignals.clear()
             forced = null
         }
-        val popup = AppPopupResolver.resolve(snapshot.remote, snapshot.server, environment, now, hidden, forced)
+        val closed = dismissed.get()
+        val popup = AppPopupResolver.resolveAll(snapshot.remote, snapshot.server, environment, now, hidden, forced)
+            .firstOrNull { it.identity !in closed }
             ?: return null
         return withImageReady(popup, imageBudgetMillis)
     }
@@ -90,6 +114,9 @@ class AppPopupCoordinator(
             withTimeoutOrNull(budgetMillis) { prefetcher.prefetch(image.url) } == true
         return if (received) popup else popup.copy(image = PopupImage.None)
     }
+
+    private val dismissed = AtomicReference<Set<Pair<PopupKind, String?>>>(emptySet())
+    private val lastSnapshot = AtomicReference<AppOpsSnapshot?>(null)
 
     private fun today(): LocalDate = LocalDate.now(clock)
 

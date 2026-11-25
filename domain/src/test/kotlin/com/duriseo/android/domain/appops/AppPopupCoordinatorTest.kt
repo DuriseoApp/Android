@@ -162,4 +162,20 @@ class AppPopupCoordinatorTest {
         assertNull(c.check(false))
         assertNull(signals.current.value)
     }
+
+    @Test
+    fun `D-178 이번만 닫으면 다음 순서 팝업을 고르고 다음 확인 때 다시 고른다`() = runTest {
+        val repo = FakeRepository(snapshotWith(notice("a"), notice("b")))
+        val c = coordinator(repo)
+
+        val first = c.check(true)!!
+        c.dismissForNow(first)
+
+        assertEquals("a", first.id)
+        assertEquals("b", c.next()?.id)
+        c.dismissForNow(c.next()!!)
+        assertNull(c.next())
+        // 돌아올 때 확인하면 닫았던 팝업도 다시 뜬다 (오늘 하루 안 보기와 다르다)
+        assertEquals("a", c.check(false)?.id)
+    }
 }

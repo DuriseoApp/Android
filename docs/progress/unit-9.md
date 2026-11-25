@@ -88,7 +88,25 @@
 13. **이미지 로더**: 팝업 전용 Coil `ImageLoader`를 `@PopupImageLoader`(`core:common`의 한정자)로 제공한다. 인터셉터 없는 별도 OkHttp(`https`→`http` 이동 안 따름, 10초 제한). 미리 받기는 이 로더의 캐시를 채우므로 화면도 같은 로더를 써야 한다.
 14. **`OsVersion(apiLevel)`** (`core:common` `config/`)을 새로 두고 app이 `Build.VERSION.SDK_INT`로 제공한다. 공통 헤더와 기기 등록이 `AppVersion`과 함께 쓴다. `ErrorCode` 개수 문서는 27개로 고쳤다.
 
+15. **묶음 B 구현 판단 (구현 담당이 정함, 리드 확인 필요)**:
+    - 팝업 틀은 `core:designsystem`의 `DuriseoPopupDialog`(feature는 `OverlayRulesTest` 때문에 scrim·창 API를 못 쓴다). 항상 맨 위는 `DuriseoOverlayWindow(alwaysOnTop = true)`: 보통 창이 새로 열릴 때마다 `DuriseoOverlayWindows.generation`이 올라가 팝업 창을 다시 만든다(나중에 만든 창이 위). 팝업이 있으면 보통 창의 내용은 접근성에서 뺀다. 팝업 창은 스낵바를 그리지 않는다.
+    - `AppPopupCoordinator`에 `dismissForNow(popup)`(이번에만 닫음, 다음 `check`에서 초기화)·`next()`(마지막으로 읽은 값으로 다시 고름, 서버 안 부름)를 더했다. `check(isLaunch)`가 닫은 목록을 비운다.
+    - "돌아옴" 신호는 `core:common`의 `AppForegroundTracker`(`AppForegroundEvents`): 백그라운드(700ms 지연 판정)를 거친 뒤의 첫 포그라운드만 알린다. 회전은 알리지 않는다. `MyApp`의 `ForegroundCallbacks`가 이 트래커를 부른다. 실행 확인은 `AppPopupViewModel` 생성 때(Activity 생성, 회전에는 ViewModel이 남아 다시 안 함)이고, 실행 확인이 도는 중에 돌아옴 신호가 오면 건너뛴다.
+    - 규칙에 `image`가 없으면 파서가 `preset:update`로 채운다(모르는 키는 이미지 없음 그대로). 426 `details`도 같다(이미지 없음·문구 없음 → `preset:update` + 기본 문구, 이미지만 넣은 규칙이 조건을 못 채우면 기본 문구). 그래서 화면은 "이미지 `None` = 이미지 자리 없음"만 안다.
+    - `AppUpdateSource.startImmediateUpdate(activity)`가 `ImmediateUpdateResult`(STARTED·CANCELED·UNAVAILABLE)를 돌려준다. UNAVAILABLE(Play 미설치·새 버전 없음·즉시 방식 불가·실패)만 스토어를 연다. 취소는 팝업 그대로.
+    - 접근성: 패널 이름(`paneTitle`)은 제목, 이미지만 넣은 팝업은 `imageAlt`. 이미지는 `contentDescription = null`. Compose에 `alertdialog` 역할이 없어 기존 `DuriseoDialog`와 같은 방식(`paneTitle` + 초점)을 썼다. 새 문구 없음.
+16. **묶음 C**: `KakaoSdkState`(`core:common`)가 `KakaoSdk.init` 성공 여부를 들고, `KakaoTokenSource`·`DefaultSocialSessionCleaner`가 키 비어 있음 또는 미초기화면 SDK를 부르지 않는다. `KakaoTokenSource.request`는 SDK 예외도 `Failed`로 바꾼다.
+
 ## 다음 단계용 메모
+
+묶음 B·C (구현 완료, SDK 없는 환경이라 빌드는 CI 확인 필요):
+
+- **feature:appops**(새 모듈): `AppPopupHost`(`MainActivity`가 `MainScreen`을 감쌈)·`AppPopupViewModel`(코디네이터·`AppUpdateSource`·`AppForegroundEvents`·`@PopupImageLoader ImageLoader`)·`AppPopupContract`·`AppPopupScreen`·`AppPopupPreviews`(Preview 15개)·`strings.xml`(범위 표 문구). `settings.gradle.kts`·`feature:main` 의존·`MODULES.md` 1·2장·3장 갱신.
+- **core:designsystem**: `DuriseoPopupDialog`, `popupPresetDrawable`, VectorDrawable `popup_{maintenance,error,update,notice}`, `DuriseoOverlayWindow`의 `alwaysOnTop`.
+- **core:common**: `AppForegroundTracker`·`AppForegroundEvents`, `AppUpdateSource.startImmediateUpdate`(+`PlayAppUpdateSource` 구현), `KakaoSdkState`.
+- **domain**: `AppPopupCoordinator`의 `dismissForNow`·`next`.
+- 확인할 것(실기기): 시트·다이얼로그·튜토리얼·요청 중 덮개가 열린 상태에서 팝업이 위에 다시 올라오는지(창 다시 만들기 방식), 로그인 전 화면 위, TalkBack(제목·본문 읽기, 이미지만 넣은 팝업은 imageAlt), 즉시 업데이트·취소 후 팝업 유지, [앱 종료], 회전 때 중복 확인이 없는지, 돌아올 때 확인.
+- 주의: 창을 다시 만들 때 팝업이 한 프레임 깜박일 수 있다. 스크롤 위치는 창 밖 상태라 남는다. `OverlayRulesTest`는 그대로 통과해야 한다(feature에 scrim·창 API 없음).
 
 묶음 A (구현 완료, 빌드는 SDK 없는 환경이라 CI 확인 필요):
 
