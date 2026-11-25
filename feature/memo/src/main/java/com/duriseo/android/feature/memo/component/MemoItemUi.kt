@@ -1,7 +1,6 @@
 package com.duriseo.android.feature.memo.component
 
 import com.duriseo.android.domain.format.DateTexts
-import com.duriseo.android.domain.format.MemoDateChip
 import com.duriseo.android.domain.format.WrittenAt
 import com.duriseo.android.domain.me.Me
 import com.duriseo.android.domain.memo.Memo
@@ -9,18 +8,16 @@ import com.duriseo.android.domain.memo.MemoTexts
 import com.duriseo.android.domain.profile.ProfileImage
 import com.duriseo.android.domain.profile.profileImageOf
 import java.time.Clock
-import java.time.LocalDate
 
 /** 메모 작성자를 보는 사람 기준으로 나눈 것. 사람 색 점·아바타 글자("나"·"너")를 정한다 (D-57) */
 enum class MemoAuthor { ME, PARTNER }
 
 /**
- * 핀 카드·메모 행·상세가 같이 쓰는 한 메모의 화면 값 (SCREENS.md SCR-MEMO-01 "목록 항목": 제목(D-131), 작성자 닉네임, 작성일(D-129), 메모 날짜).
+ * 핀 카드·메모 행·상세가 같이 쓰는 한 메모의 화면 값 (SCREENS.md SCR-MEMO-01 "목록 항목": 제목(D-131), 작성자 닉네임, 작성일(D-129)).
  *
  * @property title 제목, 없으면 본문 첫 줄 (D-131). 제목도 본문도 없으면 빈 문자열
  * @property preview 미리보기 본문. 줄바꿈을 공백으로 접은 한 줄이고 몇 줄로 자를지는 화면이 정한다 ([MemoPreview])
  * @property writtenAt 작성일 표기 계산 결과 (D-129). 문구는 화면이 붙인다
- * @property memoDate 메모 날짜 칩. 없으면 null
  * @property canEdit 내가 만든 메모만 true: 수정·삭제 (FR-MEMO-03 AC1·AC2)
  * @property photo 작성자 프로필 사진 모델 (핀 카드의 작성자 아바타). 사진이 없으면 null (FR-AUTH-07 AC3·AC4)
  */
@@ -31,7 +28,6 @@ data class MemoItemUi(
     val author: MemoAuthor,
     val nickname: String,
     val writtenAt: WrittenAt,
-    val memoDate: MemoDateChip?,
     val isPinned: Boolean,
     val isFavorite: Boolean,
     val canEdit: Boolean,
@@ -41,7 +37,6 @@ data class MemoItemUi(
 /** [Memo]를 화면 값으로 바꾼다. 오늘·어제·올해는 [clock]의 기기 시간대로 가른다 (D-129) */
 internal fun Memo.toItemUi(me: Me, clock: Clock): MemoItemUi {
     val mine = authorId == me.id
-    val today = LocalDate.now(clock)
     val partner = me.space.partner
     return MemoItemUi(
         id = id,
@@ -50,7 +45,6 @@ internal fun Memo.toItemUi(me: Me, clock: Clock): MemoItemUi {
         author = if (mine) MemoAuthor.ME else MemoAuthor.PARTNER,
         nickname = if (mine) me.nickname else me.space.partner?.nickname.orEmpty(),
         writtenAt = DateTexts.writtenAt(createdAt, clock),
-        memoDate = memoDate?.let { DateTexts.memoDateChip(it, today) },
         isPinned = isPinned,
         isFavorite = isFavorite,
         canEdit = mine,

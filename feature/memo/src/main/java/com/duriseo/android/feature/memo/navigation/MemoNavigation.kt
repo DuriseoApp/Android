@@ -16,12 +16,17 @@ fun NavController.navigateToPinnedMemos() {
     navigate(MemoRouteModel.Pinned)
 }
 
-/** 메모 상세 (SCR-MEMO-03). 메모 탭의 목록·핀 카드, 고정 메모 전체, (묶음 C) 캘린더 날짜 목록의 메모가 부른다 */
+/** 메모 상세 (SCR-MEMO-03). 메모 탭의 목록·핀 카드, 고정 메모 전체가 부른다 */
 fun NavController.navigateToMemoDetail(memoId: String) {
     navigate(MemoRouteModel.Detail(memoId))
 }
 
-/** 메모 수정 (SCR-MEMO-04, 종류 탭 없음). 상세의 [수정]. 새 메모는 SCR-CAL-03의 [메모] 탭이다 (D-133) */
+/** 새 메모 작성 (SCR-MEMO-04, 탭 없음). 메모 탭의 FAB (D-174) */
+fun NavController.navigateToMemoCreate() {
+    navigate(MemoRouteModel.Edit())
+}
+
+/** 메모 수정 (SCR-MEMO-04, 탭 없음). 상세의 [수정] */
 fun NavController.navigateToMemoEdit(memoId: String) {
     navigate(MemoRouteModel.Edit(memoId = memoId))
 }
@@ -40,7 +45,7 @@ fun NavController.closeMemoEditAndDetail() {
  *
  * @param onOpenDetail 목록·핀 카드·고정 메모 전체에서 메모를 눌렀을 때
  * @param onOpenPinned [고정 메모 전체 보기]
- * @param onOpenCreate 메모 탭의 FAB. 새 메모 화면은 이 모듈에 없고 SCR-CAL-03의 [메모] 탭이라 앱 쪽 이동에 맡긴다 (D-133)
+ * @param onOpenCreate 메모 탭의 FAB -> 새 메모 작성 (SCR-MEMO-04, D-174)
  * @param onOpenEdit 상세의 [수정]
  * @param onBack 하위 화면의 뒤로 가기·닫기
  * @param onCloseEditAndDetail 수정이 404였을 때 수정 화면과 상세를 함께 닫는다 (`NavController.closeMemoEditAndDetail`)

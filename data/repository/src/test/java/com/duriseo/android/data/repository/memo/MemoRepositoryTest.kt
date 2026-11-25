@@ -40,7 +40,6 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import java.time.LocalDate
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
@@ -72,11 +71,10 @@ class MemoRepositoryTest {
     private fun memo(
         id: String,
         title: String? = id,
-        date: String? = null,
         pinned: Boolean = false,
         favorite: Boolean = false,
         author: String = "u1",
-    ) = """{"id":"$id","title":${title?.let { "\"$it\"" } ?: "null"},"body":null,"memoDate":${date?.let { "\"$it\"" } ?: "null"},
+    ) = """{"id":"$id","title":${title?.let { "\"$it\"" } ?: "null"},"body":null,
         "authorId":"$author","isPinned":$pinned,"pinnedAt":${if (pinned) "\"2026-10-18T01:00:00Z\"" else "null"},"isFavorite":$favorite,
         "createdAt":"2026-10-08T00:12:00Z","updatedAt":"2026-10-08T00:12:00Z"}"""
 
@@ -85,15 +83,10 @@ class MemoRepositoryTest {
 
     private fun items(vararg m: String) = """{"items":[${m.joinToString(",")}]}"""
 
-    private val october = LocalDate.of(2026, 9, 30) to LocalDate.of(2026, 11, 1)
-
     private suspend fun RepoHarness.titles(view: MemoView): List<String?> =
         memoRepository.observeList(view).first().items.map { it.title }
 
     private suspend fun RepoHarness.pinnedIds(): List<String> = memoRepository.observePinned().first().map { it.id }
-
-    private suspend fun RepoHarness.datedIds(from: LocalDate = october.first, to: LocalDate = october.second): List<String> =
-        memoRepository.observeDated(from, to).first().map { it.id }
 
     /** 모든 Room 읽기·쓰기가 예외인 창구 (서버는 성공했는데 기기 반영이 실패하는 경우를 만든다) */
     private class FailingMemoLocal(dao: MemoDao) : MemoLocalDataSource(dao) {
@@ -104,7 +97,6 @@ class MemoRepositoryTest {
         override suspend fun replaceList(listType: String, items: List<MemoEntity>, nextCursor: String?, totalCount: Int, favoriteCount: Int) = fail()
         override suspend fun appendList(listType: String, items: List<MemoEntity>, nextCursor: String?, totalCount: Int, favoriteCount: Int) = fail()
         override suspend fun replacePinned(items: List<MemoEntity>) = fail()
-        override suspend fun replaceDated(from: LocalDate, to: LocalDate, entities: List<MemoEntity>) = fail()
         override suspend fun replaceDetail(entity: MemoEntity) = fail()
         override suspend fun hasDetail(memoId: String): Boolean = fail()
         override suspend fun delete(memoId: String) = fail()
@@ -224,57 +216,6 @@ class MemoRepositoryTest {
     }
 
     @Test
-    fun `dated는 범위를 교체하고 이웃 달을 지우지 않는다`() = runTestWithTimeout {
-        val h = harness()
-        server.enqueue(jsonResponse(200, items(memo("late", date = "2026-10-20"), memo("early", date = "2026-10-05"), memo("same", date = "2026-10-20"))))
-        h.memoRepository.refreshDated(october.first, october.second)
-
-        // 메모 날짜순, 같은 날은 응답 위치 그대로
-        assertEquals(listOf("early", "late", "same"), h.datedIds())
-
-        val december = LocalDate.of(2026, 11, 30) to LocalDate.of(2027, 1, 1)
-        server.enqueue(jsonResponse(200, items(memo("dec", date = "2026-12-05"))))
-        h.memoRepository.refreshDated(december.first, december.second)
-
-        // 10월을 다시 받으면 그 범위만 교체한다 (서버에서 지워진 것은 사라지고 12월은 그대로)
-        server.enqueue(jsonResponse(200, items(memo("only", date = "2026-10-01"))))
-        h.memoRepository.refreshDated(october.first, october.second)
-
-        assertEquals(listOf("only"), h.datedIds())
-        assertEquals(listOf("dec"), h.datedIds(december.first, december.second))
-    }
-
-    @Test
-    fun `dated는 1950-01-01 ~ 2050-12-31 안으로 잘라 요청하고 밖이면 요청하지 않는다`() = runTestWithTimeout {
-        val h = harness()
-        server.enqueue(jsonResponse(200, items()))
-
-        h.memoRepository.refreshDated(LocalDate.of(1949, 12, 31), LocalDate.of(1950, 1, 31))
-        val outside = h.memoRepository.refreshDated(LocalDate.of(2051, 1, 1), LocalDate.of(2051, 1, 31))
-
-        assertEquals("/api/v1/memos/dated?from=1950-01-01&to=1950-01-31", server.takeRequest().path)
-        assertTrue(outside is DataResult.Success)
-        assertEquals(1, server.requestCount)
-    }
-
-    @Test
-    fun `이웃 달 범위를 교체해도 서로의 날짜를 지우지 않는다`() = runTestWithTimeout {
-        val h = harness()
-        val november = LocalDate.of(2026, 10, 31) to LocalDate.of(2026, 12, 1)
-        server.dispatcher = object : Dispatcher() {
-            override fun dispatch(request: RecordedRequest): MockResponse = when (request.requestUrl?.queryParameter("from")) {
-                "2026-09-30" -> jsonResponse(200, items(memo("oct", date = "2026-10-05"), memo("both", date = "2026-10-31")))
-                else -> jsonResponse(200, items(memo("both", date = "2026-10-31"), memo("nov", date = "2026-11-20")))
-            }
-        }
-
-        h.memoRepository.refreshDated(october.first, october.second)
-        h.memoRepository.refreshDated(november.first, november.second)
-
-        assertEquals(listOf("oct", "both", "nov"), h.datedIds(october.first, november.second))
-    }
-
-    @Test
     fun `상세를 받으면 저장하고 목록의 같은 메모보다 최근에 받은 값을 쓴다`() = runTestWithTimeout {
         val h = harness()
         server.enqueue(jsonResponse(200, page(null, 1, 0, memo("a", title = "옛 제목"))))
@@ -326,7 +267,7 @@ class MemoRepositoryTest {
         )
         server.dispatcher = path
 
-        val result = h.memoRepository.create(NewMemo("  새 메모 ", null, null, notifyPartner = true))
+        val result = h.memoRepository.create(NewMemo("  새 메모 ", null, notifyPartner = true))
 
         assertEquals("n1", (result as DataResult.Success).value.id)
         val body = Json.parseToJsonElement(path.bodies.getValue("POST /api/v1/memos")).jsonObject
@@ -365,27 +306,25 @@ class MemoRepositoryTest {
     }
 
     @Test
-    fun `쓰기 성공 뒤 목록 고정 달을 다시 불러온다`() = runTestWithTimeout {
+    fun `쓰기 성공 뒤 목록 고정을 다시 불러오고 날짜 목록은 부르지 않는다`() = runTestWithTimeout {
         val h = harness()
-        // 최신순·오래된순을 받아 두고 보이는 달을 알린다. 즐겨찾기 보기는 받은 적이 없다
+        // 최신순·오래된순을 받아 둔다. 즐겨찾기 보기는 받은 적이 없다
         server.enqueue(jsonResponse(200, page(null, 1, 0, memo("x"))))
         h.memoRepository.refreshList(MemoView.NEWEST)
         server.enqueue(jsonResponse(200, page(null, 1, 0, memo("x"))))
         h.memoRepository.refreshList(MemoView.OLDEST)
-        h.memoRepository.setVisibleRange(october.first, october.second)
         server.takeRequest()
         server.takeRequest()
         val path = PathServer(
             mapOf(
-                "POST /api/v1/memos" to jsonResponse(201, memo("n1", date = "2026-10-20")),
-                "GET /api/v1/memos" to jsonResponse(200, page(null, 2, 0, memo("n1", date = "2026-10-20"), memo("x"))),
+                "POST /api/v1/memos" to jsonResponse(201, memo("n1")),
+                "GET /api/v1/memos" to jsonResponse(200, page(null, 2, 0, memo("n1"), memo("x"))),
                 "GET /api/v1/memos/pinned" to jsonResponse(200, items()),
-                "GET /api/v1/memos/dated" to jsonResponse(200, items(memo("n1", date = "2026-10-20"))),
             ),
         )
         server.dispatcher = path
 
-        h.memoRepository.create(NewMemo("n1", null, LocalDate.of(2026, 10, 20)))
+        h.memoRepository.create(NewMemo("n1", null))
 
         assertEquals(
             setOf(
@@ -393,12 +332,10 @@ class MemoRepositoryTest {
                 "GET /api/v1/memos?view=newest",
                 "GET /api/v1/memos?view=oldest",
                 "GET /api/v1/memos/pinned",
-                "GET /api/v1/memos/dated?from=2026-09-30&to=2026-11-01",
             ),
             path.requests.toSet(),
         )
         assertEquals(listOf("n1", "x"), h.memoRepository.observeList(MemoView.NEWEST).first().items.map { it.id })
-        assertEquals(listOf("n1"), h.datedIds())
     }
 
     @Test
@@ -434,7 +371,7 @@ class MemoRepositoryTest {
         // Room 호출이 모두 예외인 저장소 (DB를 닫는 것보다 결정적이다)
         val repo = MemoRepositoryImpl(h.memoRemote, FailingMemoLocal(h.database.memoDao()), h.monitor, h.cache)
 
-        val created = repo.create(NewMemo("n1", null, null))
+        val created = repo.create(NewMemo("n1", null))
         val updated = repo.update("n1", MemoPatch(title = FieldChange.Set("새 제목")))
         val deleted = repo.delete("n1")
 
@@ -612,7 +549,7 @@ class MemoRepositoryTest {
         val h = harness(online = false)
 
         val results = listOf(
-            h.memoRepository.create(NewMemo("제목", null, null)),
+            h.memoRepository.create(NewMemo("제목", null)),
             h.memoRepository.update("a1", MemoPatch(title = FieldChange.Set("x"))),
             h.memoRepository.delete("a1"),
             h.memoRepository.setPinned("a1", true),
@@ -621,31 +558,6 @@ class MemoRepositoryTest {
 
         results.forEach { assertEquals(DataResult.Failure(DataError.Offline), it) }
         assertEquals(0, server.requestCount)
-    }
-
-    @Test
-    fun `보이는 범위는 마지막으로 알린 값이고 캐시를 지우면 비워진다`() = runTestWithTimeout {
-        val h = harness()
-        val november = LocalDate.of(2026, 10, 31) to LocalDate.of(2026, 12, 1)
-        h.memoRepository.setVisibleRange(october.first, october.second)
-        h.memoRepository.setVisibleRange(november.first, november.second)
-        val path = PathServer(
-            mapOf(
-                "DELETE /api/v1/memos/a1" to MockResponse().setResponseCode(204),
-                "GET /api/v1/memos/pinned" to jsonResponse(200, items()),
-                "GET /api/v1/memos/dated" to jsonResponse(200, items()),
-            ),
-        )
-        server.dispatcher = path
-
-        h.memoRepository.delete("a1")
-        assertTrue(path.requests.contains("GET /api/v1/memos/dated?from=2026-10-31&to=2026-12-01"))
-        assertFalse(path.requests.contains("GET /api/v1/memos/dated?from=2026-09-30&to=2026-11-01"))
-
-        h.session.clearUserData()
-        path.requests.clear()
-        h.memoRepository.delete("a1")
-        assertFalse(path.requests.any { it.startsWith("GET /api/v1/memos/dated") })
     }
 
     @Test
@@ -662,19 +574,6 @@ class MemoRepositoryTest {
         val list = h.memoRepository.observeList(MemoView.NEWEST).first()
         assertEquals(emptyList<String>(), list.items.map { it.id })
         assertFalse(list.isLoaded)
-    }
-
-    @Test
-    fun `캐시를 지운 뒤 도착한 이전 날짜 범위 응답은 저장하지 않는다`() = runTestWithTimeout {
-        val h = harness()
-        server.enqueue(jsonResponse(200, items(memo("late", date = "2026-10-20"))).setHeadersDelay(1500, TimeUnit.MILLISECONDS))
-
-        val stale = async(Dispatchers.Default) { h.memoRepository.refreshDated(october.first, october.second) }
-        assertTrue(server.takeRequest(5, TimeUnit.SECONDS) != null)
-        h.session.clearUserData()
-        stale.await()
-
-        assertEquals(emptyList<String>(), h.datedIds())
     }
 
     @Test

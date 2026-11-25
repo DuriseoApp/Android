@@ -61,16 +61,12 @@ import com.duriseo.android.core.designsystem.theme.Ink900
 import com.duriseo.android.core.designsystem.theme.Line100
 import com.duriseo.android.core.designsystem.theme.Line200
 import com.duriseo.android.core.designsystem.theme.Surface0
-import com.duriseo.android.core.designsystem.theme.Surface100
-import com.duriseo.android.domain.format.MemoDateChip
 import com.duriseo.android.domain.format.WrittenAt
 import com.duriseo.android.feature.memo.R
 import com.duriseo.android.feature.memo.component.FavoriteToggleButton
 import com.duriseo.android.feature.memo.component.MemoAuthor
 import com.duriseo.android.feature.memo.component.MemoAuthorDot
-import com.duriseo.android.feature.memo.component.MemoDateBadge
 import com.duriseo.android.feature.memo.component.PinToggleButton
-import java.time.DayOfWeek
 
 // SCR-MEMO-03 메모 상세 (FR-MEMO-03, FR-MEMO-05, FR-MEMO-06). 수치는 보드 `MemoDetail.dc.html`.
 
@@ -248,7 +244,6 @@ private fun DetailBody(memo: MemoDetailUi, onAction: (MemoDetailAction) -> Unit)
                         color = Ink600,
                     )
                 }
-                memo.memoDate?.let { chip -> MemoDateBadge(chip = chip, background = Surface100, large = true) }
             }
             HorizontalDivider(color = Line100)
             if (!memo.body.isNullOrEmpty()) {
@@ -309,7 +304,6 @@ private val Mine = MemoDetailUi(
     author = MemoAuthor.ME,
     nickname = "[내 이름]",
     writtenAt = WrittenAt.ThisYear(10, 11),
-    memoDate = MemoDateChip(null, 11, 20, DayOfWeek.FRIDAY),
     isPinned = false,
     isFavorite = true,
     canEdit = true,
@@ -322,7 +316,6 @@ private val Partner = MemoDetailUi(
     author = MemoAuthor.PARTNER,
     nickname = "[상대 이름]",
     writtenAt = WrittenAt.Today(isPm = false, hour12 = 8, minute = 40),
-    memoDate = null,
     isPinned = true,
     isFavorite = false,
     canEdit = false,
@@ -333,21 +326,15 @@ private fun PreviewScreen(state: MemoDetailUiState) {
     DuriseoTheme { MemoDetailScreen(state = state, onAction = {}) }
 }
 
-/** `SCR-MEMO-03.png`: 내 메모, 날짜 있음. [수정]·[메모 삭제] 있음 */
+/** `SCR-MEMO-03.png`: 내 메모. [수정]·[메모 삭제] 있음 */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun MemoDetailPreview_Mine() = PreviewScreen(MemoDetailUiState(memo = Mine))
 
-/** `SCR-MEMO-03--partner.png`: 상대 메모, 날짜 없음. 고정·즐겨찾기만 */
+/** `SCR-MEMO-03--partner.png`: 상대 메모. 고정·즐겨찾기만 */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun MemoDetailPreview_Partner() = PreviewScreen(MemoDetailUiState(memo = Partner))
-
-/** `SCR-MEMO-03--other-year.png`: 올해가 아닌 메모 날짜 칩 "2027년 10월 17일 (일)" (D-129) */
-@Preview(showBackground = true, widthDp = 390, heightDp = 844)
-@Composable
-private fun MemoDetailPreview_OtherYear() =
-    PreviewScreen(MemoDetailUiState(memo = Mine.copy(memoDate = MemoDateChip(2027, 10, 17, DayOfWeek.SUNDAY))))
 
 /** `SCR-MEMO-03--delete-dialog.png`: 삭제 확인 */
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)

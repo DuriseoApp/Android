@@ -33,13 +33,11 @@ import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 import com.duriseo.android.core.designsystem.theme.Ink600
 import com.duriseo.android.core.designsystem.theme.Surface0
-import com.duriseo.android.domain.format.MemoDateChip
 import com.duriseo.android.domain.format.WrittenAt
 import com.duriseo.android.feature.memo.R
 import com.duriseo.android.feature.memo.component.MemoAuthor
 import com.duriseo.android.feature.memo.component.MemoItemUi
 import com.duriseo.android.feature.memo.component.PinCard
-import java.time.DayOfWeek
 
 // SCR-MEMO-02 고정 메모 전체 (FR-MEMO-05). 수치는 보드 `PinnedAll.dc.html`: 목록 안쪽 위 4·좌우 20·아래 28, 카드 사이 10,
 // 안내 아래 4 더, 비었을 때 문구는 위아래 32에 가운데 정렬 14/1.6.
@@ -144,20 +142,20 @@ fun PinnedMemosScreen(
 private val Samples = listOf(
     MemoItemUi(
         id = "2", title = "장보기", preview = "우유, 계란, 두부, 대파, 사과", author = MemoAuthor.PARTNER, nickname = "[상대 이름]",
-        writtenAt = WrittenAt.Today(isPm = false, hour12 = 8, minute = 40), memoDate = null, isPinned = true, isFavorite = false, canEdit = false,
+        writtenAt = WrittenAt.Today(isPm = false, hour12 = 8, minute = 40), isPinned = true, isFavorite = false, canEdit = false,
     ),
     MemoItemUi(
         id = "1", title = "여행 숙소 후보 정리했어", preview = "세 곳 골라놨는데 주말 전까지 하나 골라줘!", author = MemoAuthor.PARTNER,
         nickname = "[상대 이름]", writtenAt = WrittenAt.Today(isPm = false, hour12 = 9, minute = 12),
-        memoDate = MemoDateChip(null, 10, 16, DayOfWeek.FRIDAY), isPinned = true, isFavorite = false, canEdit = false,
+        isPinned = true, isFavorite = false, canEdit = false,
     ),
     MemoItemUi(
         id = "5", title = "주말 집안일 분담", preview = "토요일 장보기는 내가, 일요일 청소는 같이 하기", author = MemoAuthor.ME, nickname = "[내 이름]",
-        writtenAt = WrittenAt.ThisYear(10, 8), memoDate = null, isPinned = true, isFavorite = false, canEdit = true,
+        writtenAt = WrittenAt.ThisYear(10, 8), isPinned = true, isFavorite = false, canEdit = true,
     ),
     MemoItemUi(
         id = "8", title = "이번 달 데이트 통장 정리", preview = "이번 달은 여행 때문에 조금 더 넣기로 했어요. 금액은 [금액]으로 맞춰요.",
-        author = MemoAuthor.ME, nickname = "[내 이름]", writtenAt = WrittenAt.ThisYear(10, 1), memoDate = null,
+        author = MemoAuthor.ME, nickname = "[내 이름]", writtenAt = WrittenAt.ThisYear(10, 1),
         isPinned = true, isFavorite = true, canEdit = true,
     ),
 )

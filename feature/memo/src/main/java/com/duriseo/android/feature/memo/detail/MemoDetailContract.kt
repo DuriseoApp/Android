@@ -1,7 +1,6 @@
 package com.duriseo.android.feature.memo.detail
 
 import androidx.annotation.StringRes
-import com.duriseo.android.domain.format.MemoDateChip
 import com.duriseo.android.domain.format.WrittenAt
 import com.duriseo.android.feature.memo.component.MemoAuthor
 
@@ -19,7 +18,6 @@ data class MemoDetailUi(
     val author: MemoAuthor,
     val nickname: String,
     val writtenAt: WrittenAt,
-    val memoDate: MemoDateChip?,
     val isPinned: Boolean,
     val isFavorite: Boolean,
     val canEdit: Boolean,

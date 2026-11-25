@@ -13,17 +13,15 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import java.time.Instant
-import java.time.LocalDate
 
 // API.md 3.4 `Memo`와 요청 본문.
 
-/** `Memo`: 목록·고정·날짜·상세·생성·수정 응답이 같은 모양이다. 값이 없는 필드는 `null`로 온다 */
+/** `Memo`: 목록·고정·상세·생성·수정 응답이 같은 모양이다. 값이 없는 필드는 `null`로 온다 */
 @Serializable
 data class MemoDto(
     val id: String,
     val title: String? = null,
     val body: String? = null,
-    @Contextual val memoDate: LocalDate? = null,
     val authorId: String,
     val isPinned: Boolean,
     @Contextual val pinnedAt: Instant? = null,
@@ -46,7 +44,6 @@ data class MemoPageResponse(
 data class CreateMemoRequest(
     val title: String? = null,
     val body: String? = null,
-    @Contextual val memoDate: LocalDate? = null,
     val notifyPartner: Boolean? = null,
 )
 
@@ -54,7 +51,6 @@ data class CreateMemoRequest(
 internal fun NewMemo.toRequest() = CreateMemoRequest(
     title = MemoRules.normalizeTitle(title),
     body = MemoRules.normalizeBody(body),
-    memoDate = memoDate,
     notifyPartner = notifyPartner,
 )
 
@@ -62,11 +58,9 @@ internal fun NewMemo.toRequest() = CreateMemoRequest(
 internal fun MemoPatch.toRequestBody(): JsonObject {
     val titleChange = title
     val bodyChange = body
-    val dateChange = memoDate
     return buildJsonObject {
         if (titleChange is FieldChange.Set<String>) put("title", titleChange.value.toJson())
         if (bodyChange is FieldChange.Set<String>) put("body", bodyChange.value.toJson())
-        if (dateChange is FieldChange.Set<LocalDate>) put("memoDate", dateChange.value?.toString().toJson())
     }
 }
 
@@ -76,7 +70,6 @@ internal fun MemoDto.toDomain() = Memo(
     id = id,
     title = title,
     body = body,
-    memoDate = memoDate,
     authorId = authorId,
     isPinned = isPinned,
     pinnedAt = pinnedAt,

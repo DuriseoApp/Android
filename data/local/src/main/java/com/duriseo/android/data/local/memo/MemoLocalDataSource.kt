@@ -1,7 +1,6 @@
 package com.duriseo.android.data.local.memo
 
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,11 +28,6 @@ open class MemoLocalDataSource @Inject constructor(
         dao.appendList(listType, items, nextCursor, totalCount, favoriteCount)
 
     open suspend fun replacePinned(items: List<MemoEntity>) = dao.replacePinned(items)
-
-    open fun observeDated(from: LocalDate, to: LocalDate): Flow<List<MemoEntity>> = dao.observeDated(from.toString(), to.toString())
-
-    open suspend fun replaceDated(from: LocalDate, to: LocalDate, entities: List<MemoEntity>) =
-        dao.replaceDated(from.toString(), to.toString(), entities)
 
     open fun observeMemo(memoId: String): Flow<MemoEntity?> = dao.observeMemo(memoId)
 

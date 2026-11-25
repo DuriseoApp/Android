@@ -7,7 +7,6 @@ import com.duriseo.android.domain.memo.MemoView
 import com.duriseo.android.domain.memo.NewMemo
 import com.duriseo.android.domain.result.DataResult
 import com.duriseo.android.domain.result.map
-import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -38,10 +37,6 @@ class MemoRemoteDataSource @Inject constructor(
     /** `GET /memos/pinned` */
     suspend fun pinned(): DataResult<List<Memo>> =
         apiCaller.call { api.getPinned() }.map { r -> r.items.map { it.toDomain() } }
-
-    /** `GET /memos/dated?from=&to=` */
-    suspend fun dated(from: LocalDate, to: LocalDate): DataResult<List<Memo>> =
-        apiCaller.call { api.getDated(from.toString(), to.toString()) }.map { r -> r.items.map { it.toDomain() } }
 
     /** `POST /memos` (201) */
     suspend fun create(memo: NewMemo): DataResult<Memo> =

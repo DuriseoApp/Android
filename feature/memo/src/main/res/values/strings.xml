@@ -25,7 +25,6 @@
     <string name="memo_favorite_off_description">즐겨찾기</string>
 
     <!-- 메모 날짜 칩의 접근성 문구: "메모 날짜 10월 17일 (토)" (design-system "메모 날짜 칩") -->
-    <string name="memo_date_description">메모 날짜 %1$s</string>
 
     <!-- SCR-MEMO-02 고정 메모 전체 -->
     <string name="memo_pinned_title">고정된 메모 %1$d</string>
@@ -49,13 +48,6 @@
     <string name="memo_edit_title_placeholder">예) 주말에 살 것</string>
     <string name="memo_edit_body_label">메모</string>
     <string name="memo_edit_body_placeholder">상대에게 남길 내용을 적어주세요</string>
-    <string name="memo_edit_date_add">날짜 추가</string>
-    <string name="memo_edit_date_add_hint">날짜를 넣으면 캘린더 그 날에도 보여요.</string>
-    <string name="memo_edit_date_label">날짜</string>
-    <string name="memo_edit_date_remove">날짜 빼기</string>
-    <string name="memo_edit_date_hint">캘린더 %1$d월 %2$d일에 메모로 보여요.</string>
-    <string name="memo_edit_date_value_description">날짜 %1$s</string>
-    <string name="memo_edit_date_sheet_title">날짜</string>
     <string name="memo_edit_notify_title">상대에게 알림 보내기</string>
     <string name="memo_edit_notify_description">저장하면 상대에게 푸시 알림이 가요</string>
 </resources>

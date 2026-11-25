@@ -66,7 +66,6 @@ import com.duriseo.android.core.designsystem.theme.Line300
 import com.duriseo.android.core.designsystem.theme.OnBrand
 import com.duriseo.android.core.designsystem.theme.Surface0
 import com.duriseo.android.core.designsystem.theme.duriseoShadow
-import com.duriseo.android.domain.format.MemoDateChip
 import com.duriseo.android.domain.format.WrittenAt
 import com.duriseo.android.domain.memo.MemoView
 import com.duriseo.android.feature.memo.R
@@ -74,7 +73,6 @@ import com.duriseo.android.feature.memo.component.MemoAuthor
 import com.duriseo.android.feature.memo.component.MemoItemUi
 import com.duriseo.android.feature.memo.component.MemoRow
 import com.duriseo.android.feature.memo.component.PinCard
-import java.time.DayOfWeek
 
 // SCR-MEMO-01 메모 목록 (FR-MEMO-01, FR-MEMO-05, FR-MEMO-06). 수치는 보드 `Memo.dc.html`, design-system.md.
 // 토큰에 없는 보드 수치는 이름을 붙인 상수로 둔다.
@@ -477,7 +475,6 @@ private fun sample(
     preview: String,
     author: MemoAuthor,
     writtenAt: WrittenAt,
-    memoDate: MemoDateChip? = null,
     pinned: Boolean = false,
     favorite: Boolean = false,
 ) = MemoItemUi(
@@ -487,7 +484,6 @@ private fun sample(
     author = author,
     nickname = if (author == MemoAuthor.ME) "[내 이름]" else "[상대 이름]",
     writtenAt = writtenAt,
-    memoDate = memoDate,
     isPinned = pinned,
     isFavorite = favorite,
     canEdit = author == MemoAuthor.ME,
@@ -496,7 +492,7 @@ private fun sample(
 private val Pin1 = sample("2", "장보기", "우유, 계란, 두부, 대파, 사과", MemoAuthor.PARTNER, WrittenAt.Today(isPm = false, hour12 = 8, minute = 40), pinned = true)
 private val Pin2 = sample(
     "1", "여행 숙소 후보 정리했어", "세 곳 골라놨는데 주말 전까지 하나 골라줘!", MemoAuthor.PARTNER,
-    WrittenAt.Today(isPm = false, hour12 = 9, minute = 12), MemoDateChip(null, 10, 16, DayOfWeek.FRIDAY), pinned = true,
+    WrittenAt.Today(isPm = false, hour12 = 9, minute = 12), pinned = true,
 )
 private val Pin3 = sample("5", "주말 집안일 분담", "토요일 장보기는 내가, 일요일 청소는 같이 하기", MemoAuthor.ME, WrittenAt.ThisYear(10, 8), pinned = true)
 private val Pin4 = sample("8", "이번 달 데이트 통장 정리", "이번 달은 여행 때문에 조금 더 넣기로 했어요.", MemoAuthor.ME, WrittenAt.ThisYear(10, 1), pinned = true, favorite = true)
@@ -504,9 +500,9 @@ private val Pin4 = sample("8", "이번 달 데이트 통장 정리", "이번 달
 private val Rows = listOf(
     sample(
         "3", "선물 아이디어", "향수 같이 시향해보기, 지난번에 본 머플러", MemoAuthor.ME, WrittenAt.Yesterday,
-        MemoDateChip(null, 11, 20, DayOfWeek.FRIDAY), favorite = true,
+        favorite = true,
     ),
-    sample("4", "여행 준비물", "충전기, 여권 사본, 접이식 우산", MemoAuthor.PARTNER, WrittenAt.ThisYear(10, 9), MemoDateChip(null, 10, 17, DayOfWeek.SATURDAY)),
+    sample("4", "여행 준비물", "충전기, 여권 사본, 접이식 우산", MemoAuthor.PARTNER, WrittenAt.ThisYear(10, 9)),
     sample("6", "부모님 생신 선물 같이 고르기", "생신 전 주말에 같이 보러 가자", MemoAuthor.PARTNER, WrittenAt.ThisYear(10, 5), favorite = true),
     sample("7", "보고 싶은 영화", "[영화 제목] 외 2편", MemoAuthor.ME, WrittenAt.ThisYear(10, 2)),
 )

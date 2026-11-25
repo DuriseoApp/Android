@@ -32,7 +32,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import java.time.LocalDate
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -61,7 +60,7 @@ class MemoDetailViewModelTest {
     )
 
     private fun storeMine() {
-        repo.memos.value = mapOf("m1" to makeMemo("m1", memoDate = LocalDate.of(2026, 11, 20)))
+        repo.memos.value = mapOf("m1" to makeMemo("m1"))
     }
 
     private fun storePartner() {
@@ -76,7 +75,6 @@ class MemoDetailViewModelTest {
         val memo = vm.uiState.value.memo
         assertTrue(memo?.canEdit == true)
         assertEquals("민지", memo?.nickname)
-        assertEquals(11, memo?.memoDate?.month)
 
         vm.effects.test {
             vm.onAction(MemoDetailAction.EditClicked)
