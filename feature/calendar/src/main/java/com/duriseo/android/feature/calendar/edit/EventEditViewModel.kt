@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.duriseo.android.core.common.navigation.CalendarRouteModel
-import com.duriseo.android.core.designsystem.message.toMessageRes
+import com.duriseo.android.core.designsystem.message.toMessageResOrNull
 import com.duriseo.android.domain.error.ErrorCode
 import com.duriseo.android.domain.error.hasCode
 import com.duriseo.android.domain.event.Event
@@ -291,7 +291,7 @@ class EventEditViewModel @Inject constructor(
                 finishLoading()
                 if (reminderResult is DataResult.Failure) {
                     // 일정은 이미 저장됐다. 남기고 공통 오류 안내만 한 뒤 닫는다 (D-108)
-                    effectChannel.trySend(EventEditSideEffect.ShowMessage(reminderResult.error.toMessageRes()))
+                    reminderResult.error.toMessageResOrNull()?.let { effectChannel.trySend(EventEditSideEffect.ShowMessage(it)) }
                 }
                 effectChannel.trySend(EventEditSideEffect.Close)
             }
@@ -323,7 +323,7 @@ class EventEditViewModel @Inject constructor(
         // 덮개를 먼저 걷고 안내한다 (D-115)
         finishLoading()
         if (reminderResult is DataResult.Failure) {
-            effectChannel.trySend(EventEditSideEffect.ShowMessage(reminderResult.error.toMessageRes()))
+            reminderResult.error.toMessageResOrNull()?.let { effectChannel.trySend(EventEditSideEffect.ShowMessage(it)) }
         }
         effectChannel.trySend(EventEditSideEffect.Close)
     }
@@ -343,7 +343,7 @@ class EventEditViewModel @Inject constructor(
      */
     private fun fail(result: DataResult.Failure) {
         _uiState.update { it.copy(saving = false, loading = false) }
-        effectChannel.trySend(EventEditSideEffect.ShowMessage(result.error.toMessageRes()))
+        result.error.toMessageResOrNull()?.let { effectChannel.trySend(EventEditSideEffect.ShowMessage(it)) }
         if (result.error.hasCode(ErrorCode.NOT_FOUND) || result.error.hasCode(ErrorCode.NOT_AUTHOR)) {
             effectChannel.trySend(EventEditSideEffect.Close)
         }

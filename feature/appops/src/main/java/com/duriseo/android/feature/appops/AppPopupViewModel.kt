@@ -10,6 +10,7 @@ import com.duriseo.android.core.common.update.AppUpdateSource
 import com.duriseo.android.core.common.update.ImmediateUpdateResult
 import com.duriseo.android.domain.appops.AppPopup
 import com.duriseo.android.domain.appops.AppPopupCoordinator
+import com.duriseo.android.domain.appops.PopupKind
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -47,16 +48,34 @@ class AppPopupViewModel @Inject constructor(
     /** 지금 도는 실행·돌아올 때 확인. 도는 중에 돌아옴 신호가 또 오면 그 확인이 대신한다 */
     private var checkJob: Job? = null
 
+    /**
+     * 팝업의 링크 버튼으로 앱을 나갔다 돌아오는 한 번은 "앱으로 돌아옴" 확인으로 세지 않는다: 팝업이 그대로 보여야 한다
+     * (SCREENS 560행, unit-9 결정 17). 돌아오면 바로 꺼진다.
+     */
+    private var skipNextReturn = false
+
     /** [업데이트]를 눌러 Play 화면이 떠 있는 동안 */
     private var updating = false
 
+    /**
+     * 결과 순번 (메인 스레드에서만 만지므로 잠금이 필요 없다). 실행·돌아올 때 확인은 **시작할 때**, Remote Config 변경·426·다음 팝업 고르기는
+     * 결과가 **도착할 때** 번호를 받는다. 이미 나중 번호의 결과를 보인 뒤에 도착한 이전 번호의 결과는 버린다:
+     * 이미지를 받는 동안 늦게 끝난 확인이 그 사이에 생긴 앞 순서 팝업(특히 426 강제)을 덮지 않는다.
+     */
+    private var generation = 0L
+    private var appliedGeneration = 0L
+
     init {
         check(isLaunch = true)
-        viewModelScope.launch { coordinator.changes.collect { show(it) } }
-        viewModelScope.launch { coordinator.forceUpdates.collect { show(it) } }
+        viewModelScope.launch { coordinator.changes.collect { apply(++generation, it) } }
+        viewModelScope.launch { coordinator.forceUpdates.collect { apply(++generation, it) } }
         viewModelScope.launch {
             foreground.returns.collect {
-                if (checkJob?.isActive != true) check(isLaunch = false)
+                if (skipNextReturn) {
+                    skipNextReturn = false
+                } else if (checkJob?.isActive != true) {
+                    check(isLaunch = false)
+                }
             }
         }
     }
@@ -68,26 +87,44 @@ class AppPopupViewModel @Inject constructor(
             AppPopupAction.Back -> if (popup.kind.canHideToday) dismiss(popup)
             AppPopupAction.HideToday -> hideToday(popup)
             AppPopupAction.Exit -> effects.trySend(AppPopupSideEffect.FinishApp)
-            AppPopupAction.OpenLink -> popup.link?.let { effects.trySend(AppPopupSideEffect.OpenUrl(it.url)) }
+            AppPopupAction.OpenLink -> popup.link?.let {
+                skipNextReturn = true
+                effects.trySend(AppPopupSideEffect.OpenUrl(it.url))
+            }
             is AppPopupAction.Update -> startUpdate(action.activity)
         }
     }
 
-    private fun check(isLaunch: Boolean) {
-        checkJob = viewModelScope.launch { show(coordinator.check(isLaunch)) }
+    /** 링크를 열 앱이 없어 나가지 못했다: 돌아옴이 없으니 건너뛰기를 거둔다 */
+    fun onLinkOpenFailed() {
+        skipNextReturn = false
     }
 
+    private fun check(isLaunch: Boolean) {
+        val gen = ++generation
+        // 지금 떠 있는 팝업을 알려 준다: 서버를 못 받은 확인이 서버에만 있던 떠 있는 팝업을 바꾸지 않게 (결정 18)
+        val current = mutableState.value.popup
+        checkJob = viewModelScope.launch { apply(gen, coordinator.check(isLaunch, current)) }
+    }
+
+    /** 먼저 지금 팝업을 내리고(다음 팝업 이미지를 받는 동안 기다리지 않는다, 버튼 중복 누름도 막힌다) 다음 것은 받은 뒤 보인다 */
     private fun dismiss(popup: AppPopup) {
         coordinator.dismissForNow(popup)
-        viewModelScope.launch { show(coordinator.next()) }
+        closeThenShowNext()
     }
 
     private fun hideToday(popup: AppPopup) {
         if (!popup.kind.canHideToday) return
+        mutableState.value = AppPopupUiState()
         viewModelScope.launch {
             coordinator.hideToday(popup)
-            show(coordinator.next())
+            apply(++generation, coordinator.next())
         }
+    }
+
+    private fun closeThenShowNext() {
+        mutableState.value = AppPopupUiState()
+        viewModelScope.launch { apply(++generation, coordinator.next()) }
     }
 
     private fun startUpdate(activity: Activity) {
@@ -109,7 +146,14 @@ class AppPopupViewModel @Inject constructor(
         }
     }
 
-    private fun show(popup: AppPopup?) {
+    /**
+     * 결과를 보인다. 이미 나중 번호의 결과를 보였으면 버리고, 426 강제 팝업이 떠 있고 신호가 남아 있으면 강제가 아닌 결과로 바꾸지 않는다.
+     */
+    private fun apply(gen: Long, popup: AppPopup?) {
+        if (gen < appliedGeneration) return
+        val current = mutableState.value.popup
+        if (current?.kind == PopupKind.FORCE_UPDATE && coordinator.hasForceSignal && popup?.kind != PopupKind.FORCE_UPDATE) return
+        appliedGeneration = gen
         mutableState.value = AppPopupUiState(popup)
     }
 }

@@ -1,6 +1,7 @@
 package com.duriseo.android.data.repository.appops
 
 import com.duriseo.android.core.common.coroutines.ApplicationScope
+import com.duriseo.android.core.common.coroutines.IoDispatcher
 import com.duriseo.android.data.remote.appops.AppOpsJsonParser
 import com.duriseo.android.data.remote.appops.AppOpsRemoteDataSource
 import com.duriseo.android.data.remote.appops.RemoteConfigGateway
@@ -9,6 +10,7 @@ import com.duriseo.android.domain.appops.AppOpsRepository
 import com.duriseo.android.domain.appops.AppOpsSnapshot
 import com.duriseo.android.domain.appops.AppPopupCoordinator
 import com.duriseo.android.domain.result.DataResult
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -36,10 +39,8 @@ class AppOpsRepositoryImpl @Inject constructor(
     private val remote: AppOpsRemoteDataSource,
     private val gateway: RemoteConfigGateway,
     @ApplicationScope private val scope: CoroutineScope,
+    @IoDispatcher private val io: CoroutineDispatcher,
 ) : AppOpsRepository {
-
-    @Volatile
-    private var lastServer: AppOpsData? = null
 
     /** [check]에서 3초 안에 못 받은 Remote Config 값이 나중에 도착했다는 신호 */
     private val lateRemote = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
@@ -55,12 +56,15 @@ class AppOpsRepositoryImpl @Inject constructor(
         }
 
         val serverData = server.await()
-        lastServer = serverData
         AppOpsSnapshot(remote = readRemoteConfig(), server = serverData)
     }
 
+    /**
+     * Remote Config가 바뀐 때의 값. 서버 값은 담지 않는다(`server = null`): 마지막으로 받은 서버 값과의 합침은 [AppPopupCoordinator]가 하고,
+     * 426 팝업을 닫는 일은 새로 받은 서버 목록으로 하는 [check]에서만 한다 (unit-9 결정 2).
+     */
     override val changes: Flow<AppOpsSnapshot> =
-        merge(gateway.updates(), lateRemote).map { AppOpsSnapshot(remote = readRemoteConfig(), server = lastServer) }
+        merge(gateway.updates(), lateRemote).map { AppOpsSnapshot(remote = readRemoteConfig(), server = null) }
 
     private suspend fun fetchRemoteConfig(): Boolean = try {
         gateway.fetchAndActivate()
@@ -79,8 +83,9 @@ class AppOpsRepositoryImpl @Inject constructor(
         if (n == null || r == null) null else AppOpsData(notices = n.value, rules = r.value)
     }
 
-    private fun readRemoteConfig(): AppOpsData {
+    /** 디스크에 남은 값을 읽고 JSON을 해석하는 일은 IO 스레드에서 한다 (메인 스레드를 막지 않는다) */
+    private suspend fun readRemoteConfig(): AppOpsData = withContext(io) {
         val values = gateway.currentValues()
-        return AppOpsJsonParser.parse(values.notices, values.rules)
+        AppOpsJsonParser.parse(values.notices, values.rules)
     }
 }

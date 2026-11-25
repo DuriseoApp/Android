@@ -3,7 +3,7 @@ package com.duriseo.android.feature.memo.list
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.duriseo.android.core.common.time.MidnightTicker
-import com.duriseo.android.core.designsystem.message.toMessageRes
+import com.duriseo.android.core.designsystem.message.toMessageResOrNull
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.memo.MemoRepository
 import com.duriseo.android.domain.memo.MemoView
@@ -142,7 +142,7 @@ class MemoListViewModel @Inject constructor(
                 local.update { it.copy(writing = false) }
             }
             if (result is DataResult.Failure) {
-                effectChannel.trySend(MemoListSideEffect.ShowMessage(result.error.toMessageRes()))
+                result.error.toMessageResOrNull()?.let { effectChannel.trySend(MemoListSideEffect.ShowMessage(it)) }
             }
         }
     }

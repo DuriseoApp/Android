@@ -8,15 +8,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -29,9 +35,12 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.duriseo.android.core.designsystem.theme.DuriseoShadows
 import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
+import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 import com.duriseo.android.core.designsystem.theme.Line100
 import com.duriseo.android.core.designsystem.theme.duriseoShadow
 
@@ -52,7 +61,7 @@ private val PopupContentBottomPadding = DuriseoSpacing.Space3
  *
  * - 뒤 막: 토큰 `scrim`, 누르면 아무 일도 없다(닫히지 않는다). 접근성에서도 뺀다.
  * - 뒤로 가기: [onBack]이 있으면 그것을 부르고, null이면 아무것도 하지 않고 막는다 (닫을 수 없는 팝업, D-179. 닫을 수 있는 팝업의 뒤로 가기는 Q-21).
- * - 패널: 폭 최대 320, 화면 바깥 여백 `space-6`(높이도 그만큼 뺀다), 면 `surface-0`, 모서리 `radius-2xl`, `shadow-dialog`,
+ * - 패널: 폭 최대 320, 시스템 바·화면 잘림 영역 안쪽에서 바깥 여백 `space-6`(높이도 그만큼 뺀다), 면 `surface-0`, 모서리 `radius-2xl`, `shadow-dialog`,
  *   안쪽 위 `space-6`·좌우 `space-5`·아래 `space-5`.
  * - [content]는 한 영역에 세로로 두고 사이 `space-2`. 넘치면 이 영역만 스크롤되고, 영역 아래에 `line-100` 선 1과 안쪽 아래 `space-3`이 생긴다.
  * - [actions]는 내용 아래 `space-4`, 버튼끼리 `space-2`. 늘 보인다.
@@ -71,9 +80,9 @@ fun DuriseoPopupDialog(
     // 창이 다시 만들어져도(다른 덮개가 열릴 때) 스크롤 위치가 남도록 창 밖에 둔다
     val scrollState = rememberScrollState()
     val overflowing = scrollState.canScrollForward || scrollState.canScrollBackward
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
-
     DuriseoOverlayWindow(onBack = onBack, showSnackbar = false, alwaysOnTop = true) {
+        // 창 안(창이 다시 만들어질 때마다 새로 돈다)에서 초점을 패널로 가져온다
+        LaunchedEffect(Unit) { focusRequester.requestFocus() }
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             // 뒤 막: 눌러도 닫히지 않고, 뒤 화면으로 누름이 새지도 않는다
             Box(
@@ -85,6 +94,8 @@ fun DuriseoPopupDialog(
             )
             Column(
                 modifier = Modifier
+                    // 시스템 바·화면 잘림 영역을 먼저 비우고 그 안쪽에 바깥 여백 space-6을 둔다 (창이 화면 전체라 바 아래로 들어가지 않게)
+                    .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))
                     .padding(DuriseoSpacing.Space6)
                     .widthIn(max = PopupMaxWidth)
                     .fillMaxWidth()
@@ -126,6 +137,27 @@ fun DuriseoPopupDialog(
                     actions()
                 }
             }
+        }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun DuriseoPopupDialogPreview() {
+    DuriseoTheme {
+        DuriseoPopupDialog(
+            paneTitle = "공지",
+            onBack = null,
+            actions = {
+                DuriseoButton(text = "확인", onClick = { }, modifier = Modifier.fillMaxWidth(), style = DuriseoButtonStyle.Brand)
+            },
+        ) {
+            Text(
+                text = "공지 제목",
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

@@ -5,7 +5,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -30,7 +32,8 @@ class AppPopupCoordinatorTest {
             return snapshot
         }
 
-        override val changes: Flow<AppOpsSnapshot> = emptyFlow()
+        val changeFlow = MutableSharedFlow<AppOpsSnapshot>(extraBufferCapacity = 4)
+        override val changes: Flow<AppOpsSnapshot> = changeFlow
     }
 
     private class FakeSignals(initial: ForceUpdateSignal? = null) : ForceUpdateSignals {
@@ -177,5 +180,50 @@ class AppPopupCoordinatorTest {
         assertNull(c.next())
         // 돌아올 때 확인하면 닫았던 팝업도 다시 뜬다 (오늘 하루 안 보기와 다르다)
         assertEquals("a", c.check(false)?.id)
+    }
+
+    @Test
+    fun `unit-9 결정 2 426 팝업은 지난 서버 값으로 닫지 않고 방금 받은 서버 목록으로만 닫는다`() = runTest {
+        val signals = FakeSignals(ForceUpdateSignal("old-rule", "제목", null, PopupImage.None, null))
+        val withRule = AppOpsData(emptyList(), listOf(rule("old-rule", UpdateMode.FORCE)))
+        val repo = FakeRepository(AppOpsSnapshot(AppOpsData.Empty, withRule))
+        val c = coordinator(repo, signals = signals)
+        c.check(false)
+
+        val shown = mutableListOf<AppPopup?>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { c.changes.collect { shown += it } }
+        // Remote Config가 바뀌었는데 서버 값(지난 것)에는 규칙이 없다: changes는 닫지 않는다
+        repo.changeFlow.tryEmit(AppOpsSnapshot(AppOpsData.Empty, AppOpsData.Empty))
+
+        assertEquals("old-rule", shown.single()?.id)
+        assertEquals("old-rule", signals.current.value?.ruleId)
+        assertTrue(c.hasForceSignal)
+        // 방금 받은 서버 목록에 없으면 닫는다
+        repo.snapshot = AppOpsSnapshot(AppOpsData.Empty, AppOpsData.Empty)
+        assertNull(c.check(false))
+        assertTrue(!c.hasForceSignal)
+    }
+
+    @Test
+    fun `결정 18 서버를 못 받은 확인은 떠 있던 서버 공지를 그대로 둔다`() = runTest {
+        val serverOnly = AppOpsData(listOf(notice("server-notice")), emptyList())
+        val repo = FakeRepository(AppOpsSnapshot(AppOpsData.Empty, serverOnly))
+        val c = coordinator(repo)
+        val shown = c.check(true)!!
+        assertEquals("server-notice", shown.id)
+
+        // 돌아올 때 서버가 실패: 새로 고르면 Remote Config 값만이라 없지만, 떠 있던 팝업은 그대로
+        repo.snapshot = AppOpsSnapshot(AppOpsData.Empty, null)
+        assertEquals("server-notice", c.check(false, current = shown)?.id)
+        // 현재 팝업을 알려 주지 않으면(새로 고름) Remote Config 값만으로 판단한다
+        assertNull(c.check(false))
+        // 서버 목록을 받았는데 없으면 내려간 것이다
+        repo.snapshot = AppOpsSnapshot(AppOpsData.Empty, AppOpsData.Empty)
+        assertNull(c.check(false, current = shown))
+        // 서버를 못 받아도 Remote Config에 앞 순서 팝업이 생기면 바뀐다
+        repo.snapshot = AppOpsSnapshot(AppOpsData(listOf(notice("rc-block", closable = false)), emptyList()), serverOnly)
+        c.check(true)
+        repo.snapshot = AppOpsSnapshot(AppOpsData(listOf(notice("rc-block", closable = false)), emptyList()), null)
+        assertEquals("rc-block", c.check(false, current = shown)?.id)
     }
 }

@@ -18,29 +18,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
+import com.duriseo.android.core.common.image.popupImageRequest
 import com.duriseo.android.core.designsystem.component.DuriseoButton
 import com.duriseo.android.core.designsystem.component.DuriseoButtonStyle
 import com.duriseo.android.core.designsystem.component.DuriseoPopupDialog
+import com.duriseo.android.core.designsystem.component.PopupPresetImageSize
 import com.duriseo.android.core.designsystem.component.popupPresetDrawable
 import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
-import com.duriseo.android.core.designsystem.theme.Surface100
 import com.duriseo.android.domain.appops.AppPopup
 import com.duriseo.android.domain.appops.PopupImage
 import com.duriseo.android.domain.appops.PopupKind
 
 // SCR-APP-01 공지 팝업, SCR-APP-02 업데이트 팝업 (design-system.md "공지·업데이트 팝업", 보드 `AppNotice.dc.html`·`AppUpdate.dc.html`).
 // 틀(뒤 막·패널·스크롤·맨 위 창)은 `DuriseoPopupDialog`다.
-
-/** 기본 이미지(`preset:`) 크기 112×112, 가운데 (보드 값) */
-private val PresetImageSize = 112.dp
 
 /** 이미지 아래 더 띄우는 8: 내용 영역의 간격 8에 더해 이미지와 제목 사이가 16이 된다 (`space-2`) */
 private val ImageExtraGap = DuriseoSpacing.Space2
@@ -114,7 +112,7 @@ private fun ColumnScope.PopupContent(image: PopupImage, imageLoader: ImageLoader
                 painter = painterResource(popupPresetDrawable(image.preset)),
                 contentDescription = null,
                 modifier = Modifier
-                    .size(PresetImageSize)
+                    .size(PopupPresetImageSize)
                     .align(Alignment.CenterHorizontally),
             )
             if (hasText) Spacer(Modifier.height(ImageExtraGap))
@@ -163,12 +161,14 @@ private fun PopupWebImage(url: String, imageLoader: ImageLoader?) {
                 .fillMaxWidth()
                 .aspectRatio(PreviewBannerAspectRatio)
                 .clip(shape)
-                .background(Surface100),
+                .background(MaterialTheme.colorScheme.surfaceVariant),
         )
         return
     }
+    // 미리 받을 때와 같은 요청(같은 크기·키)이라 받아 둔 이미지가 메모리 캐시에서 바로 나온다
+    val request = popupImageRequest(LocalContext.current, url)
     AsyncImage(
-        model = url,
+        model = request,
         // 이미지만 넣은 팝업의 이름은 패널의 `imageAlt`가 전한다: 이미지는 따로 읽지 않는다
         contentDescription = null,
         imageLoader = imageLoader,

@@ -9,9 +9,9 @@ import androidx.activity.viewModels
 import com.duriseo.android.core.common.push.PushIntentTrust
 import com.duriseo.android.core.common.push.clearPushExtras
 import com.duriseo.android.core.common.push.toPushTapTarget
-import com.duriseo.android.feature.appops.AppPopupHost
 import com.duriseo.android.core.designsystem.permission.ProvideNotificationPermissionRequester
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
+import com.duriseo.android.feature.appops.AppPopupHost
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint

@@ -2,7 +2,7 @@ package com.duriseo.android.feature.settings.connection
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.duriseo.android.core.designsystem.message.toMessageRes
+import com.duriseo.android.core.designsystem.message.toMessageResOrNull
 import com.duriseo.android.domain.couple.CoupleRepository
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.result.DataResult
@@ -87,7 +87,7 @@ class ConnectionInfoViewModel @Inject constructor(
                 is DataResult.Failure -> {
                     // 실패·오프라인이면 다이얼로그를 닫고 안내만 한다. 연결은 그대로다
                     local.value = Local()
-                    effectChannel.trySend(ConnectionInfoSideEffect.ShowMessage(result.error.toMessageRes()))
+                    result.error.toMessageResOrNull()?.let { effectChannel.trySend(ConnectionInfoSideEffect.ShowMessage(it)) }
                 }
             }
         }

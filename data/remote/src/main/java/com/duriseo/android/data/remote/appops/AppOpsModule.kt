@@ -3,9 +3,9 @@ package com.duriseo.android.data.remote.appops
 import android.content.Context
 import coil3.ImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
-import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import com.duriseo.android.core.common.image.PopupImageLoader
+import com.duriseo.android.core.common.image.popupImageRequest
 import com.duriseo.android.data.remote.network.NoAuth
 import com.duriseo.android.data.remote.network.ForceUpdateSignalHub
 import com.duriseo.android.domain.appops.ForceUpdateSignals
@@ -44,7 +44,7 @@ internal class CoilPopupImagePrefetcher(
     private val loader: ImageLoader,
 ) : PopupImagePrefetcher {
     override suspend fun prefetch(url: String): Boolean = try {
-        loader.execute(ImageRequest.Builder(context).data(url).build()) is SuccessResult
+        loader.execute(popupImageRequest(context, url)) is SuccessResult
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {

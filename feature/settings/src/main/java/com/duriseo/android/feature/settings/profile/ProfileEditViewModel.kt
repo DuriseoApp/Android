@@ -118,7 +118,7 @@ class ProfileEditViewModel @Inject constructor(
                 is PickedPhotoResult.Ready ->
                     local.update { if (it.saving) it else it.copy(selection = PhotoSelection.Picked(result.photo)) }
                 is PickedPhotoResult.Rejected ->
-                    effectChannel.trySend(ProfileEditSideEffect.ShowMessage(result.error.toMessageRes()))
+                    result.error.toMessageResOrNull()?.let { effectChannel.trySend(ProfileEditSideEffect.ShowMessage(it)) }
                 PickedPhotoResult.Failed ->
                     effectChannel.trySend(ProfileEditSideEffect.ShowMessage(DesignR.string.error_common))
             }

@@ -2,7 +2,7 @@ package com.duriseo.android.feature.couple.invitecreate
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.duriseo.android.core.designsystem.message.toMessageRes
+import com.duriseo.android.core.designsystem.message.toMessageResOrNull
 import com.duriseo.android.domain.couple.CoupleRepository
 import com.duriseo.android.domain.couple.InviteCode
 import com.duriseo.android.domain.error.DataError
@@ -159,7 +159,7 @@ class InviteCreateViewModel @Inject constructor(
         nextAttemptAt = clock.instant().plus(RETRY_DELAY)
         if (!loadFailureShown) {
             loadFailureShown = true
-            effectChannel.trySend(InviteCreateSideEffect.ShowMessage(error.toMessageRes()))
+            error.toMessageResOrNull()?.let { effectChannel.trySend(InviteCreateSideEffect.ShowMessage(it)) }
         }
     }
 
@@ -205,7 +205,7 @@ class InviteCreateViewModel @Inject constructor(
             reissueAvailableAt = now.plusSeconds(retry.retryAfterSeconds.toLong())
             publish(now)
         } else {
-            effectChannel.trySend(InviteCreateSideEffect.ShowMessage(error.toMessageRes()))
+            error.toMessageResOrNull()?.let { effectChannel.trySend(InviteCreateSideEffect.ShowMessage(it)) }
         }
     }
 
@@ -222,7 +222,7 @@ class InviteCreateViewModel @Inject constructor(
                     }
                 }
                 is DataResult.Failure ->
-                    effectChannel.trySend(InviteCreateSideEffect.ShowMessage(result.error.toMessageRes()))
+                    result.error.toMessageResOrNull()?.let { effectChannel.trySend(InviteCreateSideEffect.ShowMessage(it)) }
             }
         }
     }

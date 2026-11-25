@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -35,7 +36,7 @@ fun AppPopupHost(
         viewModel.sideEffects.collect { effect ->
             when (effect) {
                 AppPopupSideEffect.FinishApp -> context.findActivity()?.finishAndRemoveTask()
-                is AppPopupSideEffect.OpenUrl -> context.openUri(effect.url)
+                is AppPopupSideEffect.OpenUrl -> if (!context.openUri(effect.url)) viewModel.onLinkOpenFailed()
                 is AppPopupSideEffect.OpenStore ->
                     if (!context.openUri(effect.marketUri)) context.openUri(effect.webUrl)
             }
@@ -52,12 +53,15 @@ fun AppPopupHost(
             content()
         }
         if (popup != null) {
-            AppPopupScreen(
-                popup = popup,
-                imageLoader = viewModel.imageLoader,
-                onAction = viewModel::onAction,
-                onUpdate = { context.findActivity()?.let { viewModel.onAction(AppPopupAction.Update(it)) } },
-            )
+            // 팝업이 바뀌면 상태(스크롤 위치·초점)를 새로 시작한다. 같은 팝업의 내용 갱신은 그대로 이어진다
+            key(popup.identity) {
+                AppPopupScreen(
+                    popup = popup,
+                    imageLoader = viewModel.imageLoader,
+                    onAction = viewModel::onAction,
+                    onUpdate = { context.findActivity()?.let { viewModel.onAction(AppPopupAction.Update(it)) } },
+                )
+            }
         }
     }
 }

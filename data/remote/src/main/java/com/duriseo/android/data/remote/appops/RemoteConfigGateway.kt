@@ -2,6 +2,7 @@ package com.duriseo.android.data.remote.appops
 
 import android.content.Context
 import com.duriseo.android.core.common.Logger
+import com.google.android.gms.tasks.Task
 import com.google.firebase.FirebaseApp
 import com.google.firebase.remoteconfig.ConfigUpdate
 import com.google.firebase.remoteconfig.ConfigUpdateListener
@@ -56,15 +57,15 @@ internal class FirebaseRemoteConfigGateway(
     private val config: FirebaseRemoteConfig,
 ) : RemoteConfigGateway {
 
-    init {
-        config.setConfigSettingsAsync(
-            FirebaseRemoteConfigSettings.Builder()
-                .setMinimumFetchIntervalInSeconds(MINIMUM_FETCH_INTERVAL_SECONDS)
-                .build(),
-        )
-    }
+    /** 가져오기 간격 설정. 설정이 끝나기 전에 가져오면 기본 12시간 간격으로 가져와서, 가져오기 전에 반드시 기다린다 */
+    private val settingsApplied: Task<Void> = config.setConfigSettingsAsync(
+        FirebaseRemoteConfigSettings.Builder()
+            .setMinimumFetchIntervalInSeconds(MINIMUM_FETCH_INTERVAL_SECONDS)
+            .build(),
+    )
 
     override suspend fun fetchAndActivate(): Boolean = try {
+        awaitTask(settingsApplied)
         suspendCancellableCoroutine<Boolean> { continuation ->
             config.fetchAndActivate().addOnCompleteListener { task ->
                 if (continuation.isActive) continuation.resume(task.isSuccessful)
@@ -84,7 +85,10 @@ internal class FirebaseRemoteConfigGateway(
     override fun updates(): Flow<Unit> = callbackFlow {
         val registration = config.addOnConfigUpdateListener(object : ConfigUpdateListener {
             override fun onUpdate(configUpdate: ConfigUpdate) {
-                config.activate().addOnCompleteListener { trySend(Unit) }
+                // 활성화한 값이 실제로 바뀐 때만 알린다(결과 true). 바뀐 게 없으면 팝업을 다시 고르지 않는다
+                config.activate().addOnCompleteListener { task ->
+                    if (task.isSuccessful && task.result == true) trySend(Unit)
+                }
             }
 
             override fun onError(error: FirebaseRemoteConfigException) {
@@ -93,6 +97,12 @@ internal class FirebaseRemoteConfigGateway(
             }
         })
         awaitClose { registration.remove() }
+    }
+
+    private suspend fun awaitTask(task: Task<Void>) {
+        suspendCancellableCoroutine<Unit> { continuation ->
+            task.addOnCompleteListener { if (continuation.isActive) continuation.resume(Unit) }
+        }
     }
 
     private companion object {

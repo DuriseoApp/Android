@@ -18,6 +18,9 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
 
+    // 팝업 이미지 요청 모양(미리 받기와 화면이 같은 요청을 쓴다)
+    implementation(libs.coil.core)
+
     // 소셜 로그인 (docs/MODULES.md 3장): Google = Credential Manager + Google ID, 카카오 = Kakao SDK (user)
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)

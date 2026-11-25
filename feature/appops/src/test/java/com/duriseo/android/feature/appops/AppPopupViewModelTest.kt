@@ -25,8 +25,10 @@ import com.duriseo.android.domain.appops.PopupIdSpace
 import com.duriseo.android.domain.appops.PopupImage
 import com.duriseo.android.domain.appops.PopupImagePrefetcher
 import com.duriseo.android.domain.appops.PopupKind
+import com.duriseo.android.domain.appops.PopupLink
 import com.duriseo.android.domain.appops.PopupPreset
 import com.duriseo.android.domain.appops.UpdateMode
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -56,8 +58,12 @@ import java.time.ZoneId
 
 private class FakeAppOps(var snapshot: AppOpsSnapshot) : AppOpsRepository {
     var checks = 0
+
+    /** 설정하면 완료될 때까지 [check]가 끝나지 않는다 (서버를 기다리는 중) */
+    var gate: CompletableDeferred<Unit>? = null
     override suspend fun check(): AppOpsSnapshot {
         checks++
+        gate?.await()
         return snapshot
     }
 
@@ -105,14 +111,21 @@ private class FakeUpdateSource : AppUpdateSource {
     override fun completeIfDownloaded() = Unit
 }
 
-private object NoPrefetch : PopupImagePrefetcher {
-    override suspend fun prefetch(url: String): Boolean = true
+private class FakePrefetch : PopupImagePrefetcher {
+    /** 설정하면 완료될 때까지 이미지를 받는 중이다 */
+    var gate: CompletableDeferred<Unit>? = null
+    override suspend fun prefetch(url: String): Boolean {
+        gate?.await()
+        return true
+    }
 }
 
 private fun notice(id: String, closable: Boolean = true) = AppNotice(
     id = id, closable = closable, title = "제목 $id", body = "본문", image = PopupImage.None, imageAlt = null,
     link = null, platform = null, startsAt = null, endsAt = null,
 )
+
+private fun bannerNotice(id: String) = notice(id).copy(image = PopupImage.Web("https://example.com/$id.png"))
 
 private fun forceRule(id: String) = AppUpdateRule(
     id = id, mode = UpdateMode.FORCE, platform = AppPlatform.ANDROID, build = BuildCondition.Lte(10), os = null,
@@ -131,6 +144,7 @@ class AppPopupViewModelTest {
     private val hidden = FakeHidden()
     private val foreground = FakeForeground()
     private val update = FakeUpdateSource()
+    private val prefetch = FakePrefetch()
 
     @Before
     fun setUp() {
@@ -147,7 +161,7 @@ class AppPopupViewModelTest {
             repository = repo,
             hiddenStore = hidden,
             forceSignals = signals,
-            prefetcher = NoPrefetch,
+            prefetcher = prefetch,
             environment = AppEnvironment(AppPlatform.ANDROID, build = 10, osVersion = 34),
             clock = Clock.fixed(Instant.parse("2026-11-25T03:00:00Z"), ZoneId.of("Asia/Seoul")),
         )
@@ -291,5 +305,65 @@ class AppPopupViewModelTest {
         }
         // 팝업은 그대로다 (다음 실행 때 다시 확인한다)
         assertEquals("block", vm.shownId())
+    }
+
+    @Test
+    fun `D-178 이미지를 받는 중에 426이 오면 강제 팝업이 남는다`() = runTest {
+        prefetch.gate = CompletableDeferred()
+        val vm = viewModel(FakeAppOps(snapshot(bannerNotice("info"))))
+        assertNull(vm.uiState.value.popup) // 이미지를 받는 동안은 뜨지 않는다
+
+        signals.state.value = ForceUpdateSignal("rule-9", "필수 업데이트", null, PopupImage.Preset(PopupPreset.UPDATE), null)
+        assertEquals(PopupKind.FORCE_UPDATE, vm.uiState.value.popup?.kind)
+
+        prefetch.gate?.complete(Unit) // 늦게 끝난 확인(알리는 공지)이 도착한다
+        assertEquals(PopupKind.FORCE_UPDATE, vm.uiState.value.popup?.kind)
+    }
+
+    @Test
+    fun `D-178 늦게 끝난 확인이 앞 순서 팝업을 덮지 않는다`() = runTest {
+        val repo = FakeAppOps(snapshot(notice("info")))
+        repo.gate = CompletableDeferred()
+        val vm = viewModel(repo)
+        assertNull(vm.shownId())
+
+        repo.changeFlow.tryEmit(snapshot(notice("block", closable = false)))
+        assertEquals("block", vm.shownId())
+
+        repo.gate?.complete(Unit)
+        assertEquals("block", vm.shownId())
+    }
+
+    @Test
+    fun `D-179 확인을 누르면 다음 팝업 이미지를 받는 동안에도 지금 팝업이 먼저 내려간다`() = runTest {
+        val vm = viewModel(FakeAppOps(snapshot(notice("a"), bannerNotice("b"))))
+        assertEquals("a", vm.shownId())
+        prefetch.gate = CompletableDeferred()
+
+        vm.onAction(AppPopupAction.Dismiss)
+        assertNull(vm.shownId())
+        // 닫는 중에 다시 눌러도 아무 일이 없다
+        vm.onAction(AppPopupAction.Dismiss)
+
+        prefetch.gate?.complete(Unit)
+        assertEquals("b", vm.shownId())
+    }
+
+    @Test
+    fun `결정 17 링크로 나갔다 돌아오는 한 번은 돌아옴 확인으로 세지 않고 팝업이 남는다`() = runTest {
+        val repo = FakeAppOps(snapshot(notice("a").copy(link = PopupLink("자세히", "https://example.com"))))
+        val vm = viewModel(repo)
+        assertEquals("a", vm.shownId())
+        assertEquals(1, repo.checks)
+
+        vm.onAction(AppPopupAction.OpenLink)
+        foreground.flow.tryEmit(Unit)
+
+        assertEquals(1, repo.checks)
+        assertEquals("a", vm.shownId())
+
+        // 그다음 돌아옴부터는 다시 확인한다
+        foreground.flow.tryEmit(Unit)
+        assertEquals(2, repo.checks)
     }
 }

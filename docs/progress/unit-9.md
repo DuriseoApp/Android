@@ -97,7 +97,20 @@
     - 접근성: 패널 이름(`paneTitle`)은 제목, 이미지만 넣은 팝업은 `imageAlt`. 이미지는 `contentDescription = null`. Compose에 `alertdialog` 역할이 없어 기존 `DuriseoDialog`와 같은 방식(`paneTitle` + 초점)을 썼다. 새 문구 없음.
 16. **묶음 C**: `KakaoSdkState`(`core:common`)가 `KakaoSdk.init` 성공 여부를 들고, `KakaoTokenSource`·`DefaultSocialSessionCleaner`가 키 비어 있음 또는 미초기화면 SDK를 부르지 않는다. `KakaoTokenSource.request`는 SDK 예외도 `Failed`로 바꾼다.
 
+17. **링크 버튼으로 나갔다 돌아오는 한 번은 "앱으로 돌아옴" 확인으로 세지 않는다** (리드 결정, SCREENS 560행: 링크를 열었다 돌아와도 팝업은 그대로). `AppPopupViewModel`의 `skipNextReturn`이 [링크] 누름 때 켜지고 돌아옴 신호 한 번을 건너뛰며 꺼진다. 열 앱이 없어 못 나갔으면 `onLinkOpenFailed()`가 거둔다. 그다음 돌아옴부터는 다시 확인한다.
+18. **돌아올 때 서버 요청이 실패하면 서버에만 있는 공지를 "내려갔다"고 보지 않는다** (리드 결정). 떠 있던 팝업을 닫는 경우는 Remote Config 값이 바뀌어 항목이 사라졌을 때와 서버 목록을 받았는데 그 항목이 없을 때뿐이다. 서버가 실패한 동안 떠 있는 서버 공지는 그대로 두고, 새로 고르는 것은 Remote Config 값만 쓴다(API 4.9 2단계). 구현은 `AppPopupCoordinator.check(isLaunch, current)`의 `keep`·`lastReceivedServer`.
+
 ## 다음 단계용 메모
+
+리뷰 1회차 수정 (Major 6, Minor 9):
+
+- **순서 보장(M1·M4)**: `AppPopupViewModel`이 결과마다 순번을 받고(확인은 시작 때, 변경·426·다음 팝업은 도착 때) 나중 번호를 이미 보였으면 이전 번호의 늦은 결과를 버린다. 426 강제가 떠 있고 신호가 남아 있으면(`coordinator.hasForceSignal`) 강제가 아닌 결과로 바꾸지 않는다. [확인]·[닫기]·[오늘 하루 안 보기]는 먼저 팝업을 내리고(`AppPopupUiState()`) 다음 팝업은 이미지를 받은 뒤 보인다(내려간 뒤라 중복 누름은 무시됨).
+- **426 닫기(M2)**: 닫기는 `check()`가 방금 받은 서버 목록으로만 한다. `changes`·`next`는 `lastReceivedServer`로 합치되 강제를 닫지 않는다. `AppOpsRepositoryImpl.changes`는 `server = null`로 낸다(합침은 코디네이터).
+- **426 스낵바(M3)**: feature ViewModel 23곳의 `toMessageRes()`를 `toMessageResOrNull()?.let`으로 바꿨다. 되돌아가지 않게 `ErrorMessageRulesTest`(core:designsystem)가 feature·app 소스에서 `.toMessageRes()` 직접 호출을 찾아 실패시킨다(`ProfileEdit`의 사진 오류 변환은 다른 함수). 대표 화면 `MemoListViewModelTest`에 "426이면 공통 오류 스낵바를 띄우지 않는다".
+- **창·이미지(M5·M6)**: `DuriseoPopupDialog`는 `windowInsetsPadding(systemBars ∪ displayCutout)` 안쪽에서 여백 24를 둔다. 미리 받기·`AsyncImage`가 `core:common`의 `popupImageRequest(context, url)`(크기 `Size.ORIGINAL`)을 같이 써서 메모리 캐시 키가 맞는다(`PopupImageRequestTest`). `core:common`에 `coil-core` 의존 추가(MODULES.md 3장에 있는 라이브러리).
+- **Minor**: 초점 효과를 창 안으로 옮겨 창이 다시 만들어질 때마다 돈다, `AppPopupHost`가 `key(popup.identity)`로 팝업마다 상태를 새로 시작, Remote Config 읽기·해석은 `@IoDispatcher`, `RemoteConfigGateway`는 설정(`setConfigSettingsAsync`)을 기다린 뒤 가져오고 활성화 결과가 true일 때만 변경을 알린다, 112dp는 `PopupPresetImageSize`(core:designsystem), `Surface100` 직접 사용은 `colorScheme.surfaceVariant`로, `DuriseoPopupDialog` Preview, `PopupImageClientTest`(MockWebServer, Authorization·X-* 없음), `MainActivity` import 순서.
+- 새 테스트: `AppPopupViewModelTest`(D-178 이미지를 받는 중에 426이 오면 강제 팝업이 남는다, 늦게 끝난 확인이 앞 순서 팝업을 덮지 않는다, 확인을 누르면 지금 팝업이 먼저 내려간다, 결정 17), `AppPopupCoordinatorTest`(결정 2 426은 방금 받은 서버 목록으로만 닫는다, 결정 18).
+
 
 묶음 B·C (구현 완료, SDK 없는 환경이라 빌드는 CI 확인 필요):
 
@@ -122,6 +135,7 @@
 
 | 회차 | Critical | Major | 비고 |
 | --- | --- | --- | --- |
+| 1회차 | 0 | 6 | 팝업 결과 순서·426 보호(M1), 426 닫기는 새 서버 목록으로만(M2), 426 공통 스낵바(M3), 다음 팝업 이미지 동안 닫기(M4), 시스템 바 inset(M5), 이미지 요청 캐시 키(M6), Minor 9건 모두 수정 |
 
 ## 남은 일
 

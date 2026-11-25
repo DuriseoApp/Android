@@ -74,6 +74,7 @@ class AppPopupRepositoryTest {
         remote = AppOpsRemoteDataSource(api, ApiCaller(createApiJson()), StandardTestDispatcher(testScheduler)),
         gateway = gateway,
         scope = backgroundScope,
+        io = StandardTestDispatcher(testScheduler),
     )
 
     private fun notices(vararg ids: String) =
@@ -163,8 +164,8 @@ class AppPopupRepositoryTest {
 
         assertEquals(1, received.size)
         assertEquals(listOf("b"), received.single().remote.notices.map { it.id })
-        // 마지막으로 받은 서버 값과 합쳐서 낸다
-        assertEquals(listOf("srv"), received.single().server?.notices?.map { it.id })
+        // 서버 값은 담지 않는다: 합침은 AppPopupCoordinator가, 426 닫기는 새로 받은 check에서만 한다 (결정 2)
+        assertNull(received.single().server)
     }
 
     @Test

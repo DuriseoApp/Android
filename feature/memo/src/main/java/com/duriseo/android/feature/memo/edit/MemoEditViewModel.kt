@@ -3,7 +3,7 @@ package com.duriseo.android.feature.memo.edit
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.duriseo.android.core.designsystem.message.toMessageRes
+import com.duriseo.android.core.designsystem.message.toMessageResOrNull
 import com.duriseo.android.domain.error.DataError
 import com.duriseo.android.domain.error.ErrorCode
 import com.duriseo.android.domain.error.hasCode
@@ -180,7 +180,7 @@ class MemoEditViewModel @Inject constructor(
      */
     private fun fail(error: DataError) {
         _uiState.update { it.copy(saving = false, loading = false) }
-        effectChannel.trySend(MemoEditSideEffect.ShowMessage(error.toMessageRes()))
+        error.toMessageResOrNull()?.let { effectChannel.trySend(MemoEditSideEffect.ShowMessage(it)) }
         if (memoId != null) {
             when {
                 error.hasCode(ErrorCode.NOT_FOUND) -> effectChannel.trySend(MemoEditSideEffect.CloseWithDetail)

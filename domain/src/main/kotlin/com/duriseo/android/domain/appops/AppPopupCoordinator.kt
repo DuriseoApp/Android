@@ -30,22 +30,31 @@ class AppPopupCoordinator(
      * 확인 한 번. 띄울 팝업이 없으면 null.
      *
      * @param isLaunch 앱 실행 때(Activity 생성)인지. 돌아올 때는 false
+     * @param current 지금 떠 있는 팝업. 서버 값을 못 받은(실패·오프라인) 확인에서, 서버에만 있던 떠 있는 팝업이 서버 값이 빠졌다는 이유로
+     *   바뀌지 않게 한다 (공지를 내려간 것으로 보는 것은 Remote Config 항목이 사라졌을 때와 서버 목록을 받았는데 없을 때뿐이다)
      */
-    suspend fun check(isLaunch: Boolean): AppPopup? {
+    suspend fun check(isLaunch: Boolean, current: AppPopup? = null): AppPopup? {
         // [확인]·[닫기]는 "이번만"이라 실행·돌아올 때 다시 확인하면 그 팝업이 다시 뜬다 (D-179)
         dismissed.set(emptySet())
         val start = uptimeMillis()
         val snapshot = repository.check()
         lastSnapshot.set(snapshot)
+        snapshot.server?.let { lastReceivedServer.set(it) }
         val budget = if (isLaunch) LAUNCH_BUDGET_MILLIS - (uptimeMillis() - start) else IMAGE_BUDGET_MILLIS
-        return present(snapshot, budget)
+        // 426 팝업을 닫아도 되는지는 방금 받은 서버 목록으로만 판단한다 (unit-9 결정 2): changes·next는 지난 값이라 닫지 않는다
+        return present(snapshot, budget, allowCloseForced = true, keep = current)
     }
+
+    /** 426 강제 신호가 아직 남아 있는지 (닫히지 않았는지). 화면이 낡은 결과로 강제 팝업을 덮지 않게 볼 때 쓴다 */
+    val hasForceSignal: Boolean get() = forceSignals.current.value != null
 
     /** Remote Config 값이 바뀔 때마다 다시 판단한 결과 (이미지는 [IMAGE_BUDGET_MILLIS]까지). 이번에 닫은 팝업은 빼고 고른다 */
     val changes: Flow<AppPopup?>
-        get() = repository.changes.map {
-            lastSnapshot.set(it)
-            present(it, IMAGE_BUDGET_MILLIS)
+        get() = repository.changes.map { changed ->
+            // 서버를 못 받은 상태에서 Remote Config만 바뀌어도 마지막으로 받은 서버 값은 그대로 합친다 (서버에만 있는 공지를 내려간 것으로 보지 않는다)
+            val snapshot = if (changed.server == null) changed.copy(server = lastReceivedServer.get()) else changed
+            lastSnapshot.set(snapshot)
+            present(snapshot, IMAGE_BUDGET_MILLIS)
         }
 
     /**
@@ -76,19 +85,42 @@ class AppPopupCoordinator(
         hiddenStore.hideToday(popup.kind.idSpace, id, today())
     }
 
-    private suspend fun present(snapshot: AppOpsSnapshot, imageBudgetMillis: Long): AppPopup? {
+    private suspend fun present(
+        snapshot: AppOpsSnapshot,
+        imageBudgetMillis: Long,
+        allowCloseForced: Boolean = false,
+        keep: AppPopup? = null,
+    ): AppPopup? {
         val now = clock.instant()
         val hidden = hiddenStore.hiddenIds(today())
         var forced = forceSignals.current.value
-        if (forced != null && shouldCloseForced(forced, snapshot, now, hidden)) {
+        if (allowCloseForced && forced != null && shouldCloseForced(forced, snapshot, now, hidden)) {
             forceSignals.clear()
             forced = null
         }
         val closed = dismissed.get()
         val popup = AppPopupResolver.resolveAll(snapshot.remote, snapshot.server, environment, now, hidden, forced)
             .firstOrNull { it.identity !in closed }
-            ?: return null
-        return withImageReady(popup, imageBudgetMillis)
+        if (keep != null && snapshot.server == null && keepStillValid(keep, snapshot, now, hidden, forced, closed, popup)) return keep
+        return popup?.let { withImageReady(it, imageBudgetMillis) }
+    }
+
+    /**
+     * 서버 값을 못 받았을 때, 떠 있던 팝업([keep])이 마지막으로 받은 서버 값까지 합치면 아직 유효하고 새로 고른 것([picked])에 밀리지 않으면 그대로 둔다
+     * (새로 고를 때는 Remote Config 값만, API.md 4.9 2단계).
+     */
+    private fun keepStillValid(
+        keep: AppPopup,
+        snapshot: AppOpsSnapshot,
+        now: java.time.Instant,
+        hidden: HiddenTodayIds,
+        forced: ForceUpdateSignal?,
+        closed: Set<Pair<PopupKind, String?>>,
+        picked: AppPopup?,
+    ): Boolean {
+        if (picked != null && picked.kind.ordinal < keep.kind.ordinal) return false
+        val withOldServer = AppPopupResolver.resolveAll(snapshot.remote, lastReceivedServer.get(), environment, now, hidden, forced)
+        return withOldServer.any { it.identity == keep.identity && it.identity !in closed }
     }
 
     /**
@@ -117,6 +149,9 @@ class AppPopupCoordinator(
 
     private val dismissed = AtomicReference<Set<Pair<PopupKind, String?>>>(emptySet())
     private val lastSnapshot = AtomicReference<AppOpsSnapshot?>(null)
+
+    /** 마지막으로 **받은** 서버 값(실패한 확인은 덮지 않는다) */
+    private val lastReceivedServer = AtomicReference<AppOpsData?>(null)
 
     private fun today(): LocalDate = LocalDate.now(clock)
 

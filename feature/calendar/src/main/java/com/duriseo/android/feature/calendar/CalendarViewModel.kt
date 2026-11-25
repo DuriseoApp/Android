@@ -2,7 +2,7 @@ package com.duriseo.android.feature.calendar
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.duriseo.android.core.designsystem.message.toMessageRes
+import com.duriseo.android.core.designsystem.message.toMessageResOrNull
 import com.duriseo.android.domain.anniversary.AnniversaryKind
 import com.duriseo.android.domain.anniversary.AnniversaryOccurrence
 import com.duriseo.android.domain.anniversary.AnniversaryRepository
@@ -297,7 +297,7 @@ class CalendarViewModel @Inject constructor(
                     // 실패·오프라인이면 시트를 그대로 두고 안내한다. 상대가 먼저 해제했으면(NOT_COUPLE) 앱 초기화가 이동을 맡는다 (D-103)
                     local.update { it.copy(startDateSheet = sheet.copy(saving = false)) }
                     if (!result.error.hasCode(ErrorCode.NOT_COUPLE)) {
-                        effectChannel.trySend(CalendarSideEffect.ShowMessage(result.error.toMessageRes()))
+                        result.error.toMessageResOrNull()?.let { effectChannel.trySend(CalendarSideEffect.ShowMessage(it)) }
                     }
                 }
             }
