@@ -12,7 +12,7 @@ import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-/** 메모 API (API.md 3.4 "메모") 11개 경로. "인증" 클라이언트(`@Authed`)로 만든다 */
+/** 메모 API (API.md 3.4 "메모") 10개 경로 (`GET /memos/dated`는 D-174로 삭제). "인증" 클라이언트(`@Authed`)로 만든다 */
 interface MemoApi {
     /** 200 `{items, nextCursor, totalCount, favoriteCount}`. `view`는 `newest`·`oldest`·`favorites`, `cursor`는 앞 응답의 `nextCursor` 그대로 */
     @GET("memos")
@@ -25,13 +25,6 @@ interface MemoApi {
     /** 200 `{items}`. 고정 메모 전체 (최근 고정순) */
     @GET("memos/pinned")
     suspend fun getPinned(): Response<ListResponse<MemoDto>>
-
-    /** 200 `{items}`. 캘린더용. `from`·`to`는 `YYYY-MM-DD`, 최대 3개월 */
-    @GET("memos/dated")
-    suspend fun getDated(
-        @Query("from") from: String,
-        @Query("to") to: String,
-    ): Response<ListResponse<MemoDto>>
 
     /** 201 `Memo` */
     @POST("memos")

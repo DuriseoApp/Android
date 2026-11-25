@@ -28,7 +28,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MemoListViewModelTest {
@@ -100,7 +99,7 @@ class MemoListViewModelTest {
             MemoView.NEWEST,
             listOf(
                 makeMemo("a", authorId = PartnerId, createdAt = java.time.Instant.parse("2026-10-11T23:40:00Z")),
-                makeMemo("b", createdAt = java.time.Instant.parse("2026-10-11T01:00:00Z"), memoDate = LocalDate.of(2027, 10, 17)),
+                makeMemo("b", createdAt = java.time.Instant.parse("2026-10-11T01:00:00Z")),
             ),
         )
 
@@ -110,8 +109,6 @@ class MemoListViewModelTest {
         assertEquals(WrittenAt.Today(isPm = false, hour12 = 8, minute = 40), items[0].writtenAt)
         assertEquals("민지", items[1].nickname)
         assertEquals(WrittenAt.Yesterday, items[1].writtenAt)
-        // 메모 날짜가 올해가 아니면 칩에 연도가 있다 (D-129)
-        assertEquals(2027, items[1].memoDate?.year)
         assertFalse(items[0].canEdit)
         assertTrue(items[1].canEdit)
     }

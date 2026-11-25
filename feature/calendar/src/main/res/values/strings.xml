@@ -26,20 +26,18 @@
     <string name="calendar_selected_day_title">%1$d월 %2$d일 (%3$s)</string>
     <string name="calendar_count">%1$d개</string>
     <string name="calendar_day_description">%1$d월 %2$d일</string>
-    <!-- 날짜 칸 읽기 라벨: "10월 12일, 기념일 …, 일정·메모 3개: …" (보드 Calendar.dc.html 318행의 label) -->
+    <!-- 날짜 칸 읽기 라벨: "10월 12일, 기념일 …, 일정 3개: …" (보드 Calendar.dc.html 318행의 label) -->
     <string name="calendar_day_anniversary_part">, 기념일 %1$s</string>
-    <string name="calendar_day_events_part">, 일정·메모 %1$d개: %2$s</string>
+    <string name="calendar_day_events_part">, 일정 %1$d개: %2$s</string>
     <string name="calendar_day_event_summary">%1$s %2$s</string>
-    <string name="calendar_empty_day">아직 일정이나 메모가 없어요</string>
+    <string name="calendar_empty_day">아직 일정이 없어요</string>
     <string name="calendar_add_on_day">+ 이 날에 추가하기</string>
-    <string name="calendar_fab_description">일정 또는 메모 추가</string>
+    <string name="calendar_fab_description">일정 추가</string>
     <string name="calendar_all_day">종일</string>
     <string name="calendar_bar_more">+%1$d</string>
 
     <!-- 날짜 목록의 기념일 카드 (SCR-CAL-01, 보드 Calendar.dc.html 276~277행, SCR-CAL-01 anniversary 상태 이미지) -->
     <string name="calendar_anniversary_mark">기념일</string>
-    <!-- 날짜 목록의 메모 카드의 "메모" 표시 (SCR-CAL-01, D-119, 보드 Calendar.dc.html 251행) -->
-    <string name="calendar_memo_mark">메모</string>
     <string name="calendar_anniversary_day_number">D+%1$d</string>
     <string name="calendar_anniversary_sub_auto">자동 기념일</string>
     <string name="calendar_anniversary_sub_mine">내가 만든 기념일</string>
@@ -80,10 +78,6 @@
 
     <!-- SCR-CAL-03 일정 작성·수정. 문구는 SCREENS.md SCR-CAL-03과 보드 AddEvent.dc.html -->
     <string name="event_edit_title_new">새로 추가</string>
-    <!-- 종류 탭 [일정 | 메모] (새로 쓸 때만, D-133, 보드 AddEvent.dc.html 28~30행) -->
-    <string name="event_edit_kind_group">종류</string>
-    <string name="event_edit_kind_event">일정</string>
-    <string name="event_edit_kind_memo">메모</string>
     <string name="event_edit_title_edit">일정 수정</string>
     <string name="event_edit_save">저장</string>
     <string name="event_edit_title_label">제목</string>
@@ -120,7 +114,7 @@
 
     <!-- 캘린더 튜토리얼 5단계 (FR-CAL-06 AC2, D-168, SCREENS.md SCR-CAL-01 "튜토리얼"). 진행 표시·[건너뛰기]는 core:designsystem -->
     <string name="calendar_tutorial_calendar">옆으로 쓸면 다른 달로 가고, 아래로 쓸어 내리면 달력을 크게 볼 수 있어요.</string>
-    <string name="calendar_tutorial_fab">여기를 누르면 일정이나 메모를 추가할 수 있어요.</string>
+    <string name="calendar_tutorial_fab">여기를 누르면 일정을 추가할 수 있어요.</string>
     <string name="calendar_tutorial_anniversary_couple">함께한 날과 기념일은 여기서 볼 수 있어요.</string>
     <string name="calendar_tutorial_anniversary_solo">기념일은 여기서 볼 수 있어요.</string>
     <string name="calendar_tutorial_memo_tab">메모는 여기서 모아 볼 수 있어요.</string>

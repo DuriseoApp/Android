@@ -38,6 +38,9 @@ import com.duriseo.android.data.local.notification.NotificationStateEntity
  *
  * 버전 7 (단위 8): `me`에 `profile_image_version`·`partner_profile_image_version`을 더했다 (API.md 3.1 `Me`·`MePartner`의 `profileImageVersion`).
  * [MIGRATION_6_7]이 열을 더한다(값은 null = 사진 없음으로 보고 다음 `GET /me`가 채운다). 6에서 올라오지 않는 옛 버전은 지우고 다시 만든다.
+ *
+ * 버전 8 (메모와 캘린더 분리, D-174): `memo`에서 `memo_date` 열과 그 인덱스, 캘린더용 날짜 목록(`DATED`) 행을 지웠다 (API.md 3.4 `Memo`에서 `memoDate` 삭제).
+ * [MIGRATION_7_8]이 `memo`를 새 모양으로 다시 만든다(날짜 목록 행은 버리고 나머지는 그대로 옮긴다). 7에서 올라오지 않는 옛 버전은 지우고 다시 만든다.
  */
 @Database(
     entities = [
@@ -51,7 +54,7 @@ import com.duriseo.android.data.local.notification.NotificationStateEntity
         NotificationEntity::class,
         NotificationStateEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 abstract class DuriseoDatabase : RoomDatabase() {

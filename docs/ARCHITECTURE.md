@@ -93,6 +93,6 @@ ViewModel → Repository.create/update/delete → (오프라인이면 즉시 Off
 
 ## 7. 시간
 
-- 일시는 `Instant`, 날짜만 있는 값(종일 일정, 기념일, 메모 날짜, 처음 만난 날)은 `LocalDate`로 다룬다 (NFR-TIME-01).
+- 일시는 `Instant`, 날짜만 있는 값(종일 일정, 기념일, 처음 만난 날)은 `LocalDate`로 다룬다 (NFR-TIME-01).
 - 날짜 선택은 1950-01-01 ~ 2050-12-31만 허용한다. 처음 만난 날은 오늘까지 (FR-CAL-01 AC6, D-74).
 - 현재 시각은 주입받은 `Clock`으로 얻는다 (테스트에서 고정하려고).

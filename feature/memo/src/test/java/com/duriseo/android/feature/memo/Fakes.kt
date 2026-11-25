@@ -72,13 +72,11 @@ fun makeMemo(
     authorId: String = MyId,
     pinned: Boolean = false,
     favorite: Boolean = false,
-    memoDate: LocalDate? = null,
     createdAt: Instant = Instant.parse("2026-10-11T01:00:00Z"),
 ) = Memo(
     id = id,
     title = title,
     body = body,
-    memoDate = memoDate,
     authorId = authorId,
     isPinned = pinned,
     pinnedAt = if (pinned) Instant.parse("2026-10-11T02:00:00Z") else null,
@@ -151,9 +149,7 @@ class FakeMemoRepository : MemoRepository {
     override fun observeFavoriteCount(): Flow<Int> = favoriteCount
     override fun observePinned(): Flow<List<Memo>> = pinned
     override fun observePinnedLoaded(): Flow<Boolean> = pinnedLoaded
-    override fun observeDated(from: LocalDate, to: LocalDate): Flow<List<Memo>> = MutableStateFlow(emptyList())
     override fun observeMemo(id: String): Flow<Memo?> = memos.map { it[id] }
-    override fun setVisibleRange(from: LocalDate, to: LocalDate) = Unit
 
     override suspend fun refreshList(view: MemoView): DataResult<Unit> {
         refreshListCalls += view
@@ -170,8 +166,6 @@ class FakeMemoRepository : MemoRepository {
         return DataResult.Success(Unit)
     }
 
-    override suspend fun refreshDated(from: LocalDate, to: LocalDate): DataResult<Unit> = DataResult.Success(Unit)
-
     override suspend fun refreshMemo(id: String): DataResult<Unit> {
         refreshMemoCalls += id
         return refreshMemoResult.alsoApplyServerAnswer(id)
@@ -187,7 +181,7 @@ class FakeMemoRepository : MemoRepository {
         writeGate?.await()
         writeFailure?.let { throw it }
         (createResult as? DataResult.Failure)?.let { return it }
-        return DataResult.Success(makeMemo("new-${created.size}", memo.title, memo.body, memoDate = memo.memoDate))
+        return DataResult.Success(makeMemo("new-${created.size}", memo.title, memo.body))
     }
 
     override suspend fun update(id: String, patch: MemoPatch): DataResult<Unit> {

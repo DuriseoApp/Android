@@ -1,14 +1,12 @@
 package com.duriseo.android.domain.memo
 
 import java.time.Instant
-import java.time.LocalDate
 
 /**
- * 메모 (API.md 3.4 `Memo`). 목록·고정·날짜·상세·생성·수정 응답이 모두 같은 모양이다.
+ * 메모 (API.md 3.4 `Memo`). 목록·고정·상세·생성·수정 응답이 모두 같은 모양이다.
  *
  * @property title 앞뒤 공백을 지운 값. 없으면 null
  * @property body 본문 전체. 공백·줄바꿈뿐이었으면 null. 미리보기는 화면이 자른다
- * @property memoDate 메모 날짜. 없으면 null
  * @property authorId 작성자. 닉네임은 `Me`·공간의 구성원 정보에서 찾는다
  * @property pinnedAt 고정한 시각. 고정이 아니면 null
  * @property isFavorite **요청자 기준** 즐겨찾기 여부 (R-06)
@@ -17,7 +15,6 @@ data class Memo(
     val id: String,
     val title: String?,
     val body: String?,
-    val memoDate: LocalDate?,
     val authorId: String,
     val isPinned: Boolean,
     val pinnedAt: Instant?,
@@ -54,7 +51,6 @@ data class MemoList(
 data class NewMemo(
     val title: String?,
     val body: String?,
-    val memoDate: LocalDate?,
     val notifyPartner: Boolean? = null,
 )
 
@@ -69,9 +65,8 @@ sealed interface FieldChange<out T> {
 data class MemoPatch(
     val title: FieldChange<String> = FieldChange.Keep,
     val body: FieldChange<String> = FieldChange.Keep,
-    val memoDate: FieldChange<LocalDate> = FieldChange.Keep,
 ) {
     /** 바뀐 것이 없으면 요청 없이 닫는다 (FR-MEMO-03 AC4, D-123) */
     val isEmpty: Boolean
-        get() = title is FieldChange.Keep && body is FieldChange.Keep && memoDate is FieldChange.Keep
+        get() = title is FieldChange.Keep && body is FieldChange.Keep
 }

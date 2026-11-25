@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Clock
-import java.time.LocalDate
 import javax.inject.Inject
 import com.duriseo.android.core.designsystem.R as DesignR
 
@@ -176,7 +175,6 @@ class MemoDetailViewModel @Inject constructor(
             author = if (mine) MemoAuthor.ME else MemoAuthor.PARTNER,
             nickname = if (mine) me.nickname else me.space.partner?.nickname.orEmpty(),
             writtenAt = DateTexts.writtenAt(createdAt, clock),
-            memoDate = memoDate?.let { DateTexts.memoDateChip(it, LocalDate.now(clock)) },
             isPinned = isPinned,
             isFavorite = isFavorite,
             canEdit = mine,

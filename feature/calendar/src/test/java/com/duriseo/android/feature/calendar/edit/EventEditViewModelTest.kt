@@ -85,56 +85,29 @@ class EventEditViewModelTest {
 
     private fun EventEditViewModel.fill(title: String = "저녁 데이트") = onAction(EventEditAction.TitleChanged(title))
 
-    // --- 종류 탭 [일정 | 메모] (D-133) ---
+    // --- 일정만 쓴다: 종류 탭 [일정 | 메모] 없음 (D-174) ---
 
     @Test
-    fun `D-133 수정할 때는 종류 탭이 없다`() = runTest {
-        events.events.value = listOf(sampleEvent(id = "e1"))
-        val vm = EventEditViewModel(
-            SavedStateHandle(
-                mapOf(CalendarRouteModel.EventEdit::eventId.name to "e1", CalendarRouteModel.EventEdit::startOnMemo.name to true),
-            ),
-            events,
-            me,
-            gate,
-            clock,
-        )
-        assertTrue(vm.uiState.value.loaded)
-        assertFalse(vm.uiState.value.showKindTabs)
-        // 메모 탭으로 열라는 인자가 있어도 수정은 일정이고, 탭을 골라도 바뀌지 않는다
-        assertEquals(EditKind.Event, vm.uiState.value.kind)
-        vm.onAction(EventEditAction.KindSelected(EditKind.Memo))
-        assertEquals(EditKind.Event, vm.uiState.value.kind)
-    }
-
-    @Test
-    fun `D-133 새로 쓸 때는 종류 탭이 있고 일정 탭으로 시작한다`() = runTest {
-        val state = create().uiState.value
-        assertTrue(state.showKindTabs)
-        assertEquals(EditKind.Event, state.kind)
-    }
-
-    @Test
-    fun `D-133 메모 탭의 FAB에서 열면 메모 탭이 골라져 있다`() = runTest {
-        val vm = EventEditViewModel(
-            SavedStateHandle(mapOf(CalendarRouteModel.EventEdit::startOnMemo.name to true)),
-            events,
-            me,
-            gate,
-            clock,
-        )
-        assertEquals(EditKind.Memo, vm.uiState.value.kind)
-    }
-
-    @Test
-    fun `D-133 탭을 오가도 일정 입력은 그대로 남는다`() = runTest {
+    fun `FR-CAL-02 AC10 새 일정 작성 화면은 일정만 쓴다`() = runTest {
         val vm = create()
+        assertTrue(vm.uiState.value.loaded)
+        assertFalse(vm.uiState.value.isEdit)
+
         vm.fill("저녁 데이트")
-        vm.onAction(EventEditAction.KindSelected(EditKind.Memo))
-        assertEquals(EditKind.Memo, vm.uiState.value.kind)
-        vm.onAction(EventEditAction.KindSelected(EditKind.Event))
-        assertEquals("저녁 데이트", vm.uiState.value.title)
-        assertTrue(events.created.isEmpty())
+        vm.onAction(EventEditAction.SaveClicked)
+
+        // 저장하면 일정이 만들어진다 (메모로 바꾸는 탭이 없다)
+        assertEquals(1, events.created.size)
+        assertEquals("저녁 데이트", events.created.single().title)
+    }
+
+    @Test
+    fun `FR-CAL-02 AC10 캘린더 진입점이 넘기는 날짜는 일정의 시작 날짜가 된다`() = runTest {
+        // FAB·"이 날에 추가하기"·날짜 칸 두 번 누르기는 모두 이 경로(date)로 일정 작성만 연다 (D-173, D-174)
+        val state = create("2026-10-17").uiState.value
+
+        assertEquals(LocalDate.of(2026, 10, 17), state.startDate)
+        assertFalse(state.isEdit)
     }
 
     // --- 새 일정 기본값 (D-114, Q-17) ---

@@ -1,12 +1,9 @@
 package com.duriseo.android.domain.format
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.Clock
-import java.time.DayOfWeek
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 
 class DateTextsTest {
@@ -58,25 +55,5 @@ class DateTextsTest {
 
         assertEquals(WrittenAt.Yesterday, DateTexts.writtenAt(Instant.parse("2026-12-31T03:00:00Z"), newYear))
         assertEquals(WrittenAt.OtherYear(2026, 12, 30), DateTexts.writtenAt(Instant.parse("2026-12-30T03:00:00Z"), newYear))
-    }
-
-    @Test
-    fun `D-129 다른 해 메모 날짜 칩에는 연도가 붙는다`() {
-        val today = LocalDate.of(2026, 11, 12)
-
-        // 올해: 연도 없음 "10월 17일 (토)"
-        assertEquals(MemoDateChip(null, 10, 17, DayOfWeek.SATURDAY), DateTexts.memoDateChip(LocalDate.of(2026, 10, 17), today))
-        // 다른 해: "2027년 10월 17일 (일)"
-        assertEquals(MemoDateChip(2027, 10, 17, DayOfWeek.SUNDAY), DateTexts.memoDateChip(LocalDate.of(2027, 10, 17), today))
-        assertEquals(MemoDateChip(1999, 1, 1, DayOfWeek.FRIDAY), DateTexts.memoDateChip(LocalDate.of(1999, 1, 1), today))
-    }
-
-    @Test
-    fun `D-129 메모 날짜 칩의 올해는 기기 시계의 오늘로 정한다`() {
-        // 서울은 이미 2027년이지만 UTC로는 아직 2026년이다
-        val instant = Instant.parse("2026-12-31T16:00:00Z")
-
-        assertEquals(2026, DateTexts.memoDateChip(LocalDate.of(2026, 12, 31), Clock.fixed(instant, seoul)).year)
-        assertNull(DateTexts.memoDateChip(LocalDate.of(2026, 12, 31), Clock.fixed(instant, ZoneId.of("UTC"))).year)
     }
 }

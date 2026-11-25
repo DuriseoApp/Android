@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * 메모 캐시. 읽기 순서는 응답 위치([MemoEntity.position]) 그대로다.
- * 날짜는 `YYYY-MM-DD`라 문자열 비교가 날짜 비교와 같다.
  */
 @Dao
 abstract class MemoDao {
@@ -61,25 +60,6 @@ abstract class MemoDao {
         insertMemos(items.mapIndexed { i, e -> e.copy(listType = MEMO_LIST_PINNED, position = i) })
         // 받은 적이 있다는 표시. 빈 목록도 "고정 없음"으로 확정된다
         upsertState(MemoPageStateEntity(MEMO_STATE_PINNED, null, null, null))
-    }
-
-    // --- 날짜 메모 범위 ---
-
-    @Query(
-        """SELECT * FROM memo
-            WHERE list_type = 'DATED' AND memo_date >= :from AND memo_date <= :to
-            ORDER BY memo_date, position""",
-    )
-    abstract fun observeDated(from: String, to: String): Flow<List<MemoEntity>>
-
-    @Query("DELETE FROM memo WHERE list_type = 'DATED' AND memo_date >= :from AND memo_date <= :to")
-    abstract suspend fun deleteDated(from: String, to: String)
-
-    /** 서버 응답으로 범위를 바꾼다: 그 범위의 날짜 메모를 지우고 응답 위치대로 새로 넣는다 (한 트랜잭션) */
-    @Transaction
-    open suspend fun replaceDated(from: String, to: String, entities: List<MemoEntity>) {
-        deleteDated(from, to)
-        insertMemos(entities.map { it.copy(listType = MEMO_LIST_DATED) })
     }
 
     // --- 상세 ---

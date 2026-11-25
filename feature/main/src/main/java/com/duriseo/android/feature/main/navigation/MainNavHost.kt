@@ -65,8 +65,6 @@ fun MainNavHost(
             padding = padding,
             onOpenMenu = navigator::navigateToSettings,
             onOpenEvent = navigator::navigateToEventDetail,
-            // 날짜 목록의 메모 카드 -> SCR-MEMO-03 (단위 6 묶음 C)
-            onOpenMemo = navigator::navigateToMemoDetail,
             onOpenCreate = navigator::navigateToEventCreate,
             onOpenEdit = navigator::navigateToEventEdit,
             onOpenAnniversaries = navigator::navigateToAnniversaries,
@@ -76,8 +74,6 @@ fun MainNavHost(
             onBack = navigator::navigateUp,
             onShowSnackBar = onShowSnackBar,
             snackbarVisible = snackbarVisible,
-            // 새 작성 화면의 [메모] 탭은 feature:memo 부품으로 채운다 (D-133)
-            memoTab = { onClose, onSnack -> rememberEventEditMemoTab(onClose, onSnack) },
         )
         // 기념일 (SCR-ANNIV-01·02). 캘린더(앱바·기념일 카드)에서 `navigateToAnniversaries`로 들어간다
         anniversaryNavGraph(
@@ -87,7 +83,7 @@ fun MainNavHost(
             onOpenEdit = navigator::navigateToAnniversaryEdit,
             onShowSnackBar = onShowSnackBar,
         )
-        // 메모 (SCR-MEMO-01 탭 루트, SCR-MEMO-02·03·04). 목록·핀 카드는 상세로, FAB은 [메모] 탭이 골라진 작성 화면(SCR-CAL-03)으로 간다 (D-133).
+        // 메모 (SCR-MEMO-01 탭 루트, SCR-MEMO-02·03·04). 목록·핀 카드는 상세로, FAB은 메모 작성 화면(SCR-MEMO-04, 탭 없음)으로 간다 (D-174).
         // 상세·고정 전체·수정은 하단 탭이 없다. 수정이 404면 수정과 상세를 함께 닫는다 (D-121)
         memoNavGraph(
             padding = padding,

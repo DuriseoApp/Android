@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.component.DuriseoAvatarPhoto
-import com.duriseo.android.core.designsystem.format.memoDateChipText
 import com.duriseo.android.core.designsystem.format.writtenAtText
 import com.duriseo.android.core.designsystem.theme.Brand50
 import com.duriseo.android.core.designsystem.theme.Brand500
@@ -80,16 +79,6 @@ private val RowLineGap = 3.dp
 private val RowButtonGap = 2.dp
 private val DotSize = 7.dp
 private val DotGap = 6.dp
-
-/** 메모 날짜 칩: 높이 22, 안쪽 좌우 8, 달력 아이콘 12, 사이 4 / 상세는 높이 28, 좌우 10, 아이콘 14, 사이 5 */
-private val ChipHeight = 22.dp
-private val ChipPaddingHorizontal = DuriseoSpacing.Space2
-private val ChipIconSize = 12.dp
-private val ChipGap = 4.dp
-private val ChipLargeHeight = 28.dp
-private val ChipLargePaddingHorizontal = 10.dp
-private val ChipLargeIconSize = 14.dp
-private val ChipLargeGap = 5.dp
 
 /** 핀·별 아이콘 20, 터치 44 (`Memo.dc.html` 41~45행) */
 private val ToggleIconSize = 20.dp
@@ -185,49 +174,8 @@ internal fun FavoriteToggleButton(
 }
 
 /**
- * 메모 날짜 칩: 달력 아이콘 + "10월 17일 (토)". 올해가 아니면 연도가 붙고 높이·글자 크기는 그대로, 폭만 늘어난다 (D-129).
- * 접근성 문구는 "메모 날짜 10월 17일 (토)".
- *
- * @param background 카드 위에서는 `surface-0`, 흰 면 위에서는 `surface-100` (design-system "메모 날짜 칩")
- * @param large 상세 화면: 높이 28, 글자 13
- */
-@Composable
-internal fun MemoDateBadge(
-    chip: com.duriseo.android.domain.format.MemoDateChip,
-    background: Color,
-    modifier: Modifier = Modifier,
-    large: Boolean = false,
-) {
-    val text = memoDateChipText(chip)
-    val description = stringResource(R.string.memo_date_description, text)
-    Row(
-        modifier = modifier
-            .height(if (large) ChipLargeHeight else ChipHeight)
-            .background(background, DuriseoShapes.Xs)
-            .padding(horizontal = if (large) ChipLargePaddingHorizontal else ChipPaddingHorizontal)
-            .semantics { contentDescription = description },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(if (large) ChipLargeGap else ChipGap),
-    ) {
-        Icon(
-            painter = painterResource(DesignR.drawable.ic_calendar),
-            contentDescription = null,
-            modifier = Modifier.size(if (large) ChipLargeIconSize else ChipIconSize),
-            tint = Ink700,
-        )
-        Text(
-            text = text,
-            style = (if (large) MaterialTheme.typography.labelLarge else MaterialTheme.typography.labelMedium)
-                .copy(fontWeight = FontWeight.SemiBold),
-            color = Ink700,
-            maxLines = 1,
-        )
-    }
-}
-
-/**
  * 핀 카드 (SCR-MEMO-01 고정 영역, SCR-MEMO-02). `brand-50` 면, 작성자 아바타·닉네임·작성 시각(D-129, unit-6.md 확인 필요 1), 핀·별 버튼,
- * 제목, 미리보기 2줄, 메모 날짜 칩. 본문을 누르면 상세다.
+ * 제목, 미리보기 2줄. 본문을 누르면 상세다.
  *
  * @param onFavoriteClick null이면 별 버튼이 없다 (SCR-MEMO-02는 핀 버튼만 있다, `PinnedAll.dc.html` 34행)
  */
@@ -291,15 +239,12 @@ internal fun PinCard(
                     )
                 }
             }
-            item.memoDate?.let { chip ->
-                MemoDateBadge(chip = chip, background = Surface0, modifier = Modifier.padding(top = CardBodyGap))
-            }
         }
     }
 }
 
 /**
- * 메모 행 (SCR-MEMO-01 전체 메모). 제목, 미리보기 한 줄, 사람 색 점·닉네임·작성일·메모 날짜 칩, 핀·별 버튼, 아래 선 `line-100`.
+ * 메모 행 (SCR-MEMO-01 전체 메모). 제목, 미리보기 한 줄, 사람 색 점·닉네임·작성일, 핀·별 버튼, 아래 선 `line-100`.
  */
 @Composable
 internal fun MemoRow(
@@ -354,7 +299,6 @@ internal fun MemoRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                item.memoDate?.let { chip -> MemoDateBadge(chip = chip, background = Surface100) }
             }
         }
         PinToggleButton(pinned = item.isPinned, onClick = onPinClick)

@@ -35,7 +35,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
-import java.time.LocalDate
 
 /** 메모 API 11개 경로 (API.md 3.4 "메모") */
 class MemoRemoteDataSourceTest {
@@ -63,13 +62,13 @@ class MemoRemoteDataSourceTest {
 
     private fun bodyOf(request: RecordedRequest): JsonObject = Json.parseToJsonElement(request.body.readUtf8()).jsonObject
 
-    /** 날짜·제목이 있는 내 메모, 고정됨 */
-    private val fullJson = """{"id":"m1","title":"장보기","body":"우유\n계란","memoDate":"2026-10-17","authorId":"u1",
+    /** 제목이 있는 내 메모, 고정됨 (`memoDate`가 없는 응답, D-174) */
+    private val fullJson = """{"id":"m1","title":"장보기","body":"우유\n계란","authorId":"u1",
         "isPinned":true,"pinnedAt":"2026-10-18T01:00:00Z","isFavorite":true,
         "createdAt":"2026-10-08T00:12:00Z","updatedAt":"2026-10-09T00:00:00Z"}"""
 
     /** 값이 없는 필드는 null로 온다 (1.1) */
-    private val emptyJson = """{"id":"m2","title":null,"body":"본문만","memoDate":null,"authorId":"u2",
+    private val emptyJson = """{"id":"m2","title":null,"body":"본문만","authorId":"u2",
         "isPinned":false,"pinnedAt":null,"isFavorite":false,
         "createdAt":"2026-10-08T00:12:00Z","updatedAt":"2026-10-08T00:12:00Z"}"""
 
@@ -90,14 +89,12 @@ class MemoRemoteDataSourceTest {
         val m = page.items[0]
         assertEquals("장보기", m.title)
         assertEquals("우유\n계란", m.body)
-        assertEquals(LocalDate.of(2026, 10, 17), m.memoDate)
         assertTrue(m.isPinned)
         assertEquals(Instant.parse("2026-10-18T01:00:00Z"), m.pinnedAt)
         assertTrue(m.isFavorite)
         assertEquals(Instant.parse("2026-10-08T00:12:00Z"), m.createdAt)
         val empty = page.items[1]
         assertNull(empty.title)
-        assertNull(empty.memoDate)
         assertNull(empty.pinnedAt)
     }
 
@@ -141,22 +138,10 @@ class MemoRemoteDataSourceTest {
     }
 
     @Test
-    fun `API GET memos dated는 from to를 보낸다`() = runTest {
-        server.enqueue(jsonResponse(200, """{"items":[$fullJson]}"""))
-
-        val items = remote.dated(LocalDate.of(2026, 9, 30), LocalDate.of(2026, 11, 1)).value()
-
-        val request = server.takeRequest()
-        assertEquals("GET", request.method)
-        assertEquals("/api/v1/memos/dated?from=2026-09-30&to=2026-11-01", request.path)
-        assertEquals(LocalDate.of(2026, 10, 17), items.single().memoDate)
-    }
-
-    @Test
-    fun `API POST memos는 정리한 title body memoDate notifyPartner를 보내고 Memo를 읽는다`() = runTest {
+    fun `API POST memos는 정리한 title body notifyPartner를 보내고 memoDate 없이 Memo를 읽는다`() = runTest {
         server.enqueue(jsonResponse(201, fullJson))
 
-        val made = remote.create(NewMemo("  장보기  ", "우유\n계란", LocalDate.of(2026, 10, 17), notifyPartner = true)).value()
+        val made = remote.create(NewMemo("  장보기  ", "우유\n계란", notifyPartner = true)).value()
 
         val request = server.takeRequest()
         assertEquals("POST", request.method)
@@ -164,7 +149,7 @@ class MemoRemoteDataSourceTest {
         val body = bodyOf(request)
         assertEquals("장보기", body["title"]?.jsonPrimitive?.content)
         assertEquals("우유\n계란", body["body"]?.jsonPrimitive?.content)
-        assertEquals("2026-10-17", body["memoDate"]?.jsonPrimitive?.content)
+        assertEquals(setOf("title", "body", "notifyPartner"), body.keys)
         assertTrue(body["notifyPartner"]!!.jsonPrimitive.boolean)
         assertEquals("m1", made.id)
     }
@@ -174,7 +159,7 @@ class MemoRemoteDataSourceTest {
         server.enqueue(jsonResponse(201, emptyJson))
 
         // 제목은 공백뿐이라 없는 것, 본문 공백은 보존
-        remote.create(NewMemo("   ", "  본문  ", null)).value()
+        remote.create(NewMemo("   ", "  본문  ")).value()
 
         val body = bodyOf(server.takeRequest())
         assertEquals(setOf("body"), body.keys)
@@ -182,13 +167,7 @@ class MemoRemoteDataSourceTest {
     }
 
     @Test
-    fun `API POST memos의 DATE_OUT_OF_RANGE와 둘 다 빈 VALIDATION_FAILED를 읽는다`() = runTest {
-        server.enqueue(
-            jsonResponse(
-                400,
-                """{"code":"DATE_OUT_OF_RANGE","message":"m","details":{"fields":[{"field":"memoDate","reason":"OUT_OF_RANGE"}]},"traceId":"t"}""",
-            ),
-        )
+    fun `API POST memos의 둘 다 빈 VALIDATION_FAILED를 읽는다`() = runTest {
         server.enqueue(
             jsonResponse(
                 400,
@@ -196,10 +175,8 @@ class MemoRemoteDataSourceTest {
             ),
         )
 
-        val range = remote.create(NewMemo("제목", null, LocalDate.of(1949, 1, 1))).apiError()
-        val required = remote.create(NewMemo(null, null, null)).apiError()
+        val required = remote.create(NewMemo(null, null)).apiError()
 
-        assertEquals(ErrorCode.DATE_OUT_OF_RANGE, range.knownCode)
         assertEquals(
             ErrorDetails.Fields(listOf(FieldError("title", "REQUIRED"), FieldError("body", "REQUIRED"))),
             required.details,
@@ -240,25 +217,21 @@ class MemoRemoteDataSourceTest {
 
         remote.update(
             "m1",
-            MemoPatch(title = FieldChange.Set(null), memoDate = FieldChange.Set(null), body = FieldChange.Set("본문만")),
+            MemoPatch(title = FieldChange.Set(null), body = FieldChange.Set("본문만")),
         ).value()
 
         val body = bodyOf(server.takeRequest())
-        assertEquals(setOf("title", "body", "memoDate"), body.keys)
+        assertEquals(setOf("title", "body"), body.keys)
         assertEquals(JsonNull, body["title"])
-        assertEquals(JsonNull, body["memoDate"])
         assertEquals("본문만", body["body"]?.jsonPrimitive?.content)
     }
 
     @Test
-    fun `API PATCH memos는 날짜를 YYYY-MM-DD로 보내고 403 NOT_AUTHOR를 읽는다`() = runTest {
-        server.enqueue(jsonResponse(200, fullJson))
+    fun `API PATCH memos의 403 NOT_AUTHOR를 읽는다`() = runTest {
         server.enqueue(jsonResponse(403, errorJson("NOT_AUTHOR")))
 
-        remote.update("m1", MemoPatch(memoDate = FieldChange.Set(LocalDate.of(2027, 1, 5)))).value()
         val error = remote.update("m1", MemoPatch(title = FieldChange.Set("x"))).apiError()
 
-        assertEquals("2027-01-05", bodyOf(server.takeRequest())["memoDate"]?.jsonPrimitive?.content)
         assertEquals(ErrorCode.NOT_AUTHOR, error.knownCode)
     }
 

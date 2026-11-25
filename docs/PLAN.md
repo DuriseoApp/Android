@@ -72,10 +72,10 @@
 - 탭 전환 상태 저장·복원, 비행기 모드에서 오프라인 감지(`AndroidNetworkMonitor`), Google 글꼴 받기.
 - Keystore 키셋·마스터 키를 지운 뒤 다시 만들고 저장되는지, TalkBack 포커스·하드웨어 키보드 초점(다이얼로그 `DuriseoDialogLayer`).
 - Google 로그인, 카카오 로그인(카카오톡 설치·미설치), 두 기기로 같은 계정 로그인 → 이전 기기 `SESSION_REPLACED` 안내, 앱 삭제 후 재설치 → 시작 화면, 카카오 회원 탈퇴 뒤 카카오 계정에서 연결 끊김.
-- **Room 스키마 JSON**: DB 버전 4(단위 5)·5(단위 6)·6(단위 7)·7(단위 8)의 JSON(이전 버전 JSON이 없으면 함께)을 맥에서 빌드해 커밋해요.
+- **Room 스키마 JSON**: DB 버전 4(단위 5)·5(단위 6)·6(단위 7)·7(단위 8)·8(메모와 캘린더 분리 D-174)의 JSON(이전 버전 JSON이 없으면 함께)을 맥에서 빌드해 커밋해요.
 - 단위 8: 사진 고르기·카메라·25MP 줄이기·상대 기기 반영·로그아웃 뒤 사진 캐시, Play 설치 앱의 인앱 업데이트, 메일 앱 없는 기기, 라이선스 목록 (unit-8.md 남은 일).
 - 단위 7: Secret `GOOGLE_SERVICES_JSON` 등록, 맥 `app/google-services.json` 배치, Room 스키마 JSON 6, 서버 Firebase 키 확인 뒤 실기기 2대로 푸시·SYNC·알림 권한 요청 시점·SCR-NOTI-01·SCR-SET-02 확인.
-- 단위 6 Preview를 그림과 대조: 메모 화면 전체(SCR-MEMO-01~04), 작성 화면 메모 탭(`EventEditPreview_MemoTab`(main), `EventEditPreview_KindTabs`(calendar)), `CalendarPreview_Memo`.
+- 단위 6 Preview를 그림과 대조: 메모 화면 전체(SCR-MEMO-01~04), 메모 작성 화면(`MemoEditPreview_*`, 탭·날짜 영역 없음). 캘린더에서 메모 카드·점이 사라진 모양(`CalendarPreview_*`)과 일정 작성 화면(종류 탭 없음, `EventEditPreview_*`).
 - 단위 5 화면 Preview를 그림과 대조: 기념일 화면, 캘린더 기념일 카드·고리, 당겨서 새로고침 호 모양, 시간 휠 스냅(`rememberSnapFlingBehavior`, 콘텐츠 패딩 88), 날짜 시트 연도·월, 로딩 덮개(하단 탭까지 덮는지), SCR-COUPLE-02~04·SCR-SET-01 상태. 실기기에서 기기 시간대를 바꾼 뒤 서버에 새 시간대가 가는지(Q-19 ①).
 - 기기 2대(서로 다른 Google·카카오 계정): 초대코드 연결·해제, 연결 직후 시트의 기록 개수(`importCounts`)와 연결 정보의 "연결한 날"(`linkedAt`, 서버 배포됨), 상대 일정·'함께' 일정, SCR-CAL-01 스낵바가 하단 탭 위에 뜨는지.
 
