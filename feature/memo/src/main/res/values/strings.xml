@@ -24,8 +24,6 @@
     <string name="memo_favorite_on_description">즐겨찾기 해제</string>
     <string name="memo_favorite_off_description">즐겨찾기</string>
 
-    <!-- 메모 날짜 칩의 접근성 문구: "메모 날짜 10월 17일 (토)" (design-system "메모 날짜 칩") -->
-
     <!-- SCR-MEMO-02 고정 메모 전체 -->
     <string name="memo_pinned_title">고정된 메모 %1$d</string>
     <string name="memo_pinned_description">최근에 고정한 순서예요. 핀을 누르면 고정이 풀려요.</string>

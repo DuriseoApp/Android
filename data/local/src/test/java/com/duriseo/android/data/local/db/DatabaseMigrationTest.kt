@@ -114,6 +114,18 @@ class DatabaseMigrationTest {
         assertEquals(false, "memo_date" in columns)
         assertEquals(true, "title" in columns)
 
+        // 인덱스는 Room 엔티티의 두 개만 남는다 (이름이 틀리면 Room이 앱 시작 때 스키마 검증에 실패한다)
+        val indexes = buildList {
+            db.query("PRAGMA index_list(`memo`)").use { cursor ->
+                val nameIndex = cursor.getColumnIndexOrThrow("name")
+                while (cursor.moveToNext()) {
+                    val name = cursor.getString(nameIndex)
+                    if (!name.startsWith("sqlite_autoindex")) add(name)
+                }
+            }
+        }
+        assertEquals(setOf("index_memo_list_type_position", "index_memo_memo_id"), indexes.toSet())
+
         // 날짜 목록 행은 버리고 나머지는 그대로이며 Room 엔티티로 읽힌다
         val rows = database.memoDao().observeList("NEWEST").first()
         assertEquals(listOf("m1"), rows.map { it.memoId })
