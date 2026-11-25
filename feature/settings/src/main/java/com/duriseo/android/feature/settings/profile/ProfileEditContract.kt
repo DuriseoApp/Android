@@ -129,7 +129,7 @@ sealed interface ProfileEditSideEffect {
 
 /** 사진 오류 문구 (D-147) */
 @StringRes
-internal fun PhotoError.toMessageRes(): Int = when (this) {
+internal fun PhotoError.toPhotoMessageRes(): Int = when (this) {
     PhotoError.TOO_LARGE -> R.string.profile_photo_error_too_large
     PhotoError.TYPE_NOT_ALLOWED -> R.string.profile_photo_error_type
 }

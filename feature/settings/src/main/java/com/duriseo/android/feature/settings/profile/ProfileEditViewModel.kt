@@ -118,7 +118,7 @@ class ProfileEditViewModel @Inject constructor(
                 is PickedPhotoResult.Ready ->
                     local.update { if (it.saving) it else it.copy(selection = PhotoSelection.Picked(result.photo)) }
                 is PickedPhotoResult.Rejected ->
-                    result.error.toMessageResOrNull()?.let { effectChannel.trySend(ProfileEditSideEffect.ShowMessage(it)) }
+                    effectChannel.trySend(ProfileEditSideEffect.ShowMessage(result.error.toPhotoMessageRes()))
                 PickedPhotoResult.Failed ->
                     effectChannel.trySend(ProfileEditSideEffect.ShowMessage(DesignR.string.error_common))
             }
@@ -144,7 +144,7 @@ class ProfileEditViewModel @Inject constructor(
                 if (failure == null) {
                     effectChannel.trySend(ProfileEditSideEffect.Close)
                 } else {
-                    val messageRes = failure.photoErrorOrNull()?.toMessageRes() ?: failure.toMessageResOrNull()
+                    val messageRes = failure.photoErrorOrNull()?.toPhotoMessageRes() ?: failure.toMessageResOrNull()
                     // 세션이 끊겼다는 응답이면 안내 없이 세션 종료 흐름이 시작 화면으로 보낸다
                     messageRes?.let { effectChannel.trySend(ProfileEditSideEffect.ShowMessage(it)) }
                 }
