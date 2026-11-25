@@ -18,10 +18,17 @@ import javax.inject.Singleton
 class SocialSdkInitializer @Inject constructor(
     @ApplicationContext private val context: Context,
     private val config: AppConfig,
+    private val kakaoState: KakaoSdkState,
 ) {
     fun initialize() {
         if (config.kakaoNativeAppKey.isNotBlank()) {
-            KakaoSdk.init(context, config.kakaoNativeAppKey)
+            try {
+                KakaoSdk.init(context, config.kakaoNativeAppKey)
+                kakaoState.markInitialized()
+            } catch (e: Exception) {
+                // 초기화가 실패하면 SDK를 부르지 않는다 (로그인은 공통 오류로 끝난다)
+                Logger.w(SOCIAL_LOG_TAG, "Kakao SDK 초기화 실패 ${e.javaClass.simpleName}")
+            }
         }
         if (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
             logDiagnostics()

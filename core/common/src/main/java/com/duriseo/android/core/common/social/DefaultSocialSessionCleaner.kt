@@ -22,6 +22,7 @@ import kotlin.coroutines.resume
 class DefaultSocialSessionCleaner @Inject constructor(
     @ApplicationContext private val context: Context,
     private val config: AppConfig,
+    private val kakaoState: KakaoSdkState,
 ) : SocialSessionCleaner {
 
     override suspend fun clear() {
@@ -30,8 +31,8 @@ class DefaultSocialSessionCleaner @Inject constructor(
     }
 
     private suspend fun clearKakao() {
-        // SDK를 초기화하지 않았으면(키 없음) 부르지 않는다
-        if (config.kakaoNativeAppKey.isBlank()) return
+        // SDK를 초기화하지 않았으면(키 없음, 초기화 실패) 부르지 않는다. 부르면 죽는다
+        if (!kakaoState.isUsable(config)) return
         try {
             suspendCancellableCoroutine<Unit> { continuation ->
                 UserApiClient.instance.logout { error ->
