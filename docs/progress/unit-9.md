@@ -1,6 +1,6 @@
 # 단위 9: 운영 — 공지 팝업·업데이트 팝업·기기 정보
 
-> 브랜치: `feat/9-app-ops` · PR: #38 · 상태: 진행 중
+> 브랜치: `feat/9-app-ops` · PR: #38 · 상태: PR 완료
 > 기준: PRD v0.22, SCREENS.md(캔버스 버전 51), API.md 1장(공통 요청 헤더)·1.1·3.1 `PUT /me/devices`·3.7·4.9·5장 426·R-20
 > 디자인 이슈: #37 (Closes)
 
@@ -136,8 +136,12 @@
 | 회차 | Critical | Major | 비고 |
 | --- | --- | --- | --- |
 | 1회차 | 0 | 6 | 팝업 결과 순서·426 보호(M1), 426 닫기는 새 서버 목록으로만(M2), 426 공통 스낵바(M3), 다음 팝업 이미지 동안 닫기(M4), 시스템 바 inset(M5), 이미지 요청 캐시 키(M6), Minor 9건 모두 수정 |
+| 1회차 수정 확인 | 0 | 0 | 리드가 diff로 확인(Major 수정분, 재리뷰 없음). CI에서 `PhotoError.toMessageRes` 이름이 규칙 테스트에 걸려 `toPhotoMessageRes`로 바꿈(e4e291d) |
 
 ## 남은 일
+
+- CI: 모든 단계 초록불 (firebase-config BoM 34.4.0, coil-core 추가 확인됨).
+- Docs 후속: 링크로 나갔다 돌아올 때(결정 17)·서버 실패 때 서버 공지 유지(결정 18)·Remote Config 3초 대기(결정 1)·426 팝업 유지(결정 2)를 SCREENS/API 4.9에 적기.
 
 - 사람(맥): Room 변경 없음(DataStore만). Firebase 콘솔에 Remote Config 키 `app_notices`·`app_update_rules` 만들기(값 `{"items":[]}`).
 - 사람(실기기): 관리자 API로 공지·규칙을 넣고 앱 실행·복귀·Remote Config 변경 때 뜨는지, 426, Play 설치 앱의 즉시 업데이트, 시트·다이얼로그 위에 뜨는지, TalkBack.
