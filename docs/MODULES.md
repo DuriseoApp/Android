@@ -65,6 +65,7 @@ PRD에 화면이 추가되면 이 표에 먼저 넣고 모듈을 정한다.
 | 카카오 로그인 | Kakao SDK (`v2-user` 2.21.0). `settings.gradle.kts`에 `devrepo.kakao.com` 저장소를 `com.kakao.*` 그룹만 받도록 추가 | 2 (추가됨, 버전은 CI로 확인) |
 | 테스트: 메모리 Room | Robolectric 4.15.1 + `androidx.test:core` 1.6.1 (`data:local`, `data:repository`의 `testImplementation`. `feature:settings`도: `SavedStateHandle.toRoute` 테스트) | 2 (추가됨) |
 | 푸시 | Firebase Messaging (`firebase-bom` 34.4.0 + `firebase-messaging`)와 google-services 플러그인 4.4.3. 플러그인은 `app/google-services.json`이 있을 때만 적용 | 7 (추가됨, 버전은 CI로 확인) |
+| 운영 팝업 | Firebase Remote Config (`firebase-bom` 34.4.0 + `firebase-config`, `data:remote`). 키 `app_notices`·`app_update_rules`, 가져오기 간격 300초, 실시간 리스너. `google-services.json`이 없으면 Remote Config 없이 서버 값만 씀. 팝업 `https://` 이미지는 토큰·공통 헤더 없는 별도 OkHttp의 Coil `ImageLoader`로 받음(새 라이브러리 없음) | 9 (추가됨, 버전은 CI로 확인) |
 | 프로필 이미지 | Coil 3 (`coil-compose`·`coil-core`·`coil-network-okhttp` 3.3.0). `coil-network-okhttp`에 앱의 "인증" OkHttp(`@Authed`)를 넣어 Bearer·401 갱신을 그대로 씀. 버전은 CI로 확인 | 8 (추가됨) |
 | 사진 회전(EXIF) | `androidx.exifinterface:exifinterface` 1.4.1 (`feature:settings`, 25MP를 넘는 사진을 줄일 때 방향 읽기) | 8 (추가됨, 버전은 CI로 확인) |
 | 인앱 업데이트 | `com.google.android.play:app-update-ktx` 2.1.0 (`core:common`, FLEXIBLE 방식. 코드는 `app-update`의 `AppUpdateManager` 등을 쓰고 ktx는 `requestAppUpdateInfo`만 씀). 버전은 CI로 확인 | 8 (추가됨, 버전은 CI로 확인) |

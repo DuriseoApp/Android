@@ -23,6 +23,10 @@ dependencies {
     implementation(libs.coil.core)
     implementation(libs.coil.network.okhttp)
 
+    // 공지·업데이트 팝업의 Remote Config (docs/MODULES.md 3장, 단위 9). BoM이 버전을 정한다
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.config)
+
     implementation(libs.androidx.core.ktx)
 
     testImplementation(libs.junit)

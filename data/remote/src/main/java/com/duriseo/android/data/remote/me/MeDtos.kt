@@ -84,6 +84,12 @@ data class UpdateMeRequest(
 data class RegisterDeviceRequest(
     val fcmToken: String,
     val platform: String? = null,
+    /** Android는 API 레벨 문자열 (예 `"34"`, 최대 20자, D-182) */
+    val osVersion: String? = null,
+    /** versionName (최대 50자) */
+    val appVersion: String? = null,
+    /** versionCode (0 이상) */
+    val appBuild: Long? = null,
 ) {
     override fun toString(): String = "RegisterDeviceRequest(platform=$platform, fcmToken=***)"
 }

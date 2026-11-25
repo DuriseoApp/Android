@@ -42,9 +42,26 @@ class MeRemoteDataSource @Inject constructor(
 
     suspend fun deleteMe(): DataResult<Unit> = apiCaller.callUnit { api.deleteMe() }
 
-    /** `PUT /me/devices {fcmToken, platform}` (204, 멱등 upsert). 토큰은 로그에 남기지 않는다 (NFR-SEC-01) */
-    suspend fun putDevice(fcmToken: String): DataResult<Unit> =
-        apiCaller.callUnit { api.putDevice(RegisterDeviceRequest(fcmToken = fcmToken, platform = "ANDROID")) }
+    /**
+     * `PUT /me/devices {fcmToken, platform, osVersion, appVersion, appBuild}` (204, 멱등 upsert, D-182, FR-APP-03 AC2).
+     * 서버는 보낸 값만 저장하고 안 보낸 값은 null로 둔다. 토큰은 로그에 남기지 않는다 (NFR-SEC-01)
+     */
+    suspend fun putDevice(
+        fcmToken: String,
+        osVersion: String? = null,
+        appVersion: String? = null,
+        appBuild: Long? = null,
+    ): DataResult<Unit> = apiCaller.callUnit {
+        api.putDevice(
+            RegisterDeviceRequest(
+                fcmToken = fcmToken,
+                platform = "ANDROID",
+                osVersion = osVersion,
+                appVersion = appVersion,
+                appBuild = appBuild,
+            ),
+        )
+    }
 
     /** `GET /space` (API.md 3.2) */
     suspend fun getSpace(): DataResult<Space> = apiCaller.call { api.getSpace() }.map { it.toDomain() }

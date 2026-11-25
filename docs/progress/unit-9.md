@@ -78,9 +78,27 @@
 6. **Play 스토어 페이지**: `market://details?id=com.duriseo.android`, 열 앱이 없으면 `https://play.google.com/store/apps/details?id=com.duriseo.android`.
 7. **모듈**: 팝업 화면은 새 모듈 `feature:appops`(`feature:main`이 맨 위층에 둠), 규칙·순서 판단은 `domain`의 `appops` 패키지(순수 Kotlin), Remote Config·서버 읽기는 `data:remote`의 `appops/`, "오늘 하루 안 보기"는 `data:local`의 기기 단위 키.
 
+묶음 A를 구현하며 문서에 없어 구현 담당이 정한 것 (리드 확인 필요):
+
+8. **합친 뒤에 거른다**: 같은 `id`는 Remote Config 값으로 하나로 합친 다음 기간·플랫폼·규칙 맞춤을 거른다. Remote Config 쪽 값이 기간 밖이면 서버에 같은 `id`가 유효해도 안 뜬다(문서의 "같은 id는 Remote Config 값"을 그대로 따름).
+9. **"오늘 하루 안 보기"는 버튼이 있는 종류(알리는 공지·권장)에만 적용**한다. 앱을 막는 공지·강제는 기록이 있어도 숨기지 않는다. 저장은 설정 DataStore에 `id`마다 문자열 키 `popup_hidden_notice_<id>`·`popup_hidden_rule_<id>`, 값은 숨긴 날짜(`YYYY-MM-DD`, 기기 시간대). `DeviceLevelKeys.isDeviceLevel(key)`가 이름 접두어로 로그아웃 정리에서 남긴다(`ALL`은 Boolean 고정 키 그대로). 지난·읽을 수 없는 값은 `hiddenIds()`를 부를 때 지운다.
+10. **서버 값은 공지와 규칙 두 조회가 모두 성공해야** 쓴다. 하나라도 실패하면 `server = null`(Remote Config 값만).
+11. **값 거르기 추가 건너뛰기**: 공지의 `id` 규칙(`[a-z0-9_-]` 1~50자) 위반, `closable` 없음·boolean 아님, `platform`이 `ANDROID`·`IOS`·null이 아님, 일시 형식 틀림, 규칙의 `osVersion`이 객체지만 `min`·`max`가 둘 다 null이거나 `min > max`, `build`가 음수·`RANGE` `min > max`·`IN` 빈 목록은 그 항목을 건너뛴다(문서가 명시한 "필수값 없음·모르는 enum"의 연장).
+12. **426 신호**: `ForceUpdateSignalHub`(data:remote, `ForceUpdateSignals`로 노출)가 마지막 신호를 `StateFlow`로 프로세스 동안 들고 있다(늦게 구독해도 받음). 두 OkHttp 모두의 가장 바깥(서버 주소 검사 바로 뒤) 인터셉터가 `peekBody`로 읽는다. `details`가 비면 문구·이미지 없는 신호, 이미지만 넣은 규칙(`title` null)이 `https://` 이미지·`imageAlt`를 못 채우면 문구·이미지를 비워 기본 문구로 보이게 한다. 결정 2의 닫기 판단은 `AppPopupCoordinator`가 한다.
+13. **이미지 로더**: 팝업 전용 Coil `ImageLoader`를 `@PopupImageLoader`(`core:common`의 한정자)로 제공한다. 인터셉터 없는 별도 OkHttp(`https`→`http` 이동 안 따름, 10초 제한). 미리 받기는 이 로더의 캐시를 채우므로 화면도 같은 로더를 써야 한다.
+14. **`OsVersion(apiLevel)`** (`core:common` `config/`)을 새로 두고 app이 `Build.VERSION.SDK_INT`로 제공한다. 공통 헤더와 기기 등록이 `AppVersion`과 함께 쓴다. `ErrorCode` 개수 문서는 27개로 고쳤다.
+
 ## 다음 단계용 메모
 
--
+묶음 A (구현 완료, 빌드는 SDK 없는 환경이라 CI 확인 필요):
+
+- **domain `appops/`**: `AppOpsModels.kt`(`AppNotice`·`AppUpdateRule`·`BuildCondition`·`OsCondition`·`PopupImage`(Preset/Web/None)·`PopupLink`·`ForceUpdateSignal`·`AppEnvironment`·`AppOpsData`), `AppOpsRules.kt`(`isActive`·`filterActive`·`AppUpdateRule.matches`), `AppPopup.kt`(`PopupKind` 선언 순서 = 표시 순서, `AppPopup` 화면용 값), `AppPopupResolver.kt`(`merge`·`resolveAll`·`resolve`, `HiddenTodayIds`), `AppOpsRepository.kt`(`AppOpsRepository`·`ForceUpdateSignals`·`PopupHiddenTodayStore`·`PopupImagePrefetcher`·`AppOpsSnapshot`), `AppPopupCoordinator.kt`.
+- **화면(묶음 B)이 쓸 것은 `AppPopupCoordinator`(Hilt `@Singleton`, `data:repository`의 `AppOpsProvidesModule`이 만듦)** 하나다: `check(isLaunch)`(Activity 생성 true, 포그라운드 복귀 false) → `AppPopup?`, `changes: Flow<AppPopup?>`(Remote Config 변경), `forceUpdates: Flow<AppPopup>`(426), `hideToday(popup)`. 이미지는 `https://`를 못 받으면 이미 `PopupImage.None`으로 바뀌어 온다(이미지만 넣은 팝업은 `title == null`이면 `imageAlt`를 제목 자리에). 업데이트 팝업의 이미지가 `None`이면 `preset:update`, 426의 `title`·`body`가 null이면 기본 문구는 화면이 정한다. `AppPopup.kind`: `FORCE_UPDATE`·`BLOCK_NOTICE`·`RECOMMEND_UPDATE`·`INFO_NOTICE`(`canHideToday`).
+- 결정 2(426 팝업 유지·닫기)는 코디네이터가 `check`·`changes`에서 판단하고 `ForceUpdateSignals.clear()`를 부른다. 화면은 `forceUpdates`를 구독하면 된다.
+- **data:remote**: `network/CommonHeadersInterceptor`·`ForceUpdateInterceptor`·`ForceUpdateSignalHub`, `appops/`(`AppOpsApi`, `AppOpsRemoteDataSource`, `AppOpsJsonParser`(서버·RC 공통), `RemoteConfigGateway`(Firebase 없으면 `NoRemoteConfigGateway`), `AppOpsModule`(`@PopupImageLoader` Coil·`PopupImagePrefetcher`)). `createNoAuthClient`·`createAuthedClient`에 헤더·426 인터셉터 인자 추가(기본 null이라 기존 테스트 그대로).
+- **data:local**: `appops/PopupHiddenTodayLocalDataSource`, `DeviceLevelKeys.isDeviceLevel`. **data:repository**: `appops/AppOpsRepositoryImpl`, `di/AppOpsModule.kt`, `DeviceRegistrarImpl`이 `osVersion`·`appVersion`·`appBuild`를 보냄(생성자에 `AppVersion`·`OsVersion` 추가, `RepoHarness` 갱신).
+- 주의: `google-services.json`이 없는 빌드는 Remote Config 없이 서버 값만 쓴다(`FirebaseApp.getApps` 검사). Firebase 있는 빌드에서만 실제 Remote Config 경로가 돈다(실기기 확인 필요). `firebase-config` 버전은 BoM 34.4.0이 정한다(CI로 확인). 화면 B는 `@PopupImageLoader ImageLoader`를 Coil `AsyncImage`에 넘겨야 미리 받은 캐시를 쓴다(`feature`가 `coil-compose`를 가져야 하면 MODULES.md 3장에 이미 있는 라이브러리).
+- 테스트 이름이 요구 표와 다른 곳: `DataErrorMessageTest`는 `core:designsystem`에 새 파일(`ErrorMessagesTest`와 별개). 모든 테스트 이름 앞에 AC·결정 ID를 붙였다.
 
 ## 리뷰 기록
 

@@ -1,10 +1,12 @@
 package com.duriseo.android.di
 
+import android.os.Build
 import androidx.annotation.RawRes
 import com.duriseo.android.BuildConfig
 import com.duriseo.android.R
 import com.duriseo.android.core.common.config.AppConfig
 import com.duriseo.android.core.common.config.LicensesJsonRes
+import com.duriseo.android.core.common.config.OsVersion
 import com.duriseo.android.core.common.update.AppVersion
 import dagger.Module
 import dagger.Provides
@@ -35,6 +37,11 @@ object AppModule {
         name = BuildConfig.VERSION_NAME,
         code = BuildConfig.VERSION_CODE.toLong(),
     )
+
+    /** 공통 요청 헤더 `X-OS-Version`·기기 등록 `osVersion`의 값: API 레벨 (D-182) */
+    @Provides
+    @Singleton
+    fun provideOsVersion(): OsVersion = OsVersion(apiLevel = Build.VERSION.SDK_INT)
 
     /**
      * 오픈소스 라이선스 JSON(AboutLibraries 플러그인이 `res/raw/aboutlibraries.json`으로 만든다)의 리소스 ID (SCR-SET-05).

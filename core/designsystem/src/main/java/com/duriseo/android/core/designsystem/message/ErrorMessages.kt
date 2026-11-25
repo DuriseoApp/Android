@@ -29,9 +29,15 @@ private val SessionEndCodes = setOf(
 )
 
 /**
- * [toMessageRes]와 같지만 세션 종료 코드(`SESSION_REPLACED`·`SESSION_INVALID`)는 "보여 줄 것 없음"이라 null이다
+ * 426 `APP_VERSION_UNSUPPORTED`: 강제 업데이트 팝업(SCR-APP-02)이 앱 전체에 뜨므로 화면이 공통 오류 스낵바를 따로 띄우지 않는다
+ * (API.md 4.9 7단계, FR-APP-02 AC6).
+ */
+private val NoSnackbarCodes = SessionEndCodes + ErrorCode.APP_VERSION_UNSUPPORTED
+
+/**
+ * [toMessageRes]와 같지만 세션 종료 코드(`SESSION_REPLACED`·`SESSION_INVALID`)와 `APP_VERSION_UNSUPPORTED`는 "보여 줄 것 없음"이라 null이다
  * (SCREENS.md SCR-SET-01 "로그아웃·탈퇴 실패").
  */
 @StringRes
 fun DataError.toMessageResOrNull(): Int? =
-    if (this is DataError.ApiError && knownCode in SessionEndCodes) null else toMessageRes()
+    if (this is DataError.ApiError && knownCode in NoSnackbarCodes) null else toMessageRes()

@@ -61,7 +61,7 @@ ViewModel → Repository.create/update/delete → (오프라인이면 즉시 Off
 ## 3. 오류
 
 - 결과·오류 타입은 `domain`에 있다. `core:common`은 Android 라이브러리라 순수 Kotlin인 `domain`이 의존할 수 없기 때문이다. 호출 결과는 `DataResult<T>`(`Success` / `Failure(DataError)`), 오류는 `DataError`(`ApiError` / `Offline`)다.
-- 서버 오류는 API.md 1.1의 오류 객체 `{code, message, details, traceId}`다. `data:remote`의 `ApiCaller`가 이를 `ApiError(code, details, traceId)`로 바꾼다. `code`는 서버 문자열 그대로 두고 `ErrorCode`(API.md 5장 중 앱이 받는 26개. 서버 웹훅 전용 `WEBHOOK_UNAUTHORIZED`는 없다)로 해석하며, 모르는 값은 `knownCode = null`이다.
+- 서버 오류는 API.md 1.1의 오류 객체 `{code, message, details, traceId}`다. `data:remote`의 `ApiCaller`가 이를 `ApiError(code, details, traceId)`로 바꾼다. `code`는 서버 문자열 그대로 두고 `ErrorCode`(API.md 5장 중 앱이 받는 27개. 서버 웹훅 전용 `WEBHOOK_UNAUTHORIZED`는 없다)로 해석하며, 모르는 값은 `knownCode = null`이다.
 - JSON이 아닌 오류 본문(프록시 HTML, 빈 본문)과 모양이 맞지 않는 성공 본문은 `ApiError(code = "INTERNAL_ERROR")`로 본다. 서버 주소가 비어 있는 빌드(CI)에서 요청하면 같은 `INTERNAL_ERROR`로 실패한다.
 - 화면 문구는 `code`로 정한다. `message`는 로그용이라 화면에 쓰지 않는다. 모르는 `code`는 일반 오류 문구로 보여 준다.
 - 네트워크 오류(연결 없음, 시간 초과, 그 밖의 `IOException`)는 `Offline`으로 따로 구분한다.
