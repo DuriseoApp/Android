@@ -301,6 +301,19 @@ class MemoListViewModelTest {
     }
 
     @Test
+    fun `FR-APP-02 AC6 426이면 공통 오류 스낵바를 띄우지 않는다`() = runTest {
+        repo.setList(MemoView.NEWEST, listOf(makeMemo("m1")))
+        repo.favoriteResult = com.duriseo.android.feature.memo.apiError("APP_VERSION_UNSUPPORTED")
+        val vm = viewModel()
+
+        vm.effects.test {
+            vm.onAction(MemoListAction.FavoriteClicked(vm.uiState.value.items.single()))
+            expectNoEvents()
+        }
+        assertFalse(vm.uiState.value.loading)
+    }
+
+    @Test
     fun `FR-MEMO-01 AC2 화면이 보이면 고정 목록과 지금 보기를 다시 불러온다`() = runTest {
         val vm = viewModel()
 

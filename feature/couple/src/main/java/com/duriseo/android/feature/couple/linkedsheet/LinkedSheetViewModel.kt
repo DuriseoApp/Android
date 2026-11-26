@@ -2,7 +2,7 @@ package com.duriseo.android.feature.couple.linkedsheet
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.duriseo.android.core.designsystem.message.toMessageRes
+import com.duriseo.android.core.designsystem.message.toMessageResOrNull
 import com.duriseo.android.domain.couple.CoupleRepository
 import com.duriseo.android.domain.couple.StartDateRules
 import com.duriseo.android.domain.error.DataError
@@ -254,6 +254,6 @@ class LinkedSheetViewModel @Inject constructor(
             local.value = Local()
             return
         }
-        effectChannel.trySend(LinkedSheetSideEffect.ShowMessage(error.toMessageRes()))
+        error.toMessageResOrNull()?.let { effectChannel.trySend(LinkedSheetSideEffect.ShowMessage(it)) }
     }
 }

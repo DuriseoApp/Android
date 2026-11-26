@@ -2,7 +2,7 @@ package com.duriseo.android.feature.memo.pinned
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.duriseo.android.core.designsystem.message.toMessageRes
+import com.duriseo.android.core.designsystem.message.toMessageResOrNull
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.memo.MemoRepository
 import com.duriseo.android.domain.result.DataResult
@@ -74,7 +74,7 @@ class PinnedMemosViewModel @Inject constructor(
                 writing.update { false }
             }
             if (result is DataResult.Failure) {
-                effectChannel.trySend(PinnedMemosSideEffect.ShowMessage(result.error.toMessageRes()))
+                result.error.toMessageResOrNull()?.let { effectChannel.trySend(PinnedMemosSideEffect.ShowMessage(it)) }
             }
         }
     }

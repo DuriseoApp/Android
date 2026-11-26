@@ -13,6 +13,8 @@ import com.duriseo.android.data.remote.memo.MemoApi
 import com.duriseo.android.data.remote.notification.NotificationApi
 import com.duriseo.android.data.remote.network.AndroidNetworkMonitor
 import com.duriseo.android.data.remote.network.AuthInterceptor
+import com.duriseo.android.data.remote.network.CommonHeadersInterceptor
+import com.duriseo.android.data.remote.network.ForceUpdateInterceptor
 import com.duriseo.android.data.remote.network.Authed
 import com.duriseo.android.data.remote.network.NoAuth
 import com.duriseo.android.data.remote.network.ServerConfigInterceptor
@@ -46,11 +48,23 @@ private fun OkHttpClient.Builder.commonTimeouts(): OkHttpClient.Builder = apply 
     callTimeout(30, TimeUnit.SECONDS)
 }
 
-/** "인증 없음" 클라이언트: `Authorization`을 붙이지 않는다 (`/auth/guest`, `/auth/social`, `/auth/refresh`). */
-internal fun createNoAuthClient(config: AppConfig, logging: Interceptor): OkHttpClient =
+/**
+ * "인증 없음" 클라이언트: `Authorization`을 붙이지 않는다 (`/auth/guest`, `/auth/social`, `/auth/refresh`, 공개 조회 `/app-notices`·`/app-update-rules`).
+ * 공통 요청 헤더 4개([CommonHeadersInterceptor], D-182)와 426 감지([ForceUpdateInterceptor])는 두 클라이언트 모두에 붙는다.
+ */
+internal fun createNoAuthClient(
+    config: AppConfig,
+    logging: Interceptor,
+    commonHeaders: Interceptor? = null,
+    forceUpdate: Interceptor? = null,
+): OkHttpClient =
     OkHttpClient.Builder()
         .commonTimeouts()
         .addInterceptor(ServerConfigInterceptor(config))
+        .apply {
+            if (forceUpdate != null) addInterceptor(forceUpdate)
+            if (commonHeaders != null) addInterceptor(commonHeaders)
+        }
         .addInterceptor(logging)
         .build()
 
@@ -63,9 +77,15 @@ internal fun createAuthedClient(
     logging: Interceptor,
     authInterceptor: Interceptor,
     authenticator: okhttp3.Authenticator,
+    commonHeaders: Interceptor? = null,
+    forceUpdate: Interceptor? = null,
 ): OkHttpClient = OkHttpClient.Builder()
     .commonTimeouts()
     .addInterceptor(ServerConfigInterceptor(config))
+    .apply {
+        if (forceUpdate != null) addInterceptor(forceUpdate)
+        if (commonHeaders != null) addInterceptor(commonHeaders)
+    }
     .addInterceptor(authInterceptor)
     .addInterceptor(logging)
     .authenticator(authenticator)
@@ -100,7 +120,9 @@ object NetworkModule {
     fun provideNoAuthOkHttpClient(
         config: AppConfig,
         logging: HttpLoggingInterceptor,
-    ): OkHttpClient = createNoAuthClient(config, logging)
+        commonHeaders: CommonHeadersInterceptor,
+        forceUpdate: ForceUpdateInterceptor,
+    ): OkHttpClient = createNoAuthClient(config, logging, commonHeaders, forceUpdate)
 
     @Provides
     @Singleton
@@ -110,7 +132,9 @@ object NetworkModule {
         logging: HttpLoggingInterceptor,
         authInterceptor: AuthInterceptor,
         authenticator: TokenAuthenticator,
-    ): OkHttpClient = createAuthedClient(config, logging, authInterceptor, authenticator)
+        commonHeaders: CommonHeadersInterceptor,
+        forceUpdate: ForceUpdateInterceptor,
+    ): OkHttpClient = createAuthedClient(config, logging, authInterceptor, authenticator, commonHeaders, forceUpdate)
 
     /**
      * Retrofit은 처음 쓸 때 만들어진다(Hilt 싱글턴). 서버 주소가 비어 있어도(CI) 만들다가 죽지 않고,

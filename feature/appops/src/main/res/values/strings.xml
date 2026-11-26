@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 공지·업데이트 팝업 (SCR-APP-01·02, SCREENS.md 운영 절 문구 표). 제목·본문·링크 글자·대체 글은 운영자가 정한다 -->
+    <string name="popup_exit">앱 종료</string>
+    <string name="popup_confirm">확인</string>
+    <string name="popup_hide_today">오늘 하루 안 보기</string>
+    <string name="popup_update">업데이트</string>
+    <string name="popup_close">닫기</string>
+    <!-- 426에 문구가 없을 때의 기본 문구 (D-180) -->
+    <string name="popup_default_title">업데이트가 필요해요</string>
+    <string name="popup_default_body">새 버전으로 업데이트해야 계속 쓸 수 있어요.</string>
+</resources>

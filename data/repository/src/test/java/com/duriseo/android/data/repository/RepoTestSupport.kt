@@ -8,6 +8,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.duriseo.android.core.common.config.OsVersion
+import com.duriseo.android.core.common.update.AppVersion
 import com.duriseo.android.data.local.cleanup.LocalDataCleaner
 import com.duriseo.android.data.local.db.DuriseoDatabase
 import com.duriseo.android.data.local.anniversary.AnniversaryLocalDataSource
@@ -154,6 +156,10 @@ class FakeProfileImageCacheCleaner : ProfileImageCacheCleaner {
         if (fail) throw IllegalStateException("사진 캐시 정리 실패")
     }
 }
+
+/** 기기 등록·공통 헤더가 보내는 값 (D-182) */
+val TEST_APP_VERSION = AppVersion(name = "1.2.3", code = 123L)
+val TEST_OS_VERSION = OsVersion(apiLevel = 34)
 
 fun testTokens(access: String = "guest-access", refresh: String = "guest-refresh") = AuthTokens(
     accessToken = access,
@@ -317,7 +323,7 @@ class RepoHarness(
     val meRepository = MeRepositoryImpl(meRemote, meLocal, monitor, acknowledgedSpace, session, writeLock, eventLocal, anniversaryLocal, memoLocal, cache)
     val profileRepository = ProfileRepositoryImpl(meRemote, meRepository, monitor, cache)
     val pushTokens = FakePushTokenProvider()
-    val deviceRegistrar = DeviceRegistrarImpl(meRemote, tokens, monitor, pushTokens)
+    val deviceRegistrar = DeviceRegistrarImpl(meRemote, tokens, monitor, pushTokens, TEST_APP_VERSION, TEST_OS_VERSION)
     val authRepository = AuthRepositoryImpl(authRemote, meRemote, tokens, session, meRepository, monitor, clock, deviceRegistrar, ioScope)
     val coupleRemote = CoupleRemoteDataSource(retrofit.create(CoupleApi::class.java), apiCaller)
     val coupleRepository = CoupleRepositoryImpl(coupleRemote, meRepository, meLocal, monitor, writeLock, eventLocal, anniversaryLocal, memoLocal, cache)

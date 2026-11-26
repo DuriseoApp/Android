@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.duriseo.android.core.common.navigation.MemoRouteModel
 import com.duriseo.android.core.common.time.MidnightTicker
-import com.duriseo.android.core.designsystem.message.toMessageRes
+import com.duriseo.android.core.designsystem.message.toMessageResOrNull
 import com.duriseo.android.domain.error.ErrorCode
 import com.duriseo.android.domain.error.hasCode
 import com.duriseo.android.domain.format.DateTexts
@@ -125,7 +125,7 @@ class MemoDetailViewModel @Inject constructor(
         if (result.error.hasCode(ErrorCode.NOT_FOUND)) {
             onVanished()
         } else {
-            effectChannel.trySend(MemoDetailSideEffect.ShowMessage(result.error.toMessageRes()))
+            result.error.toMessageResOrNull()?.let { effectChannel.trySend(MemoDetailSideEffect.ShowMessage(it)) }
         }
     }
 

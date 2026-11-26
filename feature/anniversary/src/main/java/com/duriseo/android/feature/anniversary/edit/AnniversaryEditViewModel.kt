@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.duriseo.android.core.common.navigation.AnniversaryRouteModel
-import com.duriseo.android.core.designsystem.message.toMessageRes
+import com.duriseo.android.core.designsystem.message.toMessageResOrNull
 import com.duriseo.android.domain.anniversary.AnniversaryPatch
 import com.duriseo.android.domain.anniversary.AnniversaryRepository
 import com.duriseo.android.domain.anniversary.AnniversaryRules
@@ -246,7 +246,7 @@ class AnniversaryEditViewModel @Inject constructor(
      */
     private fun fail(error: DataError) {
         _uiState.update { it.copy(saving = false, loading = false, deleteDialogVisible = false) }
-        effectChannel.trySend(AnniversaryEditSideEffect.ShowMessage(error.toMessageRes()))
+        error.toMessageResOrNull()?.let { effectChannel.trySend(AnniversaryEditSideEffect.ShowMessage(it)) }
         if (error.hasCode(ErrorCode.NOT_FOUND) || error.hasCode(ErrorCode.NOT_AUTHOR)) {
             effectChannel.trySend(AnniversaryEditSideEffect.Close)
         }

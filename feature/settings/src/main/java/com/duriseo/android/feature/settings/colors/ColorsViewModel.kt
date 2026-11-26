@@ -3,7 +3,7 @@ package com.duriseo.android.feature.settings.colors
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.duriseo.android.core.designsystem.theme.DuriseoPickPalette
-import com.duriseo.android.core.designsystem.message.toMessageRes
+import com.duriseo.android.core.designsystem.message.toMessageResOrNull
 import com.duriseo.android.domain.couple.ColorChange
 import com.duriseo.android.domain.couple.CoupleRepository
 import com.duriseo.android.domain.couple.MemberColor
@@ -124,7 +124,7 @@ class ColorsViewModel @Inject constructor(
                     is DataResult.Failure -> {
                         // 상대가 먼저 해제했으면(NOT_COUPLE) 앱 초기화가 이동을 맡는다 (D-103). 그 밖은 안내만 하고 화면을 그대로 둔다
                         if (!result.error.hasCode(ErrorCode.NOT_COUPLE)) {
-                            effectChannel.trySend(ColorsSideEffect.ShowMessage(result.error.toMessageRes()))
+                            result.error.toMessageResOrNull()?.let { effectChannel.trySend(ColorsSideEffect.ShowMessage(it)) }
                         }
                     }
                 }

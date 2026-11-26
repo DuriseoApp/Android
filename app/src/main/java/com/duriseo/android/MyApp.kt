@@ -9,6 +9,7 @@ import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import com.duriseo.android.core.common.social.SocialSdkInitializer
+import com.duriseo.android.core.common.update.AppForegroundTracker
 import com.duriseo.android.core.common.update.AppUpdateSource
 import com.duriseo.android.core.push.ProcessUiState
 import com.duriseo.android.core.push.PushInitializer
@@ -36,6 +37,10 @@ class MyApp : Application(), SingletonImageLoader.Factory {
     @Inject
     lateinit var appUpdateSource: AppUpdateSource
 
+    /** 앱으로 돌아옴을 공지·업데이트 팝업(`feature:appops`)에 알린다 (D-178) */
+    @Inject
+    lateinit var appForeground: AppForegroundTracker
+
     /** 프로필 사진을 받는 로더 (`data:remote`의 `ProfileImageModule`: 인증 OkHttp). 처음 사진을 그릴 때 만든다 */
     @Inject
     lateinit var imageLoader: Lazy<ImageLoader>
@@ -56,9 +61,16 @@ class MyApp : Application(), SingletonImageLoader.Factory {
         // 화면이 한 번이라도 만들어진 프로세스만 동기화 신호(SYNC)를 처리한다 (API.md 6장 "프로세스가 살아 있을 때만")
         registerActivityLifecycleCallbacks(
             ForegroundCallbacks(
-                onForeground = sessionStartup::onForeground,
+                onForeground = {
+                    sessionStartup.onForeground()
+                    // 회전이 아니라 백그라운드를 거쳐 돌아왔을 때만 팝업을 다시 확인한다
+                    appForeground.onForeground()
+                },
                 // 인앱 업데이트를 다 받았으면 앱이 백그라운드로 갈 때 설치한다 (사용 중에 앱을 다시 시작하지 않는다)
-                onBackground = appUpdateSource::completeIfDownloaded,
+                onBackground = {
+                    appUpdateSource.completeIfDownloaded()
+                    appForeground.onBackground()
+                },
                 onAnyActivityCreated = processUiState::markUiStarted,
             ),
         )

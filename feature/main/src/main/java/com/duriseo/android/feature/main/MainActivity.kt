@@ -11,6 +11,7 @@ import com.duriseo.android.core.common.push.clearPushExtras
 import com.duriseo.android.core.common.push.toPushTapTarget
 import com.duriseo.android.core.designsystem.permission.ProvideNotificationPermissionRequester
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
+import com.duriseo.android.feature.appops.AppPopupHost
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -27,7 +28,10 @@ class MainActivity : ComponentActivity() {
             DuriseoTheme {
                 // 알림 권한 요청기는 맨 위층에서 한 번 만든다: 화면이 닫혀도 요청이 끊기지 않는다 (FR-NOTI-01, D-144)
                 ProvideNotificationPermissionRequester {
-                    MainScreen()
+                    // 공지·업데이트 팝업은 맨 위층에 한 번만 둔다: 로그인 전 화면을 포함한 모든 화면 위에 뜬다 (SCR-APP-01·02, D-178)
+                    AppPopupHost {
+                        MainScreen()
+                    }
                 }
             }
         }

@@ -1,6 +1,8 @@
 package com.duriseo.android.data.repository.device
 
 import com.duriseo.android.data.repository.RepoHarness
+import com.duriseo.android.data.repository.TEST_APP_VERSION
+import com.duriseo.android.data.repository.TEST_OS_VERSION
 import com.duriseo.android.data.repository.errorJson
 import com.duriseo.android.data.repository.jsonResponse
 import com.duriseo.android.data.repository.runTestWithTimeout
@@ -68,6 +70,19 @@ class DeviceRegistrarTest {
         assertEquals("/api/v1/me/devices", request.path)
         assertEquals("fcm-token-2", body["fcmToken"]?.jsonPrimitive?.content)
         assertEquals("ANDROID", body["platform"]?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun `FR-APP-03 AC2 기기 등록에 OS 버전 앱 버전 빌드 번호를 보낸다`() = runTestWithTimeout {
+        val h = signedIn()
+        server.enqueue(MockResponse().setResponseCode(204))
+
+        h.deviceRegistrar.registerToken("fcm-token")
+
+        val body = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
+        assertEquals(TEST_OS_VERSION.apiLevel.toString(), body["osVersion"]?.jsonPrimitive?.content)
+        assertEquals(TEST_APP_VERSION.name, body["appVersion"]?.jsonPrimitive?.content)
+        assertEquals(TEST_APP_VERSION.code, body["appBuild"]?.jsonPrimitive?.content?.toLong())
     }
 
     @Test

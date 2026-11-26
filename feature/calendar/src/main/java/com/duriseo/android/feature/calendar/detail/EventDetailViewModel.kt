@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.duriseo.android.core.common.navigation.CalendarRouteModel
-import com.duriseo.android.core.designsystem.message.toMessageRes
+import com.duriseo.android.core.designsystem.message.toMessageResOrNull
 import com.duriseo.android.domain.error.ErrorCode
 import com.duriseo.android.domain.error.hasCode
 import com.duriseo.android.domain.event.Event
@@ -146,7 +146,7 @@ class EventDetailViewModel @Inject constructor(
         if (result.error.hasCode(ErrorCode.NOT_FOUND)) {
             onVanished()
         } else {
-            effectChannel.trySend(EventDetailSideEffect.ShowMessage(result.error.toMessageRes()))
+            result.error.toMessageResOrNull()?.let { effectChannel.trySend(EventDetailSideEffect.ShowMessage(it)) }
         }
     }
 

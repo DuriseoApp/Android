@@ -31,9 +31,10 @@ open class LocalDataCleaner @Inject constructor(
             database.clearAllTables()
         }
         settings.edit { prefs ->
-            val kept = DeviceLevelKeys.ALL.mapNotNull { key -> prefs[key]?.let { value -> Pair(key, value) } }
+            val kept = prefs.asMap().filterKeys { key -> DeviceLevelKeys.isDeviceLevel(key) }
             prefs.clear()
-            kept.forEach { (key, value) -> prefs[key] = value }
+            @Suppress("UNCHECKED_CAST")
+            kept.forEach { (key, value) -> prefs[key as Preferences.Key<Any>] = value }
         }
     }
 }
@@ -42,11 +43,25 @@ open class LocalDataCleaner @Inject constructor(
  * 로그아웃·탈퇴·세션 끊김에도 지우지 않는 기기 단위 설정 키. 사용자가 아니라 이 기기에 대한 기록이다.
  * 알림 권한을 이미 물었는지 (FR-NOTI-01 AC3, D-144): 지우면 같은 기기에서 다시 로그인할 때 시스템 권한창을 또 띄운다.
  * 캘린더 튜토리얼을 이미 보여 줬는지 (FR-CAL-06 AC4, D-168): 기기마다 한 번이라 로그아웃·탈퇴·연결 해제로 지우지 않는다.
+ * 공지·업데이트 팝업 "오늘 하루 안 보기" (FR-APP-01 AC2, FR-APP-02 AC3, D-179): `id`마다 키가 하나라서 이름 앞부분([isDeviceLevel])으로 가린다.
  */
 internal object DeviceLevelKeys {
     val NOTIFICATION_PERMISSION_ASKED = booleanPreferencesKey("notification_permission_asked")
 
     val CALENDAR_TUTORIAL_SHOWN = booleanPreferencesKey("calendar_tutorial_shown")
 
+    /** 이름이 정해진 키(Boolean) */
     val ALL: List<Preferences.Key<Boolean>> = listOf(NOTIFICATION_PERMISSION_ASKED, CALENDAR_TUTORIAL_SHOWN)
+
+    /** 공지 `id`별 "오늘 하루 안 보기" 키 이름 앞부분. 값은 숨긴 날짜 `YYYY-MM-DD`(기기 시간대) */
+    const val POPUP_HIDDEN_NOTICE_PREFIX = "popup_hidden_notice_"
+
+    /** 업데이트 규칙 `id`별 키 이름 앞부분. 공지와 `id` 공간이 따로라서 접두어도 따로다 (D-178) */
+    const val POPUP_HIDDEN_RULE_PREFIX = "popup_hidden_rule_"
+
+    /** 로그아웃·탈퇴 정리에서 지우지 않는 키인가 */
+    fun isDeviceLevel(key: Preferences.Key<*>): Boolean =
+        ALL.any { it.name == key.name } ||
+            key.name.startsWith(POPUP_HIDDEN_NOTICE_PREFIX) ||
+            key.name.startsWith(POPUP_HIDDEN_RULE_PREFIX)
 }

@@ -87,6 +87,27 @@ class PlayAppUpdateSource @Inject constructor(
         false
     }
 
+    override suspend fun startImmediateUpdate(activity: Activity): ImmediateUpdateResult = try {
+        val info = manager.requestAppUpdateInfo()
+        val available = info.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE ||
+            info.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS
+        if (!available || !info.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)) {
+            ImmediateUpdateResult.UNAVAILABLE
+        } else {
+            val options = AppUpdateOptions.newBuilder(AppUpdateType.IMMEDIATE).build()
+            when (manager.startUpdateFlow(info, activity, options).await()) {
+                Activity.RESULT_OK -> ImmediateUpdateResult.STARTED
+                Activity.RESULT_CANCELED -> ImmediateUpdateResult.CANCELED
+                else -> ImmediateUpdateResult.UNAVAILABLE
+            }
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Timber.d("즉시 업데이트 시작 실패: %s", e.javaClass.simpleName)
+        ImmediateUpdateResult.UNAVAILABLE
+    }
+
     override fun completeIfDownloaded() {
         if (mutablePhase.value != AppUpdatePhase.DOWNLOADED) return
         try {

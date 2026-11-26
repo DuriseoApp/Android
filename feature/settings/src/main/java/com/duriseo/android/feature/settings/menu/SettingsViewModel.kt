@@ -2,7 +2,6 @@ package com.duriseo.android.feature.settings.menu
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.duriseo.android.core.designsystem.message.toMessageRes
 import com.duriseo.android.core.designsystem.message.toMessageResOrNull
 import com.duriseo.android.domain.auth.AuthRepository
 import com.duriseo.android.domain.couple.CoupleRepository
@@ -75,7 +74,7 @@ class SettingsViewModel @Inject constructor(
             val result = meRepository.refreshMe()
             // 내 정보를 한 번도 받지 못했으면(Room도 비어 있음) 공통 오류 스낵바를 보여 준다. 계정 영역은 비워 둔다 (Q-14)
             if (result is DataResult.Failure && meRepository.observeMe().first() == null) {
-                effectChannel.trySend(SettingsSideEffect.ShowMessage(result.error.toMessageRes()))
+                result.error.toMessageResOrNull()?.let { effectChannel.trySend(SettingsSideEffect.ShowMessage(it)) }
             }
         }
     }
@@ -175,7 +174,7 @@ class SettingsViewModel @Inject constructor(
                     // 실패·오프라인이면 시트를 그대로 두고 안내한다. 상대가 먼저 해제했으면(NOT_COUPLE) 앱 초기화가 이동을 맡는다 (D-103)
                     local.update { it.copy(startDateSheet = sheet.copy(saving = false)) }
                     if (!result.error.hasCode(ErrorCode.NOT_COUPLE)) {
-                        effectChannel.trySend(SettingsSideEffect.ShowMessage(result.error.toMessageRes()))
+                        result.error.toMessageResOrNull()?.let { effectChannel.trySend(SettingsSideEffect.ShowMessage(it)) }
                     }
                 }
             }

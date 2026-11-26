@@ -2,7 +2,7 @@ package com.duriseo.android.feature.couple.inviteenter
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.duriseo.android.core.designsystem.message.toMessageRes
+import com.duriseo.android.core.designsystem.message.toMessageResOrNull
 import com.duriseo.android.domain.couple.CoupleRepository
 import com.duriseo.android.domain.couple.InviteCodeInput
 import com.duriseo.android.domain.error.DataError
@@ -97,7 +97,7 @@ class InviteEnterViewModel @Inject constructor(
             _uiState.update { it.copy(error = inviteError) }
         } else {
             // VALIDATION_FAILED, ALREADY_COUPLED, GUEST_NOT_ALLOWED(리포지토리가 GET /me를 다시 읽음), 5xx, 오프라인
-            effectChannel.trySend(InviteEnterSideEffect.ShowMessage(error.toMessageRes()))
+            error.toMessageResOrNull()?.let { effectChannel.trySend(InviteEnterSideEffect.ShowMessage(it)) }
         }
     }
 

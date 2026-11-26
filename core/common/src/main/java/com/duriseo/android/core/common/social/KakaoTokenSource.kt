@@ -11,6 +11,7 @@ import com.kakao.sdk.common.model.ClientError
 import com.kakao.sdk.common.model.ClientErrorCause
 import com.kakao.sdk.user.UserApiClient
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.cancellation.CancellationException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -23,14 +24,29 @@ import kotlin.coroutines.resume
 @Singleton
 class KakaoTokenSource @Inject constructor(
     private val config: AppConfig,
+    private val sdkState: KakaoSdkState,
 ) {
     suspend fun request(activity: Activity): SocialTokenResult {
-        if (config.kakaoNativeAppKey.isBlank()) {
-            // SDK를 초기화하지 않은 빌드(CI). SDK를 부르면 죽으므로 여기서 막는다
-            Logger.w(SOCIAL_LOG_TAG, "Kakao: local.properties duriseo.kakao.nativeAppKey가 비어 있어 로그인할 수 없어요")
-            return SocialTokenResult.Failed(IllegalStateException("카카오 네이티브 앱 키가 설정되지 않았어요"))
+        notReady()?.let { return it }
+        return try {
+            startLogin(activity)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // SDK가 던진 예외(초기화 누락 등)도 앱을 죽이지 않고 실패로 돌려준다 (공통 오류로 끝난다)
+            Logger.w(SOCIAL_LOG_TAG, "Kakao: SDK 호출 중 예외 ${e.javaClass.simpleName}")
+            SocialTokenResult.Failed(e)
         }
+    }
 
+    /** SDK를 초기화하지 않은 빌드(앱 키 없음, CI 등)면 SDK를 부르면 죽으므로 부르지 않고 실패를 돌려준다. 부를 수 있으면 null */
+    internal fun notReady(): SocialTokenResult.Failed? {
+        if (sdkState.isUsable(config)) return null
+        Logger.w(SOCIAL_LOG_TAG, "Kakao: SDK를 초기화하지 않았어요 (local.properties duriseo.kakao.nativeAppKey 확인)")
+        return SocialTokenResult.Failed(IllegalStateException("카카오 SDK가 초기화되지 않았어요"))
+    }
+
+    private suspend fun startLogin(activity: Activity): SocialTokenResult {
         val client = UserApiClient.instance
         val talkAvailable = client.isKakaoTalkLoginAvailable(activity)
         Logger.i(SOCIAL_LOG_TAG, "Kakao: 로그인 시작 (카카오톡 로그인 가능=$talkAvailable)")

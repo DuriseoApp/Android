@@ -81,8 +81,12 @@ private fun configFor(server: MockWebServer) = AppConfig(server.url("/").toStrin
 private val silentLogging = okhttp3.Interceptor { chain -> chain.proceed(chain.request()) }
 
 /** 운영과 같은 "인증 없음" 클라이언트 (연결 실패를 다시 시도하지 않게 줄임) */
-fun noAuthClient(server: MockWebServer): OkHttpClient =
-    createNoAuthClient(configFor(server), silentLogging).newBuilder()
+fun noAuthClient(
+    server: MockWebServer,
+    commonHeaders: okhttp3.Interceptor? = null,
+    forceUpdate: okhttp3.Interceptor? = null,
+): OkHttpClient =
+    createNoAuthClient(configFor(server), silentLogging, commonHeaders, forceUpdate).newBuilder()
         .retryOnConnectionFailure(false)
         .build()
 
@@ -91,10 +95,12 @@ fun authedClient(
     server: MockWebServer,
     tokens: TokenStorage,
     sessionEnd: SessionEndNotifier,
+    commonHeaders: okhttp3.Interceptor? = null,
+    forceUpdate: okhttp3.Interceptor? = null,
 ): OkHttpClient {
-    val authApi = retrofitFor(server, noAuthClient(server)).create(AuthApi::class.java)
+    val authApi = retrofitFor(server, noAuthClient(server, commonHeaders, forceUpdate)).create(AuthApi::class.java)
     val authenticator = TokenAuthenticator(tokens, authApi, sessionEnd, createApiJson())
-    return createAuthedClient(configFor(server), silentLogging, AuthInterceptor(tokens), authenticator)
+    return createAuthedClient(configFor(server), silentLogging, AuthInterceptor(tokens), authenticator, commonHeaders, forceUpdate)
         .newBuilder()
         .retryOnConnectionFailure(false)
         .build()

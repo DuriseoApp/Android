@@ -31,6 +31,7 @@ class ErrorCodeTest {
         "SOCIAL_ALREADY_USED",
         "IMAGE_TOO_LARGE",
         "IMAGE_TYPE_NOT_ALLOWED",
+        "APP_VERSION_UNSUPPORTED",
         "INVITE_RATE_LIMITED",
         "INVITE_REISSUE_TOO_SOON",
         "INTERNAL_ERROR",
@@ -38,7 +39,7 @@ class ErrorCodeTest {
 
     @Test
     fun `API 5장 오류 코드 문자열을 모두 ErrorCode로 해석한다`() {
-        assertEquals(26, apiCodes.size)
+        assertEquals(27, apiCodes.size)
         apiCodes.forEach { code ->
             val resolved = ErrorCode.fromCode(code)
             assertEquals(code, resolved?.code)

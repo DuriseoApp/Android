@@ -1,5 +1,7 @@
 package com.duriseo.android.data.repository.device
 
+import com.duriseo.android.core.common.config.OsVersion
+import com.duriseo.android.core.common.update.AppVersion
 import com.duriseo.android.data.remote.me.MeRemoteDataSource
 import com.duriseo.android.data.repository.online.runOnlineWrite
 import com.duriseo.android.domain.auth.TokenState
@@ -23,6 +25,8 @@ class DeviceRegistrarImpl @Inject constructor(
     private val tokenStorage: TokenStorage,
     private val networkMonitor: NetworkMonitor,
     private val pushTokens: PushTokenProvider,
+    private val appVersion: AppVersion,
+    private val osVersion: OsVersion,
 ) : DeviceRegistrar {
 
     override suspend fun registerCurrentToken(): DataResult<Unit> {
@@ -41,5 +45,13 @@ class DeviceRegistrarImpl @Inject constructor(
         tokenStorage.state.first { it != TokenState.Loading } is TokenState.Present
 
     private suspend fun send(token: String): DataResult<Unit> =
-        networkMonitor.runOnlineWrite { remote.putDevice(token) }
+        networkMonitor.runOnlineWrite {
+            // 공통 요청 헤더(1장)와 같은 값: OS 버전(API 레벨), 앱 버전(versionName), 빌드 번호(versionCode) (D-182, FR-APP-03 AC2)
+            remote.putDevice(
+                fcmToken = token,
+                osVersion = osVersion.apiLevel.toString(),
+                appVersion = appVersion.name,
+                appBuild = appVersion.code,
+            )
+        }
 }

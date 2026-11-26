@@ -30,6 +30,18 @@ enum class AppUpdatePhase {
     DOWNLOADED,
 }
 
+/** 즉시(IMMEDIATE) 업데이트를 시작한 결과 (FR-APP-02 AC2) */
+enum class ImmediateUpdateResult {
+    /** Play가 받기·설치를 마쳤다(앱이 다시 시작된다) 또는 진행 중이다 */
+    STARTED,
+
+    /** 사용자가 Play 화면에서 취소했다. 팝업을 다시 보인다 */
+    CANCELED,
+
+    /** 쓸 수 없다: Play가 설치하지 않은 앱, 새 버전 없음, 즉시 방식 불가, API 실패. 스토어 페이지를 연다 (unit-9 결정 6) */
+    UNAVAILABLE,
+}
+
 /**
  * Google Play 인앱 업데이트를 감싼다 (D-151). 화면의 ViewModel은 이 인터페이스만 보고, 실제 구현은 [PlayAppUpdateSource]다.
  * 방식은 FLEXIBLE: 앱을 쓰는 중에 받고, 다 받으면 앱이 백그라운드로 갈 때 설치한다 (사용 중에 앱을 다시 시작하지 않는다).
@@ -46,6 +58,12 @@ interface AppUpdateSource {
      * 받는 진행은 [phase]로 알린다
      */
     suspend fun startUpdate(activity: Activity): Boolean
+
+    /**
+     * 강제·권장 업데이트 팝업의 [업데이트]: 즉시(IMMEDIATE) 방식으로 받는다 (앱 전체를 덮고, 받은 뒤 다시 시작). 메뉴의 유연 업데이트
+     * ([startUpdate])와 별개다. 던지지 않는다.
+     */
+    suspend fun startImmediateUpdate(activity: Activity): ImmediateUpdateResult
 
     /** 앱 시작 때 한 번: 진행 알림을 구독하고 이미 받아 둔 것이 있는지 본다 */
     fun start()
