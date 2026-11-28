@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- FR-AD-04 AC2: 광고 배지. 낭독 때 "광고"가 먼저 읽힌다 -->
+    <string name="ads_badge">광고</string>
+    <!-- Preview 전용 가짜 내용 (실제 광고 문구가 아님) -->
+    <string name="ads_preview_advertiser">[광고주 이름]</string>
+    <string name="ads_preview_headline">[광고 제목]</string>
+    <string name="ads_preview_body_one_line">[광고 설명 한 줄]</string>
+    <string name="ads_preview_body_two_lines">[광고 설명은 두 줄까지 보여요. 넘치면 말줄임으로 잘려요.]</string>
+    <string name="ads_preview_cta_install">설치</string>
+    <string name="ads_preview_cta_detail">자세히 보기</string>
+    <string name="ads_preview_media">[광고 이미지 · 영상]</string>
+</resources>

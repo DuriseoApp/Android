@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+        noAdsDebug는 광고 SDK를 초기화하지 않는다 (FR-AD-04 AC4). play-services-ads의 자동 시작 Provider를 합치지 않는다.
+        Provider 이름은 라이브러리 매니페스트 기준이다. 이름이 달라 제거되지 않더라도 앱은 동작한다
+        (AdsInitializer가 호출하지 않고 화면이 광고를 요청하지 않는다). 앱 ID 메타데이터는 남겨 둬서 Provider가 남아도 죽지 않는다.
+    -->
+    <application>
+        <provider
+            android:name="com.google.android.gms.ads.MobileAdsInitProvider"
+            tools:node="remove" />
+    </application>
+</manifest>

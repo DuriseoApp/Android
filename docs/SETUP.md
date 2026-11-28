@@ -23,6 +23,14 @@
 | `duriseo.api.prodUrl` | 운영 서버 주소. release 빌드가 써요 |
 | `duriseo.google.webClientId` | Google 웹 애플리케이션 클라이언트 ID (Credential Manager `serverClientId`) |
 | `duriseo.kakao.nativeAppKey` | 카카오 네이티브 앱 키 |
+| `duriseo.admob.appId` | AdMob 앱 ID. **release만** 써요 (debug·noAdsDebug는 Google 공개 테스트 ID) |
+| `duriseo.admob.memoListNativeId` | 메모 목록 네이티브 광고 단위 ID. release만 |
+| `duriseo.admob.anniversaryListNativeId` | 기념일 목록 네이티브 광고 단위 ID. release만 |
+| `duriseo.admob.menuBottomBannerId` | 전체 메뉴 아래 적응형 배너 광고 단위 ID. release만 |
+
+AdMob 키 4개 중 하나라도 비면 release 빌드는 되지만 **광고가 꺼져요**. 출시 전에 값이 들어 있는지 사람이 확인해요.
+
+`noAdsDebug`(광고 없는 개발 빌드)는 Android Studio의 Build Variants에서 골라요. `./gradlew assembleNoAdsDebug`로도 만들 수 있어요.
 
 새 키를 만들면 이 표, `app/build.gradle.kts`, CI 워크플로를 같은 PR에서 고쳐요.
 

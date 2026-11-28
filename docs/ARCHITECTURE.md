@@ -83,13 +83,16 @@ ViewModel → Repository.create/update/delete → (오프라인이면 즉시 Off
 
 ## 6. 빌드 타입과 설정값
 
-| 빌드 타입 | 서버 | applicationId |
-| --- | --- | --- |
-| `debug` | 개발 서버 | `com.duriseo.android` |
-| `release` | 운영 서버 | `com.duriseo.android` |
+| 빌드 타입 | 서버 | 광고 | applicationId |
+| --- | --- | --- | --- |
+| `debug` | 개발 서버 | Google 공개 테스트 광고 (코드에 둔 테스트 ID) | `com.duriseo.android` |
+| `noAdsDebug` | 개발 서버 (`debug`와 같음, `initWith(debug)`) | 없음: SDK 초기화·광고 요청·광고 자리 모두 없음 (FR-AD-04 AC4) | `com.duriseo.android` |
+| `release` | 운영 서버 | 실제 광고 (`local.properties`의 AdMob 앱 ID·단위 ID 3개). 값이 하나라도 비면 광고를 끔 | `com.duriseo.android` |
 
-- 두 빌드 타입은 applicationId가 같다. Google 로그인·Firebase에 등록한 패키지가 하나이기 때문이다.
-- 서버 주소, Google 웹 클라이언트 ID, 카카오 네이티브 앱 키는 `local.properties`에서 읽어 `BuildConfig`로 넣는다. 값이 없으면 빌드는 되지만 그 기능은 동작하지 않는다 (CI 빌드용). 키 이름은 `docs/SETUP.md`.
+- 세 빌드 타입은 applicationId가 같다. Google 로그인·Firebase에 등록한 패키지가 하나이기 때문이다.
+- `noAdsDebug`는 앱에서만 만든다. 라이브러리 모듈은 `matchingFallbacks = listOf("debug")`로 `debug` 변형을 쓴다 (`app/build.gradle.kts`). 서명은 `debug`와 같다.
+- 광고 설정은 app이 `BuildConfig`(`ADS_ENABLED`, `ADMOB_*_ID` 3개)를 `AdsConfig`(`core:common`)로 만들어 Hilt로 넘긴다. `AdsConfig.create`가 단위 ID가 비면 `enabled`를 끈다. 매니페스트의 AdMob 앱 ID(`com.google.android.gms.ads.APPLICATION_ID`)는 자리표시자 `admobAppId`로 넣고, release 값이 비면 테스트 앱 ID를 넣어 SDK가 앱 시작 때 죽지 않게 한다.
+- 서버 주소, Google 웹 클라이언트 ID, 카카오 네이티브 앱 키, AdMob 앱 ID·광고 단위 ID 3개는 `local.properties`에서 읽어 `BuildConfig`로 넣는다. 값이 없으면 빌드는 되지만 그 기능은 동작하지 않는다 (CI 빌드용). 키 이름은 `docs/SETUP.md`.
 
 ## 7. 시간
 
