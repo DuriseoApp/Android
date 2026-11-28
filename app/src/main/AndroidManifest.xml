@@ -24,6 +24,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Duriseo">
+        <!-- AdMob 앱 ID. 값은 빌드 타입별 자리표시자 (app/build.gradle.kts). 비면 SDK가 앱 시작 때 죽어서 테스트 앱 ID를 넣는다 -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
+
         <activity
             android:name="com.duriseo.android.feature.main.MainActivity"
             android:exported="true"

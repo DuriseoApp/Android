@@ -39,7 +39,9 @@ class StartViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = StartViewModel(auth, me)
+    private val lastSignIn = FakeLastSignInRepository()
+
+    private fun viewModel() = StartViewModel(auth, me, lastSignIn)
 
     private fun googleToken(token: String = "google-id-token") =
         StartAction.SocialTokenReceived(SocialProvider.GOOGLE, SocialTokenResult.Success(SocialProvider.GOOGLE, token))
@@ -224,5 +226,71 @@ class StartViewModelTest {
         val strings = File("src/main/res/values/strings.xml").readText()
 
         assertTrue(strings.contains("다른 기기에서 로그인해서 로그아웃됐어요"))
+    }
+
+    // --- FR-AUTH-10 최근 로그인 수단 ---
+
+    @Test
+    fun `FR-AUTH-10 AC2 기억한 수단을 상태에 싣는다`() = runTest {
+        val vm = viewModel()
+        assertEquals(null, vm.uiState.value.lastProvider)
+
+        lastSignIn.provider.value = SocialProvider.KAKAO
+
+        assertEquals(SocialProvider.KAKAO, vm.uiState.value.lastProvider)
+    }
+
+    @Test
+    fun `FR-AUTH-10 AC3 다른 수단은 다이얼로그를 띄운다`() = runTest {
+        lastSignIn.provider.value = SocialProvider.KAKAO
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(StartAction.SocialClicked(SocialProvider.GOOGLE))
+
+            assertEquals(SocialProvider.GOOGLE, vm.uiState.value.otherMethodDialog)
+            assertFalse(vm.uiState.value.requesting)
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `FR-AUTH-10 AC3 계속을 누르면 그 수단으로 로그인한다`() = runTest {
+        lastSignIn.provider.value = SocialProvider.KAKAO
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(StartAction.SocialClicked(SocialProvider.GOOGLE))
+            vm.onAction(StartAction.OtherMethodConfirmed)
+
+            assertEquals(StartSideEffect.RequestSocialToken(SocialProvider.GOOGLE), awaitItem())
+            assertEquals(null, vm.uiState.value.otherMethodDialog)
+            assertTrue(vm.uiState.value.requesting)
+        }
+    }
+
+    @Test
+    fun `FR-AUTH-10 AC3 취소하면 로그인하지 않는다`() = runTest {
+        lastSignIn.provider.value = SocialProvider.KAKAO
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(StartAction.SocialClicked(SocialProvider.GOOGLE))
+            vm.onAction(StartAction.OtherMethodDismissed)
+
+            assertEquals(null, vm.uiState.value.otherMethodDialog)
+            assertFalse(vm.uiState.value.requesting)
+            assertTrue(auth.signInCalls.isEmpty())
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `FR-AUTH-10 AC4 같은 수단은 바로 로그인한다`() = runTest {
+        lastSignIn.provider.value = SocialProvider.KAKAO
+        val vm = viewModel()
+        vm.effects.test {
+            vm.onAction(StartAction.SocialClicked(SocialProvider.KAKAO))
+
+            assertEquals(StartSideEffect.RequestSocialToken(SocialProvider.KAKAO), awaitItem())
+            assertEquals(null, vm.uiState.value.otherMethodDialog)
+        }
     }
 }

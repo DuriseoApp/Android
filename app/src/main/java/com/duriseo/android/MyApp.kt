@@ -8,6 +8,7 @@ import android.os.Looper
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import com.duriseo.android.core.ads.AdsInitializer
 import com.duriseo.android.core.common.social.SocialSdkInitializer
 import com.duriseo.android.core.common.update.AppForegroundTracker
 import com.duriseo.android.core.common.update.AppUpdateSource
@@ -30,6 +31,10 @@ class MyApp : Application(), SingletonImageLoader.Factory {
 
     @Inject
     lateinit var pushInitializer: PushInitializer
+
+    /** 광고 SDK 초기화 (D-186). noAdsDebug·ID 없는 release는 아무것도 안 한다 */
+    @Inject
+    lateinit var adsInitializer: AdsInitializer
 
     @Inject
     lateinit var processUiState: ProcessUiState
@@ -57,6 +62,8 @@ class MyApp : Application(), SingletonImageLoader.Factory {
         pushInitializer.start()
         // 앱 시작 때 이미 받아 둔 인앱 업데이트가 있는지 본다. Play가 설치하지 않은 앱이면 조용히 끝난다 (D-151)
         appUpdateSource.start()
+        // 광고가 켜져 있을 때만 백그라운드에서 SDK를 한 번 초기화한다 (FR-AD-04 AC4)
+        adsInitializer.start()
         // 앱으로 돌아올 때 기기 시간대가 저장값과 다르면 다시 알린다 (Q-19 ①).
         // 화면이 한 번이라도 만들어진 프로세스만 동기화 신호(SYNC)를 처리한다 (API.md 6장 "프로세스가 살아 있을 때만")
         registerActivityLifecycleCallbacks(

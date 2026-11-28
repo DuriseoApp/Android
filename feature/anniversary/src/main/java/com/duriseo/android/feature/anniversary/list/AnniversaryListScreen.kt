@@ -44,6 +44,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.duriseo.android.core.ads.NativeAdCardPreviewSample
+import com.duriseo.android.core.ads.NativeAdCardStyle
+import com.duriseo.android.core.ads.NativeAdSlotItem
+import com.duriseo.android.core.ads.rememberNativeAdSlots
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.component.DuriseoBottomSheetLayer
 import com.duriseo.android.core.designsystem.component.DuriseoButton
@@ -152,7 +156,15 @@ fun AnniversaryListRoute(
             }
         }
     }
-    AnniversaryListScreen(state = state, onAction = viewModel::onAction, padding = padding, modifier = modifier)
+    // 광고 보관함은 화면이 들고 있다가 화면을 떠나면 destroy한다 (core:ads)
+    val adSlots = rememberNativeAdSlots(state.adUnitId)
+    AnniversaryListScreen(
+        state = state,
+        onAction = viewModel::onAction,
+        padding = padding,
+        modifier = modifier,
+        adCard = { NativeAdSlotItem(adSlots, slot = 0, style = NativeAdCardStyle.Large, modifier = Modifier.padding(top = BlockGap)) },
+    )
 }
 
 @Composable
@@ -161,6 +173,7 @@ fun AnniversaryListScreen(
     onAction: (AnniversaryListAction) -> Unit,
     modifier: Modifier = Modifier,
     padding: PaddingValues = PaddingValues(),
+    adCard: @Composable () -> Unit = {},
 ) {
     val sheet = state.startDateSheet
     DuriseoDialogLayer(
@@ -196,13 +209,13 @@ fun AnniversaryListScreen(
                 actionDescription = stringResource(R.string.anniversary_add_description),
                 onAction = { onAction(AnniversaryListAction.AddClicked) },
             )
-            if (state.loaded) ListBody(state = state, onAction = onAction)
+            if (state.loaded) ListBody(state = state, onAction = onAction, adCard = adCard)
         }
     }
 }
 
 @Composable
-private fun ListBody(state: AnniversaryListUiState, onAction: (AnniversaryListAction) -> Unit) {
+private fun ListBody(state: AnniversaryListUiState, onAction: (AnniversaryListAction) -> Unit, adCard: @Composable () -> Unit) {
     val listState = rememberLazyListState()
     // 끝 가까이까지 스크롤하면 다음 페이지를 이어 붙인다 (지난 기념일이 펼쳐져 있으면 그쪽)
     val nearEnd by remember {
@@ -250,6 +263,10 @@ private fun ListBody(state: AnniversaryListUiState, onAction: (AnniversaryListAc
                     onClick = { onAction(AnniversaryListAction.ItemClicked(item)) },
                 )
             }
+        }
+        if (state.showAd) {
+            // 받은 광고만 그린다 (받는 중·실패면 아무것도 없다)
+            item(key = "ad") { adCard() }
         }
         if (state.showPastRow) {
             item(key = "past-row") {
@@ -702,3 +719,16 @@ private fun AnniversaryListPreview_NoStartDate() = PreviewScreen(coupleState(noS
 private fun AnniversaryListPreview_StartDateSheet() = PreviewScreen(
     coupleState(noStartDate = true, sheet = StartDateSheetState(YearMonth.of(2026, 10), null)),
 )
+
+/** `SCR-ANNIV-01--ad.png`: 다가오는 목록 아래, 지난 기념일 위에 큰 광고 카드. 가짜 카드로 그린다 */
+@Preview(showBackground = true, widthDp = 390, heightDp = 1100)
+@Composable
+private fun AnniversaryListPreview_Ad() {
+    DuriseoTheme {
+        AnniversaryListScreen(
+            state = coupleState().copy(adUnitId = "preview"),
+            onAction = {},
+            adCard = { NativeAdCardPreviewSample(NativeAdCardStyle.Large, Modifier.padding(top = BlockGap)) },
+        )
+    }
+}

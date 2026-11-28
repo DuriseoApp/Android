@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -35,13 +36,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withLink
@@ -60,13 +67,16 @@ import com.duriseo.android.core.common.social.SOCIAL_LOG_TAG
 import com.duriseo.android.core.common.social.SocialTokenResult
 import com.duriseo.android.core.common.social.findActivity
 import com.duriseo.android.core.common.social.socialTokenProvider
-import com.duriseo.android.core.designsystem.component.DuriseoLoadingLayer
+import com.duriseo.android.core.designsystem.component.DuriseoDialog
+import com.duriseo.android.core.designsystem.component.DuriseoDialogLayer
 import com.duriseo.android.core.designsystem.component.DuriseoSnackbar
 import com.duriseo.android.core.designsystem.component.DuriseoSnackbarHost
+import com.duriseo.android.core.designsystem.theme.Brand500
 import com.duriseo.android.core.designsystem.theme.DuriseoShapes
 import com.duriseo.android.core.designsystem.theme.DuriseoSpacing
 import com.duriseo.android.core.designsystem.theme.DuriseoTheme
 import com.duriseo.android.core.designsystem.theme.Ink500
+import com.duriseo.android.core.designsystem.theme.OnBrand
 import com.duriseo.android.core.designsystem.theme.Ink600
 import com.duriseo.android.core.designsystem.theme.Ink900
 import com.duriseo.android.core.designsystem.theme.Line100
@@ -105,6 +115,14 @@ private val ConsentTopGap = 6.dp
 
 /** 작은 글 12 / 400, 행간 1.6 = 19.2 (47·48행). `caption`은 12/500/16이라 따로 쓴다 */
 private val SmallLineHeight = 19.2.sp
+
+/** "최근 사용" 배지: 버튼 오른쪽 위 모서리에 걸친다. 위 -9, 오른쪽 14, 안쪽 세로 2·가로 8, 글자 11/16 600 (`Main.dc.html` 38·39행) */
+// "최근 사용" 배지 값(위 −9, 오른쪽 14, 안쪽 2·8, 11/16 600)은 보드 값이고 토큰이 없다 (Main.dc.html, SCREENS SCR-START-01)
+private val BadgeTopOffset = (-9).dp
+private val BadgeEndInset = 14.dp
+private val BadgeVerticalPadding = 2.dp
+private val BadgeHorizontalPadding = DuriseoSpacing.Space2
+private val BadgeTextStyle = TextStyle(fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold)
 
 /** 스낵바는 위에서 40 (51행, SCREENS.md SCR-START-01 "오류·안내 위치") */
 private val SnackbarTop = 40.dp
@@ -184,8 +202,13 @@ fun StartScreen(
     snackbarHost: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // 서버 요청(게스트 시작·로그인)이 도는 동안 로딩 덮개 (D-115)
-    DuriseoLoadingLayer(loading = state.loading, modifier = modifier) {
+    // 서버 요청(게스트 시작·로그인)이 도는 동안 로딩 덮개 (D-115). 다른 수단 확인 다이얼로그도 같은 층에 그린다 (FR-AUTH-10 AC3)
+    DuriseoDialogLayer(
+        dialogVisible = state.otherMethodDialog != null && state.lastProvider != null,
+        dialog = { OtherMethodDialog(state = state, onAction = onAction) },
+        modifier = modifier,
+        loading = state.loading,
+    ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -258,20 +281,18 @@ fun StartScreen(
                     color = Ink500,
                     textAlign = TextAlign.Center,
                 )
-                DuriseoButton(
+                SocialButton(
                     text = stringResource(R.string.start_continue_google),
-                    onClick = { onAction(StartAction.SocialClicked(SocialProvider.GOOGLE)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    lastUsed = state.lastProvider == SocialProvider.GOOGLE,
+                    onPressed = { onAction(StartAction.SocialClicked(SocialProvider.GOOGLE)) },
                     style = DuriseoButtonStyle.Filled,
-                    size = DuriseoButtonSize.Social,
                     enabled = !state.requesting,
                 )
-                DuriseoButton(
+                SocialButton(
                     text = stringResource(R.string.start_continue_kakao),
-                    onClick = { onAction(StartAction.SocialClicked(SocialProvider.KAKAO)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    lastUsed = state.lastProvider == SocialProvider.KAKAO,
+                    onPressed = { onAction(StartAction.SocialClicked(SocialProvider.KAKAO)) },
                     style = DuriseoButtonStyle.Outline,
-                    size = DuriseoButtonSize.Social,
                     enabled = !state.requesting,
                 )
                 OrDivider()
@@ -308,6 +329,79 @@ fun StartScreen(
     }
     }
 }
+
+/**
+ * 소셜 로그인 버튼. [lastUsed]면 오른쪽 위 모서리에 걸친 "최근 사용" 배지를 붙이고 낭독에 ", 최근 사용"을 더한다 (FR-AUTH-10 AC2).
+ * 버튼이 모서리를 잘라 그리므로(clip) 배지는 버튼 밖 형제로 겹쳐 그려서 잘리지 않고, 버튼 높이·글자 자리를 바꾸지 않는다.
+ */
+@Composable
+private fun SocialButton(
+    text: String,
+    lastUsed: Boolean,
+    onPressed: () -> Unit,
+    style: DuriseoButtonStyle,
+    enabled: Boolean,
+) {
+    val badge = stringResource(R.string.start_last_used_badge)
+    val description = if (lastUsed) stringResource(R.string.start_button_last_used_description, text) else text
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clearAndSetSemantics {
+                contentDescription = description
+                role = Role.Button
+                if (enabled) onClick(label = null) { onPressed(); true } else disabled()
+            },
+    ) {
+        DuriseoButton(
+            text = text,
+            onClick = onPressed,
+            modifier = Modifier.fillMaxWidth(),
+            style = style,
+            size = DuriseoButtonSize.Social,
+            enabled = enabled,
+        )
+        if (lastUsed) {
+            Text(
+                text = badge,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = -BadgeEndInset, y = BadgeTopOffset)
+                    .background(Brand500, DuriseoShapes.Full)
+                    .padding(horizontal = BadgeHorizontalPadding, vertical = BadgeVerticalPadding),
+                style = BadgeTextStyle,
+                color = OnBrand,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+/** 기억한 수단과 다른 수단을 눌렀을 때 묻는 다이얼로그. 확인은 파괴적이지 않아 기본 `brand-500` (FR-AUTH-10 AC3) */
+@Composable
+private fun OtherMethodDialog(state: StartUiState, onAction: (StartAction) -> Unit) {
+    val tapped = state.otherMethodDialog ?: return
+    val last = state.lastProvider ?: return
+    val lastName = methodName(last)
+    val tappedName = methodName(tapped)
+    DuriseoDialog(
+        title = stringResource(R.string.start_other_method_title, lastName),
+        body = stringResource(R.string.start_other_method_body, tappedName),
+        cancelText = stringResource(DesignR.string.action_cancel),
+        confirmText = stringResource(R.string.start_other_method_confirm, tappedName),
+        onCancel = { onAction(StartAction.OtherMethodDismissed) },
+        onConfirm = { onAction(StartAction.OtherMethodConfirmed) },
+        confirmStyle = DuriseoButtonStyle.Brand,
+    )
+}
+
+@Composable
+private fun methodName(provider: SocialProvider): String = stringResource(
+    when (provider) {
+        SocialProvider.GOOGLE -> R.string.start_method_google
+        SocialProvider.KAKAO -> R.string.start_method_kakao
+    },
+)
 
 @Composable
 private fun SmallTextStyle() = MaterialTheme.typography.labelMedium.copy(
@@ -429,3 +523,15 @@ private fun StartScreenOfflinePreview() = PreviewStartScreen(messageRes = Design
 @Preview(showBackground = true, widthDp = 390, heightDp = 480)
 @Composable
 private fun StartScreenSmallPreview() = PreviewStartScreen()
+
+/** 카카오로 마지막 로그인한 기기: Kakao 버튼에 배지 */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun StartPreview_LastUsedKakao() = PreviewStartScreen(state = StartUiState(lastProvider = SocialProvider.KAKAO))
+
+/** 카카오를 기억한 기기에서 [Google로 계속하기]를 누른 모습 */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun StartPreview_OtherMethodDialog() = PreviewStartScreen(
+    state = StartUiState(lastProvider = SocialProvider.KAKAO, otherMethodDialog = SocialProvider.GOOGLE),
+)

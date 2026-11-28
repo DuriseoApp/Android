@@ -10,6 +10,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.duriseo.android.core.common.config.OsVersion
 import com.duriseo.android.core.common.update.AppVersion
+import com.duriseo.android.data.local.auth.LastSignInLocalDataSource
 import com.duriseo.android.data.local.cleanup.LocalDataCleaner
 import com.duriseo.android.data.local.db.DuriseoDatabase
 import com.duriseo.android.data.local.anniversary.AnniversaryLocalDataSource
@@ -324,7 +325,8 @@ class RepoHarness(
     val profileRepository = ProfileRepositoryImpl(meRemote, meRepository, monitor, cache)
     val pushTokens = FakePushTokenProvider()
     val deviceRegistrar = DeviceRegistrarImpl(meRemote, tokens, monitor, pushTokens, TEST_APP_VERSION, TEST_OS_VERSION)
-    val authRepository = AuthRepositoryImpl(authRemote, meRemote, tokens, session, meRepository, monitor, clock, deviceRegistrar, ioScope)
+    val lastSignIn = LastSignInLocalDataSource(settings)
+    val authRepository = AuthRepositoryImpl(authRemote, meRemote, tokens, session, meRepository, monitor, clock, deviceRegistrar, lastSignIn, ioScope)
     val coupleRemote = CoupleRemoteDataSource(retrofit.create(CoupleApi::class.java), apiCaller)
     val coupleRepository = CoupleRepositoryImpl(coupleRemote, meRepository, meLocal, monitor, writeLock, eventLocal, anniversaryLocal, memoLocal, cache)
     val eventRemote = EventRemoteDataSource(retrofit.create(EventApi::class.java), apiCaller)

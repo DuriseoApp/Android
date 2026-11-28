@@ -17,6 +17,7 @@ import com.duriseo.android.data.repository.sync.SyncDispatcher
 import com.duriseo.android.data.repository.tutorial.CalendarTutorialRepositoryImpl
 import com.duriseo.android.domain.anniversary.AnniversaryRepository
 import com.duriseo.android.domain.auth.AuthRepository
+import com.duriseo.android.domain.auth.LastSignInRepository
 import com.duriseo.android.domain.auth.SessionEndNotifier
 import com.duriseo.android.domain.couple.CoupleRepository
 import com.duriseo.android.domain.device.DeviceRegistrar
@@ -44,6 +45,10 @@ import dagger.hilt.components.SingletonComponent
 abstract class RepositoryModule {
     @Binds
     abstract fun bindAuthRepository(impl: AuthRepositoryImpl): AuthRepository
+
+    /** 최근 로그인 수단 읽기 (FR-AUTH-10). [AuthRepositoryImpl]이 같이 구현한다 */
+    @Binds
+    abstract fun bindLastSignInRepository(impl: AuthRepositoryImpl): LastSignInRepository
 
     @Binds
     abstract fun bindMeRepository(impl: MeRepositoryImpl): MeRepository

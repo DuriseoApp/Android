@@ -80,6 +80,8 @@ data class AnniversaryListUiState(
     val hasMorePast: Boolean = false,
     val startDateSheet: StartDateSheetState? = null,
     val today: LocalDate = LocalDate.of(2026, 1, 1),
+    /** 큰 광고 카드의 네이티브 광고 단위 ID. null이면 광고가 꺼져 있어(noAdsDebug 등) 요청도 자리도 없다 (FR-AD-04 AC4) */
+    val adUnitId: String? = null,
 ) {
     /** 처음 만난 날 저장 요청이 도는 동안 true. 로딩 덮개를 그린다 (D-115). 목록 조회·다음 페이지는 덮지 않는다 */
     val loading: Boolean get() = startDateSheet?.saving == true
@@ -89,6 +91,12 @@ data class AnniversaryListUiState(
 
     /** 비었을 때 "아직 기념일이 없어요" + [기념일 추가] (개인 공간, FR-ANNIV-04 AC2) */
     val isEmpty: Boolean get() = loaded && items.isEmpty()
+
+    /**
+     * 큰 광고 카드 자리 (FR-AD-02 AC1·AC2): 다가오는 목록 아래, 접힌 "지난 기념일" 위.
+     * 다가오는 기념일이 없으면(개인 공간 빈 화면, 직접 기념일도 없는 처음 만난 날 안내 화면) 자리가 없다.
+     */
+    val showAd: Boolean get() = adUnitId != null && loaded && items.isNotEmpty()
 
     val showPastRow: Boolean get() = pastCount > 0
 }

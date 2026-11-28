@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.annotation.RawRes
 import com.duriseo.android.BuildConfig
 import com.duriseo.android.R
+import com.duriseo.android.core.common.config.AdsConfig
 import com.duriseo.android.core.common.config.AppConfig
 import com.duriseo.android.core.common.config.LicensesJsonRes
 import com.duriseo.android.core.common.config.OsVersion
@@ -28,6 +29,16 @@ object AppModule {
         apiBaseUrl = BuildConfig.API_BASE_URL,
         googleWebClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID,
         kakaoNativeAppKey = BuildConfig.KAKAO_NATIVE_APP_KEY,
+    )
+
+    /** 광고 설정 (D-186). release인데 ID가 비면 [AdsConfig.create]가 광고를 끈다 */
+    @Provides
+    @Singleton
+    fun provideAdsConfig(): AdsConfig = AdsConfig.create(
+        enabled = BuildConfig.ADS_ENABLED,
+        memoListNativeId = BuildConfig.ADMOB_MEMO_LIST_NATIVE_ID,
+        anniversaryListNativeId = BuildConfig.ADMOB_ANNIVERSARY_LIST_NATIVE_ID,
+        menuBottomBannerId = BuildConfig.ADMOB_MENU_BOTTOM_BANNER_ID,
     )
 
     /** 앱 정보 카드와 문의 메일의 앱 버전 (FR-SET-02 AC1·AC4). `feature`는 app의 `BuildConfig`를 볼 수 없다 */

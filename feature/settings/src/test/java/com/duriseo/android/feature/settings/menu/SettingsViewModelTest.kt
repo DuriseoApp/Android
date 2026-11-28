@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.settings.menu
 
+import com.duriseo.android.core.common.config.AdsConfig
 import app.cash.turbine.test
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.domain.error.DataError
@@ -27,6 +28,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -57,8 +59,8 @@ class SettingsViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun TestScope.viewModel(): SettingsViewModel {
-        val vm = SettingsViewModel(auth, me, couple, tutorial, clock)
+    private fun TestScope.viewModel(ads: AdsConfig = AdsConfig.Disabled): SettingsViewModel {
+        val vm = SettingsViewModel(auth, me, couple, tutorial, clock, ads)
         // stateIn(WhileSubscribed)라서 값을 읽는 동안 구독해 둔다
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect { } }
         return vm
@@ -252,7 +254,7 @@ class SettingsViewModelTest {
     @Test
     fun `Q-14 내 정보를 한 번도 받지 못하고 갱신도 실패하면 공통 오류 스낵바를 보여 준다`() = runTest {
         me.refreshResult = apiError("INTERNAL_ERROR")
-        val vm = SettingsViewModel(auth, me, couple, tutorial, clock)
+        val vm = SettingsViewModel(auth, me, couple, tutorial, clock, AdsConfig.Disabled)
 
         vm.effects.test {
             assertEquals(SettingsSideEffect.ShowMessage(DesignR.string.error_common), awaitItem())
@@ -503,5 +505,18 @@ class SettingsViewModelTest {
             assertEquals(SettingsSideEffect.CloseForTutorial, awaitItem())
         }
         assertTrue(tutorial.replayRequested.value)
+    }
+
+    @Test
+    fun `FR-AD-03 AC1 광고가 켜져 있으면 배너 단위 ID를 상태에 싣는다`() = runTest {
+        val on = AdsConfig(enabled = true, memoListNativeId = "m", anniversaryListNativeId = "a", menuBottomBannerId = "b")
+        val vm = viewModel(on)
+
+        assertEquals("b", vm.uiState.value.adUnitId)
+    }
+
+    @Test
+    fun `FR-AD-04 AC4 광고가 꺼져 있으면 배너 단위 ID가 없다`() = runTest {
+        assertNull(viewModel().uiState.value.adUnitId)
     }
 }

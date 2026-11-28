@@ -45,12 +45,12 @@ jobs:
           key: robolectric-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
           restore-keys: robolectric-${{ runner.os }}-
       # local.properties 설정값은 CI에 없다. 빌드는 빈 값으로 되고, 설정값이 필요한 테스트는 가짜 값을 쓴다
-      - name: ./gradlew assembleDebug testDebugUnitTest
+      - name: ./gradlew assembleDebug assembleNoAdsDebug testDebugUnitTest testNoAdsDebugUnitTest
         # 처음 한 번 실패하면(jar 다운로드 같은 일시적인 네트워크 오류) 한 번 더 돌린다. 통과한 작업은 건너뛰어 빠르다
         run: |
           set -o pipefail
           for attempt in 1 2; do
-            ./gradlew assembleDebug testDebugUnitTest --no-daemon 2>&1 | tee -a gradle-output.log && exit 0
+            ./gradlew assembleDebug assembleNoAdsDebug testDebugUnitTest testNoAdsDebugUnitTest --no-daemon 2>&1 | tee -a gradle-output.log && exit 0
             echo "::warning title=재시도::Gradle이 실패해 한 번 더 돌려요 (시도 $attempt/2)"
           done
           exit 1

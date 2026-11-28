@@ -2,12 +2,14 @@ package com.duriseo.android.data.repository.auth
 
 import com.duriseo.android.core.common.Logger
 import com.duriseo.android.core.common.coroutines.ApplicationScope
+import com.duriseo.android.data.local.auth.LastSignInLocalDataSource
 import com.duriseo.android.data.remote.auth.AuthRemoteDataSource
 import com.duriseo.android.data.remote.me.MeRemoteDataSource
 import com.duriseo.android.data.repository.online.runOnlineWrite
 import com.duriseo.android.domain.auth.AuthRepository
 import com.duriseo.android.domain.auth.AuthState
 import com.duriseo.android.domain.auth.IssuedTokens
+import com.duriseo.android.domain.auth.LastSignInRepository
 import com.duriseo.android.domain.auth.LoginResult
 import com.duriseo.android.domain.auth.SessionEndReason
 import com.duriseo.android.domain.auth.TokenState
@@ -44,8 +46,11 @@ class AuthRepositoryImpl @Inject constructor(
     private val networkMonitor: NetworkMonitor,
     private val clock: Clock,
     private val deviceRegistrar: DeviceRegistrar,
+    private val lastSignIn: LastSignInLocalDataSource,
     @ApplicationScope private val scope: CoroutineScope,
-) : AuthRepository {
+) : AuthRepository, LastSignInRepository {
+
+    override val lastProvider: Flow<SocialProvider?> = lastSignIn.provider
 
     override val authState: Flow<AuthState> = tokenStorage.state
         .map { state ->
@@ -68,7 +73,7 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun signIn(provider: SocialProvider, token: String): DataResult<LoginResult> =
         networkMonitor.runOnlineWrite {
-            completeLogin(authRemote.social(provider, token))
+            completeLogin(authRemote.social(provider, token)).also { rememberIfSuccess(provider, it) }
         }.also { logSocialResult("POST /auth/social", provider, it) }
 
     override suspend fun link(provider: SocialProvider, token: String): DataResult<Unit> =
@@ -76,7 +81,10 @@ class AuthRepositoryImpl @Inject constructor(
             val result = authRemote.link(provider, token)
             when {
                 // 토큰은 그대로 두고 내 정보만 다시 읽는다. 같은 화면이 계정 · 회원으로 바뀐다 (API 4.3 5단계)
-                result is DataResult.Success -> meRepository.refreshMe()
+                result is DataResult.Success -> {
+                    rememberIfSuccess(provider, result)
+                    meRepository.refreshMe()
+                }
                 // 이미 회원인데 게스트 화면이었다: 상태를 다시 읽어 바로잡는다
                 result.isApiError(ErrorCode.GUEST_ONLY) -> meRepository.refreshMe()
                 else -> endSessionIfNeeded(result)
@@ -93,6 +101,7 @@ class AuthRepositoryImpl @Inject constructor(
                         localDataFailure()
                     } else {
                         tokenStorage.save(result.value.tokens)
+                        rememberProvider(provider)
                         afterLogin()
                         DataResult.Success(LoginResult(result.value.isNewUser))
                     }
@@ -112,8 +121,34 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun withdraw(): DataResult<Unit> =
         networkMonitor.runOnlineWrite {
-            finishLeaving(meRemote.deleteMe())
+            finishLeaving(meRemote.deleteMe()).also { result ->
+                // 기기 단위 기록이라 사용자 데이터 정리에서 남는다. 정리가 끝난 뒤 따로 지운다 (Q-25)
+                if (result is DataResult.Success) {
+                    try {
+                        lastSignIn.clear()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Logger.w(TAG, "최근 로그인 수단을 지우지 못했어요: ${e.javaClass.simpleName}")
+                    }
+                }
+            }
         }
+
+    private suspend fun rememberIfSuccess(provider: SocialProvider, result: DataResult<*>) {
+        if (result is DataResult.Success) rememberProvider(provider)
+    }
+
+    /** 최근 로그인 수단을 기억한다 (FR-AUTH-10). 기억하지 못해도 로그인은 이미 끝난 것이라 실패는 조용히 넘긴다 */
+    private suspend fun rememberProvider(provider: SocialProvider) {
+        try {
+            lastSignIn.save(provider)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Logger.w(TAG, "최근 로그인 수단을 기억하지 못했어요: ${e.javaClass.simpleName}")
+        }
+    }
 
     /** 로그인 3종 공통: 토큰을 저장하고, `GET /me`를 Room에 넣고, 시간대를 맞춘다. */
     private suspend fun completeLogin(result: DataResult<IssuedTokens>): DataResult<LoginResult> =

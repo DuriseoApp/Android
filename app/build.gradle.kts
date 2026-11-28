@@ -23,6 +23,28 @@ fun localProperty(key: String): String = localProperties.getProperty(key, "").tr
 fun String.asBuildConfigString(): String =
     "\"" + replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
+/** Google 공개 테스트 광고 ID (공개 값이라 코드에 둔다, D-186). debug·noAdsDebug가 쓴다 */
+object GoogleTestAdIds {
+    const val APP = "ca-app-pub-3940256099942544~3347511713"
+    const val NATIVE = "ca-app-pub-3940256099942544/2247696110"
+    const val ADAPTIVE_BANNER = "ca-app-pub-3940256099942544/9214589741"
+}
+
+/** 광고 BuildConfig 4개와 매니페스트 앱 ID 자리표시자(`admobAppId`)를 한 번에 넣는다 */
+fun com.android.build.api.dsl.ApplicationBuildType.adsBuildConfig(
+    enabled: Boolean,
+    appId: String,
+    memoListNativeId: String,
+    anniversaryListNativeId: String,
+    menuBottomBannerId: String,
+) {
+    buildConfigField("boolean", "ADS_ENABLED", enabled.toString())
+    buildConfigField("String", "ADMOB_MEMO_LIST_NATIVE_ID", memoListNativeId.asBuildConfigString())
+    buildConfigField("String", "ADMOB_ANNIVERSARY_LIST_NATIVE_ID", anniversaryListNativeId.asBuildConfigString())
+    buildConfigField("String", "ADMOB_MENU_BOTTOM_BANNER_ID", menuBottomBannerId.asBuildConfigString())
+    manifestPlaceholders["admobAppId"] = appId
+}
+
 // Firebase(FCM) 설정 파일. 비밀값이라 커밋하지 않는다 (docs/SETUP.md). 파일이 있을 때만 google-services 플러그인을 적용한다.
 // 없으면(CI 등) FCM이 꺼진 채 빌드되고, 앱은 토큰 등록·푸시 수신 없이 동작한다 (core:push `FcmAvailability`).
 if (file("google-services.json").exists()) {
@@ -46,12 +68,42 @@ android {
     }
 
     buildTypes {
-        // debug = 개발 서버, release = 운영 서버 (ARCHITECTURE.md 6장). applicationId는 둘 다 같다.
+        // debug = 개발 서버 + Google 테스트 광고, noAdsDebug = debug와 같고 광고 없음, release = 운영 서버 + 실제 광고
+        // (ARCHITECTURE.md 6장, D-186). applicationId는 셋 다 같다.
         getByName("debug") {
             buildConfigField("String", "API_BASE_URL", localProperty("duriseo.api.devUrl").asBuildConfigString())
+            adsBuildConfig(
+                enabled = true,
+                appId = GoogleTestAdIds.APP,
+                memoListNativeId = GoogleTestAdIds.NATIVE,
+                anniversaryListNativeId = GoogleTestAdIds.NATIVE,
+                menuBottomBannerId = GoogleTestAdIds.ADAPTIVE_BANNER,
+            )
+        }
+        // debug 설정(서버 주소, 서명, 디버그 가능)을 복사한 뒤 광고만 끈다. 라이브러리 모듈에는 noAdsDebug가 없으니 debug를 쓴다
+        create("noAdsDebug") {
+            initWith(getByName("debug"))
+            matchingFallbacks += listOf("debug")
+            signingConfig = signingConfigs.getByName("debug")
+            adsBuildConfig(
+                enabled = false,
+                appId = GoogleTestAdIds.APP,
+                memoListNativeId = GoogleTestAdIds.NATIVE,
+                anniversaryListNativeId = GoogleTestAdIds.NATIVE,
+                menuBottomBannerId = GoogleTestAdIds.ADAPTIVE_BANNER,
+            )
         }
         getByName("release") {
             buildConfigField("String", "API_BASE_URL", localProperty("duriseo.api.prodUrl").asBuildConfigString())
+            // 값이 하나라도 비면 광고를 끈다 (AdsConfig.create, 결정 4). 앱 ID가 비면 매니페스트에는 테스트 앱 ID를 넣어 SDK가 죽지 않게 한다
+            val releaseAppId = localProperty("duriseo.admob.appId")
+            adsBuildConfig(
+                enabled = releaseAppId.isNotBlank(),
+                appId = releaseAppId.ifBlank { GoogleTestAdIds.APP },
+                memoListNativeId = localProperty("duriseo.admob.memoListNativeId"),
+                anniversaryListNativeId = localProperty("duriseo.admob.anniversaryListNativeId"),
+                menuBottomBannerId = localProperty("duriseo.admob.menuBottomBannerId"),
+            )
         }
     }
 }
@@ -61,6 +113,7 @@ dependencies {
     implementation(projects.core.designsystem)
     implementation(projects.core.common)
     implementation(projects.core.push)
+    implementation(projects.core.ads)
     implementation(projects.domain)
     // Hilt 바인딩(리포지토리, 원격, 로컬)을 앱 그래프에 모으기 위해
     implementation(projects.data.repository)

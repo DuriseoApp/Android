@@ -13,6 +13,15 @@
     <string name="start_guest">게스트로 시작하기</string>
     <string name="start_guest_description">로그인 없이 바로 써볼 수 있어요. 나중에 메뉴 › 계정에서 로그인하면 지금까지의 기록이 그대로 옮겨져요.</string>
 
+    <!-- 최근 로그인 수단 (FR-AUTH-10, D-188): 배지, 버튼 낭독, 다른 수단 확인 다이얼로그. 수단 이름은 "Google"·"카카오" -->
+    <string name="start_last_used_badge">최근 사용</string>
+    <string name="start_button_last_used_description">%1$s, 최근 사용</string>
+    <string name="start_method_google">Google</string>
+    <string name="start_method_kakao">카카오</string>
+    <string name="start_other_method_title">이 기기에서는 %1$s로 로그인했어요</string>
+    <string name="start_other_method_body">다른 계정으로 로그인하면 새 계정이 만들어질 수 있어요. %1$s로 계속할까요?</string>
+    <string name="start_other_method_confirm">%1$s로 계속</string>
+
     <!-- 동의 문구 (FR-AUTH-08 AC1, D-63): 나이는 따로 묻지 않는다. 두 링크 모양만 있고 주소는 PRD Q-03이 정해지면 연결한다 -->
     <string name="start_consent">시작하면 만 14세 이상이며, %1$s과 %2$s에 동의하는 것으로 봐요.</string>
     <string name="start_consent_terms">이용약관</string>
