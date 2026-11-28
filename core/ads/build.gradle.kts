@@ -16,7 +16,7 @@ dependencies {
     api(libs.play.services.ads)
 
     implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.timber)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

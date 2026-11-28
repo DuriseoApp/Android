@@ -28,7 +28,7 @@
 | `duriseo.admob.anniversaryListNativeId` | 기념일 목록 네이티브 광고 단위 ID. release만 |
 | `duriseo.admob.menuBottomBannerId` | 전체 메뉴 아래 적응형 배너 광고 단위 ID. release만 |
 
-AdMob 키 4개 중 하나라도 비면 release 빌드는 되지만 **광고가 꺼져요**. 출시 전에 값이 들어 있는지 사람이 확인해요.
+AdMob 키 4개 중 하나라도 비면 release 빌드는 되지만 **광고가 꺼져요**. 출시 전에 값이 들어 있는지 사람이 확인해요. 앱 ID가 비면 매니페스트에 Google 테스트 앱 ID가 들어가서 광고 SDK 자동 시작 Provider는 돌지만(광고 요청은 없어요) 실제 광고는 나오지 않아요.
 
 `noAdsDebug`(광고 없는 개발 빌드)는 Android Studio의 Build Variants에서 골라요. `./gradlew assembleNoAdsDebug`로도 만들 수 있어요.
 

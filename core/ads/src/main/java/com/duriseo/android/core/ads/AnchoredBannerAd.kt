@@ -11,8 +11,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.findViewTreeLifecycleOwner
 import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
@@ -26,7 +30,7 @@ import com.google.android.gms.ads.LoadAdError
  * `AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, widthDp)`는 Google 적응형 배너 안내의 표준 호출이다.
  * 광고가 꺼져 있으면(`AdsConfig.enabled = false`) 이 함수를 호출하지 않는다.
  *
- * @param adUnitId 적응형 배너 광고 단위 ID (`NativeAdSlotsFactory.menuBottomBannerId`)
+ * @param adUnitId 적응형 배너 광고 단위 ID
  */
 @Composable
 fun AnchoredBannerAd(
@@ -58,8 +62,21 @@ fun AnchoredBannerAd(
                 loadAd(AdRequest.Builder().build())
             }
         }
-        DisposableEffect(adView) {
-            onDispose { adView.destroy() }
+        // 화면이 멈추면 pause, 다시 보이면 resume (AdView 수명주기 안내). 화면을 떠나면 destroy
+        val lifecycleOwner = LocalView.current.findViewTreeLifecycleOwner()
+        DisposableEffect(adView, lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_PAUSE -> adView.pause()
+                    Lifecycle.Event.ON_RESUME -> adView.resume()
+                    else -> Unit
+                }
+            }
+            lifecycleOwner?.lifecycle?.addObserver(observer)
+            onDispose {
+                lifecycleOwner?.lifecycle?.removeObserver(observer)
+                adView.destroy()
+            }
         }
         AndroidView(
             modifier = Modifier

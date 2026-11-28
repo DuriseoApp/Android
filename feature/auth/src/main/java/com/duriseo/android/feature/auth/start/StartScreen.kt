@@ -117,6 +117,7 @@ private val ConsentTopGap = 6.dp
 private val SmallLineHeight = 19.2.sp
 
 /** "최근 사용" 배지: 버튼 오른쪽 위 모서리에 걸친다. 위 -9, 오른쪽 14, 안쪽 세로 2·가로 8, 글자 11/16 600 (`Main.dc.html` 38·39행) */
+// "최근 사용" 배지 값(위 −9, 오른쪽 14, 안쪽 2·8, 11/16 600)은 보드 값이고 토큰이 없다 (Main.dc.html, SCREENS SCR-START-01)
 private val BadgeTopOffset = (-9).dp
 private val BadgeEndInset = 14.dp
 private val BadgeVerticalPadding = 2.dp

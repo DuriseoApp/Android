@@ -3,6 +3,7 @@ package com.duriseo.android.core.ads
 import android.content.Context
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.InsetDrawable
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -221,15 +222,19 @@ internal object AdCardViews {
             },
         )
 
-        val cta = button(context, look, AdDimens.CompactButtonRadius).apply {
+        // 보이는 면은 34, 뷰는 48: 위아래 7을 투명하게 비워 터치 영역을 넓힌다 (InsetDrawable)
+        val touch = look.px(AdDimens.CompactButtonTouch)
+        val inset = ((touch - look.px(AdDimens.CompactButtonHeight)) / 2).coerceAtLeast(0)
+        val cta = button(context, look, AdDimens.CompactButtonRadius, verticalInset = inset).apply {
             val h = look.px(AdDimens.CompactButtonPadding)
             setPadding(h, 0, h, 0)
         }
         row.addView(
             cta,
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, look.px(AdDimens.CompactButtonHeight)).apply {
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, touch).apply {
                 marginStart = look.px(AdDimens.CompactGap)
-                topMargin = look.px(AdDimens.CompactButtonTop)
+                // 보드의 위 여백 12는 보이는 버튼 기준이라 비워 둔 inset만큼 줄인다
+                topMargin = (look.px(AdDimens.CompactButtonTop) - inset).coerceAtLeast(0)
             },
         )
 
@@ -327,17 +332,18 @@ internal object AdCardViews {
             )
         }
 
-    private fun button(context: Context, look: AdCardLook, radius: Dp): TextView =
+    private fun button(context: Context, look: AdCardLook, radius: Dp, verticalInset: Int = 0): TextView =
         TextView(context).apply {
             applyStyle(look.button)
             setTextColor(look.buttonText)
             gravity = Gravity.CENTER
             maxLines = 1
-            background = GradientDrawable().apply {
+            val face = GradientDrawable().apply {
                 setColor(look.buttonBackground)
                 cornerRadius = look.pxF(radius)
                 setStroke(look.px(AdDimens.Border), look.buttonBorder)
             }
+            background = if (verticalInset > 0) InsetDrawable(face, 0, verticalInset, 0, verticalInset) else face
         }
 
     private fun iconView(context: Context, look: AdCardLook, size: Dp, radius: Dp): ImageView =

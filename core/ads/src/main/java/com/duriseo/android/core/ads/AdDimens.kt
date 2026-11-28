@@ -15,6 +15,8 @@ internal object AdDimens {
     val CompactIcon = 48.dp
     val CompactIconRadius = 12.dp
     val CompactButtonHeight = 34.dp
+    /** 터치 영역은 48 이상 (보이는 높이는 보드 값 34 그대로, 위아래를 투명하게 비운다) */
+    val CompactButtonTouch = DuriseoSize.ButtonMd
     val CompactButtonPadding = DuriseoSpacing.Space3
     val CompactButtonRadius = 10.dp
     val CompactButtonTop = DuriseoSpacing.Space3

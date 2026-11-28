@@ -1,6 +1,6 @@
 # 단위 10: 광고·빌드 3종·최근 로그인 수단
 
-> 브랜치: `feat/10-ads` · PR: (링크) · 상태: 진행 중
+> 브랜치: `feat/10-ads` · PR: https://github.com/DuriseoApp/Android/pull/40 · 상태: PR 완료
 > 기준: PRD v0.23, SCREENS.md(캔버스 버전 53), API.md(변경 없음) · 이슈 #39
 
 ## 범위
@@ -64,7 +64,6 @@
 
 - 만든 것: `core/ads/`(새 모듈), `core/common/.../config/AdsConfig.kt`, `app/src/noAdsDebug/AndroidManifest.xml`(광고 자동 시작 Provider 제거), `app/src/test/.../di/AdsConfigTest.kt`. 고친 것: `app/build.gradle.kts`(noAdsDebug·BuildConfig `ADS_ENABLED`·`ADMOB_MEMO_LIST_NATIVE_ID`·`ADMOB_ANNIVERSARY_LIST_NATIVE_ID`·`ADMOB_MENU_BOTTOM_BANNER_ID`·매니페스트 자리표시자 `admobAppId`), `AndroidManifest.xml`, `AppModule`(`AdsConfig` 제공), `MyApp`(`adsInitializer.start()`), `libs.versions.toml`, `settings.gradle.kts`, 문서 4곳.
 - 묶음 B가 쓸 API (모두 `com.duriseo.android.core.ads`, feature는 `projects.core.ads`와 `projects.core.common`을 `implementation`에 추가):
-  - `NativeAdSlotsFactory`(Hilt 주입): `enabled`, `memoListNativeId`, `anniversaryListNativeId`, `menuBottomBannerId`, `create(adUnitId): NativeAdSlots<NativeAd>`. ViewModel이 받아서 만들고 `onCleared`에서 `clear()`.
   - `NativeAdSlots<T>`: `request(slot: Int)`(자리마다 한 번만 받음), `ads: StateFlow<Map<Int, T>>`(받은 것만, 받는 중·실패는 없음 = 자리를 그리지 않음), `clear()`(destroy). 메모 목록은 자리 번호 = 5·10·15…번째 메모 뒤 순번, 기념일은 0 하나. 광고가 꺼져 있으면 `enabled`가 false이니 자리 계산을 건너뛴다.
   - `NativeAdCard(ad: NativeAd, style: NativeAdCardStyle.Compact | Large, modifier)`: 폭을 채운다. `AnchoredBannerAd(adUnitId, modifier)`: 폭을 채우고 받기 전·실패면 높이 0. 시스템 내비게이션 위·메뉴 스크롤 영역 배치는 화면이 한다.
   - Preview 전용: `NativeAdCardPreviewSample(style)`, `AnchoredBannerAdPreviewSample()`.
@@ -85,6 +84,8 @@
 
 | 회차 | Critical | Major | 비고 |
 | --- | --- | --- | --- |
+| 1회차 | 0 | 1 | CI가 `noAdsDebug` 갈래 테스트를 안 돌림 → ci.yml에 `assembleNoAdsDebug`·`testNoAdsDebugUnitTest` 추가. Minor 6건(Logger, 안 쓰는 factory 삭제, Compact 버튼 터치 48, 배너 pause/resume, 배지 값 주석, SETUP 한 줄) 모두 수정 |
+| 1회차 수정 확인 | 0 | 0 | 리드가 diff로 확인(재리뷰 없음). 묶음 B 첫 CI 실패는 Maven Central 429(일시)라 재실행 |
 
 ## 남은 일
 
