@@ -19,6 +19,7 @@ const val MAX_VISIBLE_PINS = 3
  * @property favoriteCount "★ 즐겨찾기 N"의 N (`favoriteCount`, 고정되지 않은 내 즐겨찾기)
  * @property hasMore 다음 페이지가 있다 (스크롤 끝에서 이어 붙인다)
  * @property listLoaded 이 보기를 한 번이라도 받았다. false인 빈 목록은 "없음"이 아니라 "아직 안 받음"이다
+ * @property adUnitId 메모 목록 네이티브 광고 단위 ID. null이면 광고가 꺼져 있어(noAdsDebug 등) 요청도 자리도 없다 (FR-AD-04 AC4)
  * @property writing 핀·별 요청이 도는 동안 true (로딩 덮개, D-115)
  */
 data class MemoListUiState(
@@ -32,7 +33,12 @@ data class MemoListUiState(
     val hasMore: Boolean = false,
     val listLoaded: Boolean = false,
     val writing: Boolean = false,
+    val adUnitId: String? = null,
 ) {
+    /** 일반 목록의 줄들. 광고가 켜져 있으면 메모 5개마다 광고 자리가 끼고, 꺼져 있으면 메모만 있다 */
+    val rows: List<MemoListRow>
+        get() = if (adUnitId == null) items.map { MemoListRow.Memo(it) } else memoRowsWithAds(items)
+
     /** 로딩 덮개를 그린다. 목록 조회·다음 페이지는 덮지 않는다 (D-115) */
     val loading: Boolean get() = writing
 

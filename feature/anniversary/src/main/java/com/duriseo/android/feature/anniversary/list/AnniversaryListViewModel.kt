@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.anniversary.list
 
+import com.duriseo.android.core.common.config.AdsConfig
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.duriseo.android.core.designsystem.message.toMessageResOrNull
@@ -46,7 +47,11 @@ class AnniversaryListViewModel @Inject constructor(
     private val meRepository: MeRepository,
     private val coupleRepository: CoupleRepository,
     private val clock: Clock,
+    adsConfig: AdsConfig,
 ) : ViewModel() {
+
+    /** 광고가 켜져 있을 때만 단위 ID (꺼져 있으면 null: 요청도 자리도 없다, FR-AD-04 AC4) */
+    private val adUnitId: String? = adsConfig.anniversaryListNativeId.takeIf { adsConfig.enabled && it.isNotBlank() }
 
     /** 화면 안에서만 들고 있는 값 */
     private data class Local(
@@ -94,7 +99,7 @@ class AnniversaryListViewModel @Inject constructor(
         state: Local,
     ): AnniversaryListUiState {
         val today = LocalDate.now(clock)
-        if (me == null) return AnniversaryListUiState(today = today)
+        if (me == null) return AnniversaryListUiState(today = today, adUnitId = adUnitId)
         val space = me.space
         val partner = space.partner
         val isCouple = space.type == SpaceType.COUPLE && partner != null
@@ -151,6 +156,7 @@ class AnniversaryListViewModel @Inject constructor(
             hasMorePast = past.hasMore,
             startDateSheet = state.startDateSheet,
             today = today,
+            adUnitId = adUnitId,
         )
     }
 

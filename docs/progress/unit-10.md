@@ -54,6 +54,10 @@
 6. **메모 목록 광고 여러 개**: 자리마다 광고 하나를 따로 받는다(같은 광고를 두 자리에 쓰지 않음). 화면(ViewModel 범위)에 받은 광고를 자리 번호별로 들고 있다가 화면을 떠나면 `destroy()`. 받지 못한 자리는 표시하지 않는다.
 7. **최근 로그인 수단 저장**: 설정 DataStore의 기기 단위 문자열 키 `last_sign_in_provider`(`GOOGLE`·`KAKAO`). `DeviceLevelKeys`에 넣어 로그아웃 정리에서 남기고, 탈퇴 성공 때만 지운다. Kakao 연결 끊기(D-87)·다른 기기 로그인(D-51)으로 끝난 세션은 지우지 않는다(Q-25).
 
+8. **광고 카드 보드 값**은 `core:ads`의 `AdDimens`에 둔다(아이콘 48·32, 버튼 34, 미디어 180, 패딩 14 등. 화면 feature 코드에는 두지 않는다). 배지 모서리는 design-system 원칙 "배지 6"에 따라 토큰 `Xs`(6)와 같다.
+9. **광고 카드 글꼴**: 카드는 `NativeAdView`에 등록한 Android 뷰라서 광고 내용은 시스템 글꼴(굵기만 맞춤)이다. 받아들인다.
+10. **광고 객체 위치**: ViewModel은 SDK 객체(`NativeAd`)를 들지 않는다(feature 테스트가 SDK 없이 돌고, 화면을 떠날 때 destroy를 Compose 수명에 맞추려고). ViewModel은 `AdsConfig`만 받아 UiState에 단위 ID(`adUnitId: String?`, 광고가 꺼져 있거나 ID가 비면 null)를 싣고, 화면(Route)이 `rememberNativeAdSlots(adUnitId)`로 `NativeAdSlots`를 들고 `DisposableEffect`로 화면을 떠날 때 `clear()`(destroy)한다. `adUnitId == null`이면 요청도 자리도 없다. 화면 회전 같은 구성 변경에서는 보관함이 다시 만들어져 광고를 새로 받는다(받아 둔 광고를 한 화면 안에서 바꾸지 않는다는 규칙은 같은 컴포지션 안에서 지킨다).
+
 ## 다음 단계용 메모
 
 묶음 A(빌드 3종·광고 기반) 끝. SDK가 없는 환경이라 컴파일은 CI로 확인해야 한다 (SDK API 이름은 Google 표준 예제 형태).
@@ -67,6 +71,15 @@
 - 주의: 카드는 Compose가 아니라 Android 뷰(`NativeAdView`에 자산 등록)로 그려서 IBM Plex 글꼴이 아니라 시스템 글꼴(굵기만 맞춤)이다. 보드에만 있고 토큰에 없는 dp(48·34·180·14 등)는 `core/ads/.../AdDimens.kt` 한 곳에 모았다. `core:ads`는 SDK를 `api`로 열어 feature가 `NativeAd` 타입을 쓴다.
 - 확인 필요(CI): `noAdsDebug` 컴파일은 `assembleNoAdsDebug`로만 확인된다 (현재 CI는 `assembleDebug testDebugUnitTest`).
 - **묶음 C (최근 로그인 수단)**: domain `LastSignInRepository`(`lastProvider: Flow<SocialProvider?>`, `AuthRepositoryImpl`이 같이 구현, `RepositoryModule`에 바인딩). `data:local/auth/LastSignInLocalDataSource`(키 `DeviceLevelKeys.LAST_SIGN_IN_PROVIDER`, `isDeviceLevel`이 이름으로 가림). `AuthRepositoryImpl` 생성자에 `lastSignIn` 추가(signIn·link·switch 성공 때 저장, withdraw 성공 때 정리 뒤 지움, 로그아웃·세션 끊김은 그대로). `StartViewModel`은 `LastSignInRepository`를 더 받고, 상태에 `lastProvider`·`otherMethodDialog`, 액션 `OtherMethodConfirmed`·`OtherMethodDismissed`. `StartScreen`은 `DuriseoLoadingLayer`를 `DuriseoDialogLayer(loading=)`로 바꿨고 `SocialButton`(배지는 버튼 밖 형제로 겹쳐 잘리지 않음). 테스트: `AuthRepositoryImplTest`(새 파일, 로그아웃은 남는다 하나 더), `data/local/.../cleanup/LocalDataCleanerTest`. SDK가 없어 컴파일은 CI로 확인할 것.
+
+### 묶음 B (광고 화면 세 곳)
+
+- 새 API(`core:ads`): `rememberNativeAdSlots(adUnitId: String?)`, `NativeAdSlotItem(slots, slot, style, modifier)`(요청+받은 뒤에만 그림). `AdDimens.BadgeRadius` 6.
+- memo: `list/MemoAdSlots.kt`(`MemoListRow.Memo|Ad`, `memoRowsWithAds`, `MEMO_AD_INTERVAL=5`), `MemoListUiState.adUnitId`·`rows`, `MemoListScreen(adSlot = …)`, Preview `MemoListPreview_Ad`. 테스트 `MemoAdSlotsTest`.
+- anniversary: `AnniversaryListUiState.adUnitId`·`showAd`(광고 켜짐 + 다가오는 기념일 있음), "past-row" 위 `item("ad")`, `AnniversaryListScreen(adCard = …)`, Preview `AnniversaryListPreview_Ad`. 테스트는 `AnniversaryListViewModelTest`에 FR-AD-02 AC1·AC2, FR-AD-04 AC4.
+- settings: `SettingsUiState.adUnitId`, `SettingsScreen(banner = …)`(메뉴 스크롤 영역 아래, `padding`의 내비게이션 영역 위), Preview `SettingsPreview_Banner`. 테스트는 `SettingsViewModelTest`에 FR-AD-03 AC1, FR-AD-04 AC4.
+- 세 ViewModel 생성자에 `AdsConfig`가 마지막 인자로 추가됐다(테스트는 `AdsConfig.Disabled`). 각 feature `build.gradle.kts`에 `projects.core.ads`.
+- 주의: 컴파일은 CI로 확인. 메모 광고 줄에는 보드의 아래 구분선을 넣지 않았다(카드 위아래 여백 12만).
 
 ## 리뷰 기록
 

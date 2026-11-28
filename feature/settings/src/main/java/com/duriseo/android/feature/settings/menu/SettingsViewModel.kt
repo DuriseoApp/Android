@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.settings.menu
 
+import com.duriseo.android.core.common.config.AdsConfig
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.duriseo.android.core.designsystem.message.toMessageResOrNull
@@ -40,7 +41,11 @@ class SettingsViewModel @Inject constructor(
     private val coupleRepository: CoupleRepository,
     private val calendarTutorialRepository: CalendarTutorialRepository,
     private val clock: Clock,
+    adsConfig: AdsConfig,
 ) : ViewModel() {
+
+    /** 광고가 켜져 있을 때만 단위 ID (꺼져 있으면 null) */
+    private val bannerAdUnitId: String? = adsConfig.menuBottomBannerId.takeIf { adsConfig.enabled && it.isNotBlank() }
 
     private data class Local(
         val logoutDialogVisible: Boolean = false,
@@ -62,8 +67,9 @@ class SettingsViewModel @Inject constructor(
             logoutDialogVisible = localState.logoutDialogVisible,
             mailDialogVisible = localState.mailDialogVisible,
             requesting = localState.requesting,
+            adUnitId = bannerAdUnitId,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), SettingsUiState())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), SettingsUiState(adUnitId = bannerAdUnitId))
 
     private val effectChannel = Channel<SettingsSideEffect>(Channel.BUFFERED)
     val effects = effectChannel.receiveAsFlow()

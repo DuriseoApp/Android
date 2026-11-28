@@ -49,6 +49,8 @@ import com.duriseo.android.core.common.legal.LegalLinks
 import com.duriseo.android.core.common.legal.openExternalUrl
 import android.os.Build
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.duriseo.android.core.ads.AnchoredBannerAd
+import com.duriseo.android.core.ads.AnchoredBannerAdPreviewSample
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.component.DuriseoButton
 import com.duriseo.android.core.designsystem.component.DuriseoBottomSheetLayer
@@ -177,6 +179,8 @@ fun SettingsRoute(
             if (!context.openSupportMail(appUpdate.versionName)) viewModel.onAction(SettingsAction.MailAppMissing)
         },
         // "이용약관·개인정보처리방침" 한 행은 개인정보처리방침 주소를 연다 (D-154)
+        // 광고가 켜져 있을 때만 배너 (adUnitId가 null이면 요청도 자리도 없다, FR-AD-04 AC4)
+        banner = { state.adUnitId?.let { AnchoredBannerAd(adUnitId = it) } },
         onOpenTerms = { context.openExternalUrl(LegalLinks.SETTINGS_ROW_URL) },
         onCopyMailAddress = { address -> context.copyToClipboard(address) },
         onUpdate = { context.findActivity()?.let(appUpdateViewModel::onUpdateClicked) },
@@ -229,6 +233,7 @@ fun SettingsScreen(
     onOpenTerms: () -> Unit = {},
     onCopyMailAddress: (String) -> Unit = {},
     onUpdate: () -> Unit = {},
+    banner: @Composable () -> Unit = {},
 ) {
     val sheet = state.startDateSheet
     DuriseoDialogLayer(
@@ -403,6 +408,9 @@ fun SettingsScreen(
                         AppInfoCard(state = appUpdate, onUpdate = onUpdate)
                     }
                 }
+                // 적응형 고정 배너 (FR-AD-03): 메뉴 목록 아래에 붙고 목록은 배너 위에서 스크롤된다.
+                // `padding`에 시스템 내비게이션 영역이 들어 있어 배너는 그 위에 놓인다. 받기 전·실패면 높이 0 (광고가 꺼져 있으면 호출하지 않음)
+                banner()
             }
         }
     }
@@ -940,3 +948,22 @@ private fun SettingsPreview_UpdateAvailable() = PreviewSettings(
     state = previewCoupleState(),
     appUpdate = AppUpdateUiState("1.0.0", 100, AppUpdateStatus.UPDATE_AVAILABLE),
 )
+
+/** `SCR-SET-01--ad.png`: 메뉴 목록 아래 적응형 배너. 가짜 배너로 그린다 */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun SettingsPreview_Banner() {
+    DuriseoTheme {
+        SettingsScreen(
+            state = previewCoupleState().copy(adUnitId = "preview"),
+            padding = PaddingValues(),
+            onClose = {},
+            onOpenAccount = {},
+            onOpenColors = {},
+            onOpenConnect = {},
+            onOpenConnectionInfo = {},
+            onAction = {},
+            banner = { AnchoredBannerAdPreviewSample() },
+        )
+    }
+}

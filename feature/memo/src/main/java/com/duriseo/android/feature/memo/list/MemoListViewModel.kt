@@ -2,6 +2,7 @@ package com.duriseo.android.feature.memo.list
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.duriseo.android.core.common.config.AdsConfig
 import com.duriseo.android.core.common.time.MidnightTicker
 import com.duriseo.android.core.designsystem.message.toMessageResOrNull
 import com.duriseo.android.domain.me.MeRepository
@@ -43,7 +44,11 @@ class MemoListViewModel @Inject constructor(
     meRepository: MeRepository,
     private val clock: Clock,
     midnightTicker: MidnightTicker,
+    adsConfig: AdsConfig,
 ) : ViewModel() {
+
+    /** 광고가 켜져 있을 때만 단위 ID (꺼져 있으면 null: 요청도 자리도 없다, FR-AD-04 AC4) */
+    private val adUnitId: String? = adsConfig.memoListNativeId.takeIf { adsConfig.enabled && it.isNotBlank() }
 
     /** 화면 안에서만 들고 있는 값 */
     private data class Local(
@@ -65,7 +70,7 @@ class MemoListViewModel @Inject constructor(
         local,
     ) { me, (pinned, pinnedLoaded), list, favoriteCount, state ->
         if (me == null) {
-            MemoListUiState(view = state.view, writing = state.writing)
+            MemoListUiState(view = state.view, writing = state.writing, adUnitId = adUnitId)
         } else {
             MemoListUiState(
                 loaded = true,
@@ -78,6 +83,7 @@ class MemoListViewModel @Inject constructor(
                 hasMore = list.hasMore,
                 listLoaded = list.isLoaded,
                 writing = state.writing,
+                adUnitId = adUnitId,
             )
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, MemoListUiState())

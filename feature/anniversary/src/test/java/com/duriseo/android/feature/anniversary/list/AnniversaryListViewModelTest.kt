@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.anniversary.list
 
+import com.duriseo.android.core.common.config.AdsConfig
 import app.cash.turbine.test
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.feature.anniversary.FakeAnniversaryRepository
@@ -52,7 +53,10 @@ class AnniversaryListViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(repo: FakeAnniversaryRepository) = AnniversaryListViewModel(repo, me, couple, clock)
+    private fun viewModel(repo: FakeAnniversaryRepository, ads: AdsConfig = AdsConfig.Disabled) =
+        AnniversaryListViewModel(repo, me, couple, clock, ads)
+
+    private val adsOn = AdsConfig(enabled = true, memoListNativeId = "m", anniversaryListNativeId = "a", menuBottomBannerId = "b")
 
     private val d1023 = LocalDate.of(2026, 10, 23)
 
@@ -323,5 +327,31 @@ class AnniversaryListViewModelTest {
             vm.onAction(AnniversaryListAction.BackClicked)
             assertEquals(AnniversaryListSideEffect.Back, awaitItem())
         }
+    }
+
+    @Test
+    fun `FR-AD-02 AC1 다가오는 기념일이 있으면 광고 자리가 있다`() = runTest {
+        val state = viewModel(FakeAnniversaryRepository(listOf(auto("200일", d1023, 11))), adsOn).uiState.value
+
+        assertEquals("a", state.adUnitId)
+        assertTrue(state.showAd)
+    }
+
+    @Test
+    fun `FR-AD-02 AC2 다가오는 기념일이 없으면 광고 자리가 없다`() = runTest {
+        me.me.value = soloMe()
+
+        val state = viewModel(FakeAnniversaryRepository(), adsOn).uiState.value
+
+        assertTrue(state.items.isEmpty())
+        assertFalse(state.showAd)
+    }
+
+    @Test
+    fun `FR-AD-04 AC4 광고가 꺼져 있으면 자리도 단위 ID도 없다`() = runTest {
+        val state = viewModel(FakeAnniversaryRepository(listOf(auto("200일", d1023, 11))), AdsConfig.Disabled).uiState.value
+
+        assertNull(state.adUnitId)
+        assertFalse(state.showAd)
     }
 }

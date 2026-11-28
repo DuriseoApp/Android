@@ -49,6 +49,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
+import com.duriseo.android.core.ads.NativeAdCardPreviewSample
+import com.duriseo.android.core.ads.NativeAdCardStyle
+import com.duriseo.android.core.ads.NativeAdSlotItem
+import com.duriseo.android.core.ads.rememberNativeAdSlots
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.component.DuriseoLoadingLayer
 import com.duriseo.android.core.designsystem.theme.Brand500
@@ -168,12 +172,17 @@ fun MemoListRoute(
             }
         }
     }
+    // 광고 보관함은 화면이 들고 있다가 화면을 떠나면 destroy한다 (core:ads, 결정 10)
+    val adSlots = rememberNativeAdSlots(state.adUnitId)
     MemoListScreen(
         state = state,
         onAction = viewModel::onAction,
         padding = padding,
         snackbarVisible = snackbarVisible,
         modifier = modifier,
+        adSlot = { slot ->
+            NativeAdSlotItem(adSlots, slot, NativeAdCardStyle.Compact, Modifier.padding(vertical = DuriseoSpacing.Space3))
+        },
     )
 }
 
@@ -184,6 +193,7 @@ fun MemoListScreen(
     modifier: Modifier = Modifier,
     padding: PaddingValues = PaddingValues(),
     snackbarVisible: Boolean = false,
+    adSlot: @Composable (slot: Int) -> Unit = {},
 ) {
     DuriseoLoadingLayer(loading = state.loading, modifier = modifier) {
         Box(modifier = Modifier.fillMaxSize().padding(padding).background(Surface0)) {
@@ -203,7 +213,7 @@ fun MemoListScreen(
                         color = Ink900,
                     )
                 }
-                if (state.loaded) ListBody(state = state, onAction = onAction)
+                if (state.loaded) ListBody(state = state, onAction = onAction, adSlot = adSlot)
             }
             MemoFab(
                 onClick = { onAction(MemoListAction.AddClicked) },
@@ -214,7 +224,7 @@ fun MemoListScreen(
 }
 
 @Composable
-private fun ListBody(state: MemoListUiState, onAction: (MemoListAction) -> Unit) {
+private fun ListBody(state: MemoListUiState, onAction: (MemoListAction) -> Unit, adSlot: @Composable (slot: Int) -> Unit) {
     val listState = rememberLazyListState()
     // 끝 가까이까지 스크롤하면 다음 페이지를 이어 붙인다
     val nearEnd by remember {
@@ -285,13 +295,17 @@ private fun ListBody(state: MemoListUiState, onAction: (MemoListAction) -> Unit)
                 )
             }
         }
-        items(state.items, key = { it.id }) { item ->
-            MemoRow(
-                item = item,
-                onOpen = { onAction(MemoListAction.ItemClicked(item)) },
-                onPinClick = { onAction(MemoListAction.PinClicked(item)) },
-                onFavoriteClick = { onAction(MemoListAction.FavoriteClicked(item)) },
-            )
+        items(state.rows, key = { it.key }) { row ->
+            when (row) {
+                is MemoListRow.Memo -> MemoRow(
+                    item = row.item,
+                    onOpen = { onAction(MemoListAction.ItemClicked(row.item)) },
+                    onPinClick = { onAction(MemoListAction.PinClicked(row.item)) },
+                    onFavoriteClick = { onAction(MemoListAction.FavoriteClicked(row.item)) },
+                )
+                // 광고 자리: 받은 광고만 그린다 (받는 중·실패면 아무것도 없다)
+                is MemoListRow.Ad -> adSlot(row.slot)
+            }
         }
     }
 }
@@ -572,4 +586,18 @@ private fun MemoListPreview_Loading() = PreviewScreen(DefaultState.copy(writing 
 @Composable
 private fun MemoListPreview_SnackbarFab() {
     DuriseoTheme { MemoListScreen(state = DefaultState, onAction = {}, snackbarVisible = true) }
+}
+
+/** 광고 자리가 낀 목록 (메모 5개 뒤에 한 줄 광고 카드, `SCR-MEMO-01--ad.png`). 실제 광고 없이 가짜 카드로 그린다 */
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun MemoListPreview_Ad() {
+    val five = Rows + sample("9", "집들이 장보기 목록", "고기, 야채, 음료", MemoAuthor.ME, WrittenAt.ThisYear(9, 28))
+    DuriseoTheme {
+        MemoListScreen(
+            state = DefaultState.copy(items = five, totalCount = five.size, adUnitId = "preview"),
+            onAction = {},
+            adSlot = { NativeAdCardPreviewSample(NativeAdCardStyle.Compact, Modifier.padding(vertical = DuriseoSpacing.Space3)) },
+        )
+    }
 }

@@ -92,6 +92,8 @@ data class SettingsUiState(
     val logoutDialogVisible: Boolean = false,
     val mailDialogVisible: Boolean = false,
     val requesting: Boolean = false,
+    /** 메뉴 아래 적응형 배너의 광고 단위 ID. null이면 광고가 꺼져 있어(noAdsDebug 등) 요청도 자리도 없다 (FR-AD-04 AC4) */
+    val adUnitId: String? = null,
 ) {
     /** 서버 요청(로그아웃, 처음 만난 날 저장)이 도는 동안 true. 로딩 덮개를 그린다 (D-115) */
     val loading: Boolean get() = requesting || startDateSheet?.saving == true

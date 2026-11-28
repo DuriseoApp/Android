@@ -35,7 +35,8 @@ internal object AdDimens {
 
     // 공통
     val Border = 1.dp
-    val BadgeRadius = 4.dp
+    /** 배지 모서리는 design-system 원칙 "배지 6"을 따라 토큰 `DuriseoShapes.Xs`(6)와 같다 */
+    val BadgeRadius = 6.dp
     val BadgePaddingH = 6.dp
     val BadgePaddingV = 1.dp
     val BadgeGap = 6.dp

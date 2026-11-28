@@ -35,15 +35,19 @@ class NativeAdSlotsFactory @Inject constructor(
     val menuBottomBannerId: String get() = config.menuBottomBannerId
 
     /** [adUnitId]의 광고를 자리마다 하나씩 받는 보관함. ViewModel 범위에서 만들고 `onCleared`에서 `clear()`한다 */
-    fun create(adUnitId: String): NativeAdSlots<NativeAd> = NativeAdSlots(
-        requester = if (config.enabled && adUnitId.isNotBlank()) {
-            GoogleNativeAdRequester(context, adUnitId)
-        } else {
-            AdRequester { _, onResult -> onResult(null) }
-        },
-        destroyer = { it.destroy() },
-    )
+    fun create(adUnitId: String): NativeAdSlots<NativeAd> =
+        if (config.enabled) googleNativeAdSlots(context, adUnitId) else googleNativeAdSlots(context, "")
 }
+
+/** [adUnitId]가 비면 요청하지 않는 보관함 (광고가 꺼진 경우) */
+internal fun googleNativeAdSlots(context: Context, adUnitId: String): NativeAdSlots<NativeAd> = NativeAdSlots(
+    requester = if (adUnitId.isNotBlank()) {
+        GoogleNativeAdRequester(context.applicationContext, adUnitId)
+    } else {
+        AdRequester { _, onResult -> onResult(null) }
+    },
+    destroyer = { it.destroy() },
+)
 
 /**
  * `AdLoader.Builder(context, unitId).forNativeAd(...).withAdListener(...).build().loadAd(AdRequest)`

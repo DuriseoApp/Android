@@ -1,5 +1,6 @@
 package com.duriseo.android.feature.memo.list
 
+import com.duriseo.android.core.common.config.AdsConfig
 import app.cash.turbine.test
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.domain.format.WrittenAt
@@ -45,7 +46,7 @@ class MemoListViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = MemoListViewModel(repo, me, TestClock, FakeMidnightTicker())
+    private fun viewModel() = MemoListViewModel(repo, me, TestClock, FakeMidnightTicker(), AdsConfig.Disabled)
 
     private fun pins(count: Int) = (1..count).map { makeMemo("p$it", pinned = true) }
 
@@ -264,7 +265,7 @@ class MemoListViewModelTest {
         val clock = MutableClock(java.time.Instant.parse("2026-10-12T14:50:00Z"))
         repo.setList(MemoView.NEWEST, listOf(makeMemo("m1", createdAt = java.time.Instant.parse("2026-10-12T05:00:00Z"))))
         val ticker = FakeMidnightTicker()
-        val vm = MemoListViewModel(repo, me, clock, ticker)
+        val vm = MemoListViewModel(repo, me, clock, ticker, AdsConfig.Disabled)
         assertTrue(vm.uiState.value.items.single().writtenAt is WrittenAt.Today)
 
         // 자정이 지났다: 시계를 옮기고 자정 신호를 한 번 내보내면 "어제"로 바뀐다
