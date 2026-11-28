@@ -23,12 +23,22 @@ data class StartUiState(
     val requesting: Boolean = false,
     /** 서버 요청(게스트 시작·로그인)이 도는 동안 true. 로딩 덮개를 그린다 (D-115). 소셜 SDK 창이 열려 있는 동안은 false */
     val loading: Boolean = false,
+    /** 이 기기에서 마지막으로 로그인한 수단. 그 버튼에 "최근 사용" 배지를 붙인다. 없으면 null (FR-AUTH-10 AC2) */
+    val lastProvider: SocialProvider? = null,
+    /** 기억한 것과 다른 수단 버튼을 눌러 확인 다이얼로그가 떠 있으면, 누른 수단. 없으면 null (FR-AUTH-10 AC3) */
+    val otherMethodDialog: SocialProvider? = null,
 )
 
 sealed interface StartAction {
     data object GuestClicked : StartAction
 
     data class SocialClicked(val provider: SocialProvider) : StartAction
+
+    /** 확인 다이얼로그의 [계속]: 누른 수단으로 로그인 흐름을 시작한다 (FR-AUTH-10 AC3) */
+    data object OtherMethodConfirmed : StartAction
+
+    /** 확인 다이얼로그의 [취소]·바깥·뒤로 가기: 닫기만 한다 (FR-AUTH-10 AC3) */
+    data object OtherMethodDismissed : StartAction
 
     /** 소셜 SDK가 끝났다. 성공이면 서버에 보내고, 취소면 아무 안내 없이 머문다 (D-88) */
     data class SocialTokenReceived(

@@ -6,6 +6,7 @@ import com.duriseo.android.core.common.social.SocialTokenResult
 import com.duriseo.android.core.designsystem.R as DesignR
 import com.duriseo.android.core.designsystem.message.toMessageResOrNull
 import com.duriseo.android.domain.auth.AuthRepository
+import com.duriseo.android.domain.auth.LastSignInRepository
 import com.duriseo.android.domain.auth.LoginResult
 import com.duriseo.android.domain.me.MeRepository
 import com.duriseo.android.domain.me.SocialProvider
@@ -27,6 +28,7 @@ import javax.inject.Inject
 class StartViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val meRepository: MeRepository,
+    private val lastSignInRepository: LastSignInRepository,
 ) : ViewModel() {
 
     private val mutableState = MutableStateFlow(StartUiState())
@@ -37,13 +39,25 @@ class StartViewModel @Inject constructor(
 
     private var sessionNoticeShown = false
 
+    init {
+        // 기억한 수단은 기기 단위 기록이다. 읽지 못해도 배지만 없을 뿐이라 시작 화면은 그대로 쓴다
+        viewModelScope.launch {
+            lastSignInRepository.lastProvider.collect { provider ->
+                mutableState.update { it.copy(lastProvider = provider) }
+            }
+        }
+    }
+
     fun onAction(action: StartAction) {
         when (action) {
             StartAction.GuestClicked -> startAsGuest()
-            is StartAction.SocialClicked -> {
-                if (!beginRequest()) return
-                effectChannel.trySend(StartSideEffect.RequestSocialToken(action.provider))
+            is StartAction.SocialClicked -> onSocialClicked(action.provider)
+            StartAction.OtherMethodConfirmed -> {
+                val provider = mutableState.value.otherMethodDialog ?: return
+                mutableState.update { it.copy(otherMethodDialog = null) }
+                requestSocial(provider)
             }
+            StartAction.OtherMethodDismissed -> mutableState.update { it.copy(otherMethodDialog = null) }
             is StartAction.SocialTokenReceived -> onSocialToken(action.provider, action.result)
             StartAction.SessionReplacedArrived -> {
                 if (sessionNoticeShown) return
@@ -51,6 +65,23 @@ class StartViewModel @Inject constructor(
                 effectChannel.trySend(StartSideEffect.ShowMessage(R.string.start_session_replaced))
             }
         }
+    }
+
+    /** 기억한 수단과 다른 수단이면 새 계정이 만들어질 수 있어 먼저 묻는다. 같은 수단·기억한 것이 없으면 바로 간다 (FR-AUTH-10 AC3·AC4) */
+    private fun onSocialClicked(provider: SocialProvider) {
+        val state = mutableState.value
+        if (state.requesting) return
+        val last = state.lastProvider
+        if (last != null && last != provider) {
+            mutableState.update { it.copy(otherMethodDialog = provider) }
+            return
+        }
+        requestSocial(provider)
+    }
+
+    private fun requestSocial(provider: SocialProvider) {
+        if (!beginRequest()) return
+        effectChannel.trySend(StartSideEffect.RequestSocialToken(provider))
     }
 
     private fun startAsGuest() {

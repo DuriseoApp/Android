@@ -3,6 +3,7 @@ package com.duriseo.android.feature.auth.start
 import com.duriseo.android.domain.me.SpaceChange
 import com.duriseo.android.domain.auth.AuthRepository
 import com.duriseo.android.domain.auth.AuthState
+import com.duriseo.android.domain.auth.LastSignInRepository
 import com.duriseo.android.domain.auth.LoginResult
 import com.duriseo.android.domain.auth.SessionEndReason
 import com.duriseo.android.domain.error.DataError
@@ -54,6 +55,12 @@ class FakeAuthRepository : AuthRepository {
     override suspend fun logout(): DataResult<Unit> = error("시작 화면은 쓰지 않아요")
 
     override suspend fun withdraw(): DataResult<Unit> = error("시작 화면은 쓰지 않아요")
+}
+
+/** 기억한 최근 로그인 수단 (FR-AUTH-10) */
+class FakeLastSignInRepository(initial: SocialProvider? = null) : LastSignInRepository {
+    val provider = MutableStateFlow(initial)
+    override val lastProvider: Flow<SocialProvider?> = provider
 }
 
 class FakeMeRepository(initial: Me? = null) : MeRepository {
